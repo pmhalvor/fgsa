@@ -149,11 +149,46 @@ class IMN(torch.nn.module):
             # mask_zero=True # think this is already True
         )
 
-        # NOTE from here on out document level ananlysis is ignored (to be impleneted later)
+        # NOTE from here on out document level analysis is ignored (to be implemeneted later)
         shared_list = []
         for i in range(args.shared_layers):
             print('Shared CNN layer %s'%i)
             shared_list.append(torch.nn.Dropout(args.dropout_prob))
+
+            if i == 0:
+                conv_1 = Conv1DWithMasking(
+                    in_channels = 1,  #TODO check this makes sense
+                    out_channels = args.cnn_dim/2,
+                    kernel_size = 3,
+                    
+
+                    # filter size
+                    # conv dim
+                    # other params
+                )
+                conv_2 = Conv1DWithMasking(
+                    # filter size
+                    # conv dim
+                    # other params
+                )
+                shared_list.append(conv_1)
+                shared_list.append(conv_2)
+            else:
+                conv_1 = Conv1DWithMasking(
+                    # filter size
+                    # conv dim
+                    # other params
+                )
+                conv_2 = Conv1DWithMasking(
+                    # filter size
+                    # conv dim
+                    # other params
+                )
+        
+        
+
+
+
 
 
         self.shared_cnn = torch.nn.Sequential(**shared_list)
