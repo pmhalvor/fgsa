@@ -5,10 +5,13 @@ Description: IMN architecture written in PyTorch with Python 3.6
 """
 
 import logging 
+import torch.nn
 import torch 
 import numpy as np
+from torch.nn.modules.dropout import Dropout
 
 from my_layers import Conv1DWithMasking
+from my_layers import Self_attention
 
 
 ############### logging ###############
@@ -18,102 +21,6 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 #######################################
-
-
-# Custom CNN kernel initializer
-# Use the initialization from Kim et al. (2014) for CNN kernel
-def my_init(shape):
-    return 0.01 * np.random.standard_normal(size=shape)
-
-
-def create_model(args, vocab, nb_class, overall_maxlen, doc_maxlen_1, doc_maxlen_2):
-
-    # Function that initializes word embeddings
-    def init_emb(emb_matrix, vocab, emb_file_gen, emb_file_domain):
-        """
-        Function that initializes word embeddings.
-        Loads from `emb_file_gen` (and `emb_file_domain` if activated).
-
-        NOTE: Datasets used for IMN experiemnt differ from NOREC, 
-        so adaptations will be needed when running as baseline.
-
-        Parameters:
-            emb_matrix: empty word look-up matrix to be filled with loaded embeddings of size [n, 300] (or [n, 400] if domain specific embeddings are activated)
-
-            vocab: not exactly sure yet, come back (TODO)
-
-            emb_file_gen: pretrained generalized embeddings of size [n, 301]
-
-            emb_file_domain: pretrained domain specific embeddings
-
-        Return:
-            emb_matrix: same size as before, but now updated with pretrained values
-        """
-
-        print('Loading pretrained general word embeddings and domain word embeddings ...')
-
-        counter_gen = 0.
-        # NOTE: emebddings data may be stored differently (check later)
-        pretrained_emb = open(emb_file_gen)
-        for line in pretrained_emb:
-            tokens = line.split()
-
-            if len(tokens) != 301:
-                continue
-
-            word = tokens[0]
-            vec = tokens[1:]
-
-            try: 
-                emb_matrix[0][vocab[word]][:300] = vec
-                counter_gen += 1
-            except KeyError:
-                pass
-
-        if args.use_domain_emb:
-            counter_domain = 0.
-            pretrained_emb = open(emb_file_domain)
-            for line in pretrained_emb:
-                tokens = line.split()
-
-                if len(tokens) != 101:
-                    continue
-
-                word = tokens[0]
-                vec[1:]
-
-                try: 
-                    emb_matrix[0][vocab[word]][300:] = vec
-                    counter_domain += 1
-                except KeyError:
-                    pass
-
-        pretrained_emb.close()
-        logger.info('%i/%i word vectors initialized by general embeddings (hit rate: %.2f%%)' % (counter_gen, len(vocab), 100*counter_gen/len(vocab)))
-
-        if args.use_domain_emb:
-            logger.info('%i/%i word vectors initialized by domain embeddings (hit rate: %.2f%%)' % (counter_domain, len(vocab), 100*counter_domain/len(vocab)))
-
-        return emb_matrix
-
-
-    # Build model
-    logger.info('Building model ...')
-    print('Building model ... \n\n\n')
-
-    vocab_size = len(vocab)
-
-    ###########################################
-    # Inputs
-    ###########################################
-    print('Input layer')
-
-    # sequence of token indices for aspect-level data
-    """
-    At this point, my data will be served as a tensor created per batch 
-    """
-    sentence_input = ''
-
 
 
 class IMN(torch.nn.module):
@@ -150,48 +57,157 @@ class IMN(torch.nn.module):
         )
 
         # NOTE from here on out document level analysis is ignored (to be implemeneted later)
-        shared_list = []
+        shared_cnn_components = []
         for i in range(args.shared_layers):
             print('Shared CNN layer %s'%i)
-            shared_list.append(torch.nn.Dropout(args.dropout_prob))
+            shared_cnn_components.append(torch.nn.Dropout(args.dropout_prob))
 
             if i == 0:
-                conv_1 = Conv1DWithMasking(
-                    in_channels = 1,  #TODO check this makes sense
+                self.shared_conv_0_1 = Conv1DWithMasking(
+                    in_channels = 1,  # TODO check this makes sense
+                    # conv dim
                     out_channels = args.cnn_dim/2,
+                    # filter size
                     kernel_size = 3,
-                    
+                    # other params
+                    padding_mode = 'reflect',
+                )
+                self.shared_conv_0_2 = Conv1DWithMasking(
+                    in_channels = 1,  # TODO check this makes sense
+                    # conv dim
+                    out_channels = args.cnn_dim/2,
+                    # filter size
+                    kernel_size = 5,
+                    # other params
+                    padding_mode = 'reflect',
+                )
 
-                    # filter size
-                    # conv dim
-                    # other params
-                )
-                conv_2 = Conv1DWithMasking(
-                    # filter size
-                    # conv dim
-                    # other params
-                )
-                shared_list.append(conv_1)
-                shared_list.append(conv_2)
+                # these need to be relu activated 
+                # then concatenated in self.forward()                
+
             else:
-                conv_1 = Conv1DWithMasking(
-                    # filter size
-                    # conv dim
-                    # other params
-                )
-                conv_2 = Conv1DWithMasking(
-                    # filter size
-                    # conv dim
-                    # other params
+                shared_cnn_components.append(
+                    Conv1DWithMasking(
+                        # input channels should be 1, right?
+                        in_channels = 1,  # TODO check this makes sense
+                        # conv dim
+                        out_channels = args.cnn_dim,
+                        # filter size
+                        kernel_size = 5,
+                        # other params
+                        padding_mode = 'reflect',
+                    )
                 )
         
+        self.shared_cnn = torch.nn.Sequential(*shared_cnn_components)
         
+        #####################################
+        # Task-specific layers
+        #####################################
+
+        #### AE: Aspect extraction task ####
+        aspect_cnn_list = []
+        for a in range(args.aspect_layers):
+            print('Aspect extraction layer %s'%a)
+            aspect_cnn_list.append(torch.nn.Dropout(args.dropout_prob))
+            aspect_cnn_list.append(Conv1DWithMasking(
+                # input channels should be 1, right?
+                in_channels = 1,  # TODO check this makes sense
+                # conv dim
+                out_channels = args.cnn_dim,
+                # filter size
+                kernel_size = 5,
+                # other params
+                padding_mode = 'reflect',
+            ))
+            aspect_cnn_list.append(torch.nn.ReLU())
+
+        # combine all layers to single object
+        self.aspect_cnn = torch.nn.Sequential(*aspect_cnn_list)
+
+        # feed through fully connected dense layer w/ softmax activation
+        # TODO check output size in Linear in line below here
+        self.aspect_dense = torch.nn.Sequential(
+            torch.nn.Linear(args.cnn_dim, args.cnn_dim),
+            torch.nn.Softmax()
+        )
 
 
 
+        #### AS: Aspect sentiment task ####
+        sentiment_cnn_list = [] 
+        for b in range(args.senti_layers):
+            print('Sentiment classification layer %s'%b)
+            sentiment_cnn_list.append(torch.nn.Dropout(args.dropout_prob))
+            sentiment_cnn_list.append(
+                Conv1DWithMasking(
+                    # input channels should be 1, right?
+                    in_channels = 1,  # TODO check this makes sense
+                    # conv dim
+                    out_channels = args.cnn_dim,
+                    # filter size
+                    kernel_size = 5,
+                    # other params
+                    padding_mode = 'reflect',
+
+                )
+            )
+
+        # combine all layers to single object
+        self.sentiment_cnn = torch.nn.Sequential(*sentiment_cnn_list)
+
+        # attention layer
+        # TODO swap this out for my_layers.Self_attention()
+        # needs to be trainable on gold opinions (see line 233 in OG)
+        self.sentiment_att = torch.nn.MultiheadAttention(
+                embed_dim=args.emb_dim,
+                num_heads=1,
+            )
+
+        # dense layer for probability 
+        self.sentiment_dense = torch.nn.Sequential(
+            torch.nn.Linear(args.cnn_dim, args.cnn_dim),
+            torch.nn.Softmax()
+        )
 
 
-        self.shared_cnn = torch.nn.Sequential(**shared_list)
+
+        if args.use_doc:
+            # fill out for document level classifications similar to:
+            """
+            # DS specific layers
+            doc_senti_cnn = Sequential()
+            for c in xrange(args.doc_senti_layers):
+                print 'Document-level sentiment layers %s'%c
+                doc_senti_cnn.add(Dropout(args.dropout_prob))
+                doc_senti_cnn.add(Conv1DWithMasking(filters=args.cnn_dim, kernel_size=5, \
+                        activation='relu', padding='same', kernel_initializer=my_init, name='doc_sentiment_cnn_%s'%c))
+
+            doc_senti_att = Attention(name='doc_senti_att')
+            doc_senti_dense = Dense(3, name='doc_senti_dense')
+            # The reason not to use the default softmax is that it reports errors when input_dims=2 due to 
+            # compatibility issues between the tf and keras versions used.
+            softmax = Lambda(lambda x: K.tf.nn.softmax(x), name='doc_senti_softmax')
+
+            # DD specific layers
+            doc_domain_cnn = Sequential()
+            for d in xrange(args.doc_domain_layers):
+                print 'Document-level domain layers %s'%d 
+                doc_domain_cnn.add(Dropout(args.dropout_prob))
+                doc_domain_cnn.add(Conv1DWithMasking(filters=args.cnn_dim, kernel_size=5, \
+                        activation='relu', padding='same', kernel_initializer=my_init, name='doc_domain_cnn_%s'%d))
+
+            doc_domain_att = Attention(name='doc_domain_att')
+            doc_domain_dense = Dense(1, activation='sigmoid', name='doc_domain_dense')
+
+            """
+            pass
+
+        # re-encoding layer
+        self.enc = torch.nn.Sequential(
+            torch.nn.Linear(args.cnn_dim, args.cnn_dim),
+            torch.nn.ReLU()
+        )
 
 
     def forward(
@@ -205,11 +221,55 @@ class IMN(torch.nn.module):
 
         # doc-level inputs
         if self.args.use_doc:
-            doc_output_1 = self.word_emb(doc_input_1)
-            doc_output_2 = self.word_emb(doc_input_2)
-            if self.args.use_domain_emb:
-                # mask out the domain embeddings
-                doc_output_2 = '' # Remove_domain_emb()(doc_output_2)
+            # doc_output_1 = self.word_emb(doc_input_1)
+            # doc_output_2 = self.word_emb(doc_input_2)
+            # if self.args.use_domain_emb:
+            #     # mask out the domain embeddings
+            #     doc_output_2 = '' # Remove_domain_emb()(doc_output_2)
+            pass
+
+
+        ##########################################
+        # Shared features
+        ##########################################
+        sentence_output_1 = self.shared_conv_0_1(sentence_output)
+        sentence_output_2 = self.shared_conv_0_2(sentence_output)
+        sentence_output = torch.cat((sentence_output_1, sentence_output_2))
+
+
+        ### start here
+        ## stopping bc concatenated (word embeddings, sentence_output)
+        ## in build makes Sequential not an option. 
+        
+
+
+        ##########################################
+        # aspect-level message passing operation
+        ##########################################
+        aspect_output = sentence_output
+        sentiment_output = sentence_output
+
+        for i in range(self.args.interactions+1):
+            print('Interaction number %s'%i)
+
+            ###  AE  ###
+            if self.args.aspect_layers > 0:
+                aspect_output = self.aspect_cnn(aspect_output)
+            aspect_output = torch.cat((word_embeddings, aspect_output))
+            aspect_output = torch.nn.Dropout(self.args.dropout_prob)(aspect_output)
+            aspect_probs  = self.aspect_dense(aspect_output)
+
+            ###  AS  ###
+            if self.args.senti_layers > 0:
+                sentiment_output = self.sentiment_cnn(sentiment_output)
+
+            # should have some way of including gold opinions
+            sentiment_output = self.sentiment_att(sentiment_output)
+            sentiment_output = torch.cat((init))
+
+
+        
+
         
 
 
