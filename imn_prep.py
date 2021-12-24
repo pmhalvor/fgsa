@@ -30,15 +30,18 @@ norec/
 """
 
 import json
-import string 
+import os
+import shutil
 # import nltk  # TODO only run first time through 
 # nltk.download('punkt')
 from nltk.tokenize import word_tokenize
+from tqdm import tqdm 
 from norec_fine import get_bio_target
 from norec_fine import get_bio_expression
 
 #########  config  ###########
 LOWER = True
+OUTPUT_DIR = "../data/norec_fine/"
 ##############################
 
 # read in json data
@@ -50,46 +53,49 @@ def read_data(filename):
     return data
 
 
-# extract targets, polar expressions, polarity, full sentence (lower)
+# extract targets, expressions, polarities, and sentences
 def parse_data(data):
-    ids = []
-    opinions = []
-    sentences = []
+    """
+    Returns lists of targets, expressions, target polarities, and sentences in IMN format.
+    """
     targets = []
+    expressions = []
     target_polarities = []
+    sentences = []
 
-    for i, line in enumerate(data):
-
-        print('Line {}'.format(i))
+    for i, line in tqdm(enumerate(data)):
 
         text = line["text"]
         tokens = word_tokenize(text)
         
-        print(text)
-
         if line['opinions']:
 
             for opinion in line['opinions']:
                 # encode target
                 target = encode_target(text, tokens, opinion)
-                print("Target: \t", target)
 
                 # encode expression
                 expression = encode_expression(text, tokens, opinion)
-                print("Expression: \t", expression)
 
                 # encode polarity
-                polarity = encode_target_polarity(text, tokens, opinion)
-                print("Polarity: \t", polarity)
+                target_polarity = encode_target_polarity(target, opinion)
 
                 # tokenized sentence back as string
                 sentence = ' '.join(tokens)
-                print("Sentence: \t", sentence)
         else:
             # No opinion found
-            print(NotImplemented)
+            target = [str(0) for _ in tokens]
+            expression = [str(0) for _ in tokens]
+            target_polarity = [str(0) for _ in tokens]
+            sentence = ' '.join(tokens)
             
-        print("\n\n\n")
+        targets.append(target)
+        expressions.append(expression)
+        target_polarities.append(target_polarity)
+        sentences.append(sentence)
+        
+
+    return [targets, expressions, target_polarities, sentences]
 
 
 def encode_target(text, tokens, opinion):
@@ -99,7 +105,7 @@ def encode_target(text, tokens, opinion):
     """
     bio_target = get_bio_target(opinion)
 
-    encoded = [0 for _ in tokens]
+    encoded = [str(0) for _ in tokens]
 
     if bio_target[0][0] is not None:
 
@@ -109,9 +115,9 @@ def encode_target(text, tokens, opinion):
 
             # Make sure correct index of token is labelled as target
             tokens_before = len(text[:start_index].split())
-            encoded[tokens_before] = 1
+            encoded[tokens_before] = str(1)
             for i in range(tokens_before + 1, tokens_before + len(bio_labels)):  # + 1 bc B is labelled above
-                encoded[i] = 2
+                encoded[i] = str(2)
         
     return encoded
 
@@ -123,7 +129,7 @@ def encode_expression(text, tokens, opinion):
     """
     bio_expression = get_bio_expression(opinion)
 
-    encoded = [0 for _ in tokens]
+    encoded = [str(0) for _ in tokens]
 
     if bio_expression[0][0] is not None:
 
@@ -132,14 +138,14 @@ def encode_expression(text, tokens, opinion):
             bio_labels = ele[1]
 
             tokens_before = len(text[:start_index].split())
-            encoded[tokens_before] = 1
+            encoded[tokens_before] = str(1)
             for i in range(tokens_before + 1, tokens_before + len(bio_labels)):  # + 1 bc B is labelled above
-                encoded[i] = 2
+                encoded[i] = str(2)
         
     return encoded
 
 
-def encode_target_polarity(text, tokens, opinion):
+def encode_target_polarity(target, opinion):
     """
     Encode target polarities where:
         1 = positive
@@ -147,16 +153,73 @@ def encode_target_polarity(text, tokens, opinion):
         3 = neutral
         4 = confusing
 
-    In norec_fine, no confusing label was given. In IMN, these are not evaluated against.
-    Therefore, these will be exempt from labels.
+    In norec_fine, no "confusing" or "neutral" labels were given. 
+    In IMN, "confusing" was not evaluated against, but "neutral" was.
+    For simplicity, these will both be exempt from labeling here.
 
-    TODO: Tweak IMN to classify polar intensity, to help disambiguate confusing labels.
-
+    TODO: Tweak IMN to classify polar intensity and/or fact-implied non-personal labels.
+    TODO: Use Neutral for fact implied non-personal
     """
-    encoded = [0 for _ in tokens]
+    polarity = opinion["Polarity"]
+    if polarity:
+        if "Positive" in polarity:
+            polar = str(1)
+        elif "Negative" in polarity:
+            polar = str(2)
+    else:
+        polar = str(3)
+
+    encoded = [polar if int(token) > 0 else str(0) for token in target]
+
+    return encoded
+
+
+def store_data(filename, data):
+    """
+    Stores lists of data to file at filename.
+    """
+
+    if filename.split('.txt') == 1:
+        filename += '.txt'
+    
+    with open(filename, 'w+') as f:
+        for line in data:
+            if "sentence" not in filename:
+                f.write(" ".join(line))
+            else:
+                f.write(line)
+            f.write("\n")
+
+
+def run():
+    datasets = ["train", "test", "dev"]
+
+    try:
+        os.mkdir(OUTPUT_DIR)
+    except FileExistsError:
+        answer = input(f"Directory {OUTPUT_DIR} already exists.\n Replace? [y/n]")
+        if "n" in answer:
+            return None
+        shutil.rmtree(OUTPUT_DIR)
+        os.mkdir(OUTPUT_DIR)
+
+    for dataset in datasets:
+        data = read_data(f'../norec_fine/{dataset}.json')
+
+        print(f"Parsing {dataset}...")
+        parsed_package = parse_data(data)
+        partitions = ["target", "opinion", "target_polarity", "sentence"]
+
+
+
+        print(f"Storing {dataset}...")
+        os.mkdir(OUTPUT_DIR+dataset)
+        for partition, list_data in zip(partitions, parsed_package):
+            store_data(OUTPUT_DIR+os.path.join(dataset, partition), list_data)
 
 
 if __name__ == "__main__":
-    sample = read_data('../norec_fine/test.json')[:2]
-    package = parse_data(sample)
+    run()
+    
 
+    
