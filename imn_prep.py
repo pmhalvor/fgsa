@@ -31,98 +31,118 @@ norec/
 
 import json
 import string 
-from nltk.tokenize import wordpunct_tokenize
+# import nltk  # TODO only run first time through 
+# nltk.download('punkt')
+from nltk.tokenize import word_tokenize
+from norec_fine import get_bio_target
+from norec_fine import get_bio_expression
 
+#########  config  ###########
+LOWER = True
+##############################
 
-# convert json format to imn preprocessed format
-
+# read in json data
 def read_data(filename):
+
     with open(filename, 'r') as f:
         data = json.load(f)
     
     return data
 
 
-# def parse_data(data):
-#     ids = []
-#     opinions = []
-#     sentences = []
-#     targets = []
-#     target_polarities = []
+# extract targets, polar expressions, polarity, full sentence (lower)
+def parse_data(data):
+    ids = []
+    opinions = []
+    sentences = []
+    targets = []
+    target_polarities = []
 
-#     for i, line in enumerate(data):
-#         print('Line {}'.format(i))
-#         for meta in line.keys():
-#             if meta == 'opinions':
-#                 for opinion in line[meta]:
-#                     opinions.append(opinion)
-#                     # for key in line[meta][opinion]:
-#                     #     if key == 'target':
-#                     #         targets.append = tokenize_target()
-#                     #     print(key)
-#                     targets.append(tokenize_target())
-#                     sentences.append(line['text'])
-#                     ids.append(line['sent_id'])
-#                     target_polarities.append(opinion[])
+    for i, line in enumerate(data):
 
+        print('Line {}'.format(i))
 
-def tokenize_sentence(sentence):
-    tokens_long = wordpunct_tokenize(sentence)
-    tokens = []
+        text = line["text"]
+        tokens = word_tokenize(text)
+        
+        print(text)
 
-    prev = ""
-    for token in tokens_long:
-        if prev == "'":
-            tokens.append(f"'{token}")
-        elif token != "'":
-            tokens.append(token)
+        if line['opinions']:
+
+            for opinion in line['opinions']:
+                # encode target
+                target = encode_target(text, tokens, opinion)
+                print("Target:", target)
+
+                # encode expression
+                expression = encode_expression(text, tokens, opinion)
+                print("Expression: ", expression)
+
+                # encode polarity
+                polarity = encode_polarity(text, tokens, opinion)
+                print("Polarity: ", polarity)
+                print()
         else:
-            pass 
-        prev = token        
-
-    return tokens 
-
-print(tokenize_sentence("a slightly more complex string, w/ punct's and (pizzazz)"))
+            # No opinion found
+            print(NotImplemented)
+            
+        print("\n\n\n")
 
 
+def encode_target(text, tokens, opinion):
+    """
+    Encode labelled targets to BIO, where B=1, I=2, O=0.
+    Ensure the correct tokens in orginal text is being labelled.
+    """
+    print(opinion)
+    bio_target = get_bio_target(opinion)
+    print(bio_target)
 
-# def tokenize_target(target, sentence):
-#     sent_list = sentence.split(' ')
-#     indexes = []
-#     target_word = target[0]
-#     target_indx = target[1]
-#     for token in sent_list:
-#         if token in target_word: 
-#             indexes.append(1)
-#         else:
-#             indexes.append(0)
+    encoded = [0 for _ in tokens]
 
-# def get_target_indexes(target, sentence):
-#     target_word = target[0]
-    
-# def get_opinion_indexes(opinion, sentence):
-#     opinion_list = sentence.split(' ')
+    if bio_target[0][0] is not None:
 
-# def split_sentence(sentence):
-#     sent_list = []
-#     for word in sentence.split(' '):
-#         for p in string.punctuation:
-#             if p in string.punctuation:
-                
-#         # if "'s" in word:
-#         #     root = word.split("'s")[0]
-#         #     sent_list.append(root)
-#         #     sent_list.append("'s")
-#         # # elif "-" == word:
-#         # #     sent_list.append(word)
-#         # else:
-#         #     sent_list.append(word)
-#     print(sent_list)
+        for ele in bio_target:
+            start_index = ele[0]
+            bio_labels = ele[1]
+
+            # Make sure correct index of token is labelled as target
+            tokens_before = len(text[:start_index].split())
+            encoded[tokens_before] = 1
+            for i in range(tokens_before + 1, tokens_before + len(bio_labels)):  # + 1 bc B is labelled above
+                encoded[i] = 2
+        
+    return encoded
 
 
+def encode_expression(text, tokens, opinion):
+    bio_expression = get_bio_expression(opinion)
 
-# sample = read_data('norec_fine/test.json')[:10]
-# package = parse_data(sample)
+    encoded = [0 for _ in tokens]
+
+    if bio_expression[0][0] is not None:
+
+        for ele in bio_expression:
+            start_index = ele[0]
+            bio_labels = ele[1]
+
+            tokens_before = len(text[:start_index].split())
+            encoded[tokens_before] = 1
+            for i in range(tokens_before + 1, tokens_before + len(bio_labels)):  # + 1 bc B is labelled above
+                encoded[i] = 2
+        
+    return encoded
+
+
+def encode_polarity(text, tokens, opinion):
+    print("Polarity: ", opinion["Polarity"])
+    print('--------')
+    print('--------')
+
+
+if __name__ == "__main__":
+    sample = read_data('../norec_fine/test.json')[:2]
+    package = parse_data(sample)
 
 '''
  {'sent_id': '201344-04-04',
