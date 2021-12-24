@@ -72,16 +72,19 @@ def parse_data(data):
             for opinion in line['opinions']:
                 # encode target
                 target = encode_target(text, tokens, opinion)
-                print("Target:", target)
+                print("Target: \t", target)
 
                 # encode expression
                 expression = encode_expression(text, tokens, opinion)
-                print("Expression: ", expression)
+                print("Expression: \t", expression)
 
                 # encode polarity
-                polarity = encode_polarity(text, tokens, opinion)
-                print("Polarity: ", polarity)
-                print()
+                polarity = encode_target_polarity(text, tokens, opinion)
+                print("Polarity: \t", polarity)
+
+                # tokenized sentence back as string
+                sentence = ' '.join(tokens)
+                print("Sentence: \t", sentence)
         else:
             # No opinion found
             print(NotImplemented)
@@ -94,9 +97,7 @@ def encode_target(text, tokens, opinion):
     Encode labelled targets to BIO, where B=1, I=2, O=0.
     Ensure the correct tokens in orginal text is being labelled.
     """
-    print(opinion)
     bio_target = get_bio_target(opinion)
-    print(bio_target)
 
     encoded = [0 for _ in tokens]
 
@@ -116,6 +117,10 @@ def encode_target(text, tokens, opinion):
 
 
 def encode_expression(text, tokens, opinion):
+    """
+    Encode labelled polar expressions to BIO, where B=1, I=2, O=0.
+    Ensure the correct tokens in orginal text is being labelled.
+    """
     bio_expression = get_bio_expression(opinion)
 
     encoded = [0 for _ in tokens]
@@ -134,71 +139,24 @@ def encode_expression(text, tokens, opinion):
     return encoded
 
 
-def encode_polarity(text, tokens, opinion):
-    print("Polarity: ", opinion["Polarity"])
-    print('--------')
-    print('--------')
+def encode_target_polarity(text, tokens, opinion):
+    """
+    Encode target polarities where:
+        1 = positive
+        2 = negative
+        3 = neutral
+        4 = confusing
+
+    In norec_fine, no confusing label was given. In IMN, these are not evaluated against.
+    Therefore, these will be exempt from labels.
+
+    TODO: Tweak IMN to classify polar intensity, to help disambiguate confusing labels.
+
+    """
+    encoded = [0 for _ in tokens]
 
 
 if __name__ == "__main__":
     sample = read_data('../norec_fine/test.json')[:2]
     package = parse_data(sample)
 
-'''
- {'sent_id': '201344-04-04',
-  'text': 'Her har fokuset på funksjoner og indre kvaliteter , for første gang blitt kombinert med en ambisiøs satsning på et ekslusivt ytre .',
-  'opinions': [{'Source': [[], []],
-    'Target': [[], []],
-    'Polar_expression': [['ambisiøs satsning på et ekslusivt ytre'],
-     ['91:129']],
-    'Polarity': 'Positive',
-    'Intensity': 'Strong',
-    'NOT': False,
-    'Source_is_author': True,
-    'Target_is_general': True,
-    'Type': 'E'},
-   {'Source': [[], []],
-    'Target': [['satsning'], ['100:108']],
-    'Polar_expression': [['ambisiøs'], ['91:99']],
-    'Polarity': 'Positive',
-    'Intensity': 'Standard',
-    'NOT': False,
-    'Source_is_author': True,
-    'Target_is_general': False,
-    'Type': 'E'},
-   {'Source': [[], []],
-    'Target': [['ytre'], ['125:129']],
-    'Polar_expression': [['ekslusivt'], ['115:124']],
-    'Polarity': 'Positive',
-    'Intensity': 'Strong',
-    'NOT': False,
-    'Source_is_author': True,
-    'Target_is_general': False,
-    'Type': 'E'},
-   {'Source': [[], []],
-    'Target': [[], []],
-    'Polar_expression': [['fokuset på funksjoner og indre kvaliteter'],
-     ['8:49']],
-    'Polarity': 'Positive',
-    'Intensity': 'Strong',
-    'NOT': False,
-    'Source_is_author': True,
-    'Target_is_general': True,
-    'Type': 'E'},
-   {'Source': [[], []],
-    'Target': [[], []],
-    'Polar_expression': [['fokuset på funksjoner og indre kvaliteter , for første gang blitt kombinert med en ambisiøs satsning på et ekslusivt ytre'],
-     ['8:129']],
-    'Polarity': 'Positive',
-    'Intensity': 'Strong',
-    'NOT': False,
-    'Source_is_author': True,
-    'Target_is_general': True,
-    'Type': 'E'}]},
-'''
-
-
-# if __name__=='__main__':
-#     user_input = input("Path to file: ")
-#     read_data(user_input)
-    
