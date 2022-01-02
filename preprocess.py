@@ -29,17 +29,29 @@ norec/
 
 """
 
+import logging
 import json
 import os
 import shutil
 # import nltk  # TODO only run first time through 
 # nltk.download('punkt')
+
 from nltk.tokenize import word_tokenize
 from tqdm import tqdm 
 from norec_fine import get_bio_target
 from norec_fine import get_bio_expression
 
 #########  config  ###########
+logging.basicConfig(
+    filename='out.log',
+    level=logging.INFO,
+    format='%(asctime)s %(levelname)s %(message)s'
+)
+logger = logging.getLogger(__name__)
+logging.info('----------------------------------  New Preprocess ----------------------------------')
+
+ERROR_COUNT = 0
+KNOWN_ERRONEOUS_IDS = ['703281-03-01', '705034-09-03']
 LOWER = True
 OUTPUT_DIR = "../data/norec_fine/"
 ##############################
@@ -65,47 +77,58 @@ def parse_data(data):
 
     for i, line in tqdm(enumerate(data)):
 
+        if line["sent_id"] in KNOWN_ERRONEOUS_IDS:
+            continue
+
         text = line["text"]
-        tokens = word_tokenize(text)
+        tokens = word_tokenize(text)  # NOTE potential flaw. Cross check with res/res_15
+
+        target = [str(0) for _ in tokens]
+        expression = [str(0) for _ in tokens]
+        target_polarity = [str(0) for _ in tokens]
         
         if line['opinions']:
 
             for opinion in line['opinions']:
                 # encode target
-                target = encode_target(text, tokens, opinion)
+                target = encode_target(text, tokens, opinion, target)
 
                 # encode expression
-                expression = encode_expression(text, tokens, opinion)
+                expression = encode_expression(text, tokens, opinion, expression)
 
                 # encode polarity
-                target_polarity = encode_target_polarity(target, opinion)
+                target_polarity = encode_target_polarity(target, opinion, target_polarity)
 
-                # tokenized sentence back as string
-                sentence = ' '.join(tokens)
-        else:
-            # No opinion found
-            target = [str(0) for _ in tokens]
-            expression = [str(0) for _ in tokens]
-            target_polarity = [str(0) for _ in tokens]
-            sentence = ' '.join(tokens)
-            
+        # tokenized sentence back as string
+        sentence = ' '.join(tokens).lower()
+
         targets.append(target)
         expressions.append(expression)
         target_polarities.append(target_polarity)
         sentences.append(sentence)
         
+        # print(target)
+        # print(expression)
+        # print(target_polarity)
+        # print(sentence)
+        # print('\n\n ----------------------------------------')
+        # print(i)
+        # if i>100:
+        #     break
+        
 
     return [targets, expressions, target_polarities, sentences]
 
 
-def encode_target(text, tokens, opinion):
+def encode_target(text, tokens, opinion, target):
     """
     Encode labelled targets to BIO, where B=1, I=2, O=0.
     Ensure the correct tokens in orginal text is being labelled.
     """
     bio_target = get_bio_target(opinion)
 
-    encoded = [str(0) for _ in tokens]
+
+    encoded = [str(0) for _ in tokens]  # NOTE FIXME
 
     if bio_target[0][0] is not None:
 
@@ -114,15 +137,25 @@ def encode_target(text, tokens, opinion):
             bio_labels = ele[1]
 
             # Make sure correct index of token is labelled as target
-            tokens_before = len(text[:start_index].split())
-            encoded[tokens_before] = str(1)
+            tokens_before = len(word_tokenize(text[:start_index]))  # tokenized words up to target start
+            encoded[tokens_before] = str(1)  # token count before == start index of target bc start at 0  
             for i in range(tokens_before + 1, tokens_before + len(bio_labels)):  # + 1 bc B is labelled above
                 encoded[i] = str(2)
+
+
+    # check encoded target matches dataset target
+    check(encoded, tokens, opinion, 'Target')
+
+    # fill target with new encoding
+    target = [
+        enc if int(enc) > 0 and int(tar) == 0 else tar 
+        for enc, tar in zip(encoded, target)
+    ]
         
-    return encoded
+    return target
 
 
-def encode_expression(text, tokens, opinion):
+def encode_expression(text, tokens, opinion, expression):
     """
     Encode labelled polar expressions to BIO, where B=1, I=2, O=0.
     Ensure the correct tokens in orginal text is being labelled.
@@ -137,15 +170,24 @@ def encode_expression(text, tokens, opinion):
             start_index = ele[0]
             bio_labels = ele[1]
 
-            tokens_before = len(text[:start_index].split())
+            tokens_before = len(word_tokenize(text[:start_index]))
             encoded[tokens_before] = str(1)
             for i in range(tokens_before + 1, tokens_before + len(bio_labels)):  # + 1 bc B is labelled above
                 encoded[i] = str(2)
         
-    return encoded
+    # check encoded expression matches dataset expression
+    check(encoded, tokens, opinion, 'Polar_expression')
+
+    # fill expression with new encoding
+    expression = [
+        enc if int(enc) > 0 and int(tar) == 0 else tar 
+        for enc, tar in zip(encoded, expression)
+    ]
+        
+    return expression
 
 
-def encode_target_polarity(target, opinion):
+def encode_target_polarity(target, opinion, target_polarity):
     """
     Encode target polarities where:
         1 = positive
@@ -169,9 +211,50 @@ def encode_target_polarity(target, opinion):
     else:
         polar = str(3)
 
-    encoded = [polar if int(token) > 0 else str(0) for token in target]
+    encoded = target_polarity
+
+    for i, (token, polarity) in enumerate(zip(target, target_polarity)):
+        if int(polarity) == 0:
+            if int(token) > 0:
+                encoded[i] = polar
 
     return encoded
+
+
+def check(encoded, tokens, opinion, attribute):
+    # check encoded attribute matches dataset attribute
+    if len(opinion[attribute][0]) > 0:
+        # double join to match tokenized formatting
+        expected = ' '.join(word_tokenize(' '.join(opinion[attribute][0]))).lower()
+    else:
+        expected = ''        
+
+    encoded_tokens = []
+    for i, enc in enumerate(encoded):
+        if int(enc) > 0: 
+            encoded_tokens.append(tokens[i])
+    encoded = ' '.join(encoded_tokens).lower()
+
+    
+    global ERROR_COUNT
+    try:
+        assert expected == encoded
+    except AssertionError:
+        if len(expected) == len(encoded):
+            # most likely swapped orders. double check tokens match 
+            # TODO check opposite way as well?
+            for ele in expected.split():
+              if ele not in encoded:
+                logging.info(f'Conflicting {attribute}:')
+                logging.info(expected)
+                logging.info(encoded)
+                ERROR_COUNT += 1
+
+        else:
+            logging.info(f'Conflicting {attribute}:')
+            logging.info(expected)
+            logging.info(encoded)
+            ERROR_COUNT += 1
 
 
 def store_data(filename, data):
@@ -179,7 +262,7 @@ def store_data(filename, data):
     Stores lists of data to file at filename.
     """
 
-    if filename.split('.txt') == 1:
+    if len(filename.split('.txt')) == 1:
         filename += '.txt'
     
     with open(filename, 'w+') as f:
@@ -189,10 +272,15 @@ def store_data(filename, data):
             else:
                 f.write(line)
             f.write("\n")
+    print(f"Saved {filename}")
 
 
 def run():
-    datasets = ["train", "test", "dev"]
+    datasets = [
+        "test", 
+        "train", 
+        "dev",
+    ]
 
     try:
         os.mkdir(OUTPUT_DIR)
@@ -207,9 +295,14 @@ def run():
         data = read_data(f'../norec_fine/{dataset}.json')
 
         print(f"Parsing {dataset}...")
+        logging.info(f"\n Parsing {dataset}...")
         parsed_package = parse_data(data)
         partitions = ["target", "opinion", "target_polarity", "sentence"]
 
+        global ERROR_COUNT
+        logging.info(f'Errors for {dataset}: {ERROR_COUNT}')
+        logging.info('- - - - - - - - - - - - - - - - - - - - - - - - - - -')
+        ERROR_COUNT = 0
 
 
         print(f"Storing {dataset}...")
