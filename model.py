@@ -1,8 +1,10 @@
 from torch.utils.data import DataLoader
 from transformers import BertConfig, BertModel
+from transformer import Transformer  # TODO change to BertSimple
 import torch
 import json
 import logging
+import sys
 
 from dataset import Norec, NorecOneHot 
 
@@ -14,6 +16,7 @@ logging.basicConfig(
     format='%(asctime)s %(levelname)s %(message)s'
 )
 logger = logging.getLogger(__name__)
+# logger.addHandler(logging.StreamHandler(sys.stdout))  # didnt work as expected
 logging.info('----------------------------------  new run: model.py ----------------------------------')
 
 DATA_DIR = "/fp/homes01/u01/ec-pmhalvor/data/"  # TODO hide personal info
@@ -72,7 +75,7 @@ def pad(batch):  # removed: both=False
 
 
 # load train/dev/test data so every build has complete result set
-train_dataset = NorecOneHot(data_path=DATA_DIR + "norec_fine/train/")
+train_dataset = NorecOneHot(data_path=DATA_DIR + "norec_fine/train/", proportion=0.3)
 test_dataset = NorecOneHot(data_path=DATA_DIR + "norec_fine/test/")
 dev_dataset = NorecOneHot(data_path=DATA_DIR + "norec_fine/dev/")
 
@@ -95,14 +98,14 @@ train_loader = DataLoader(
 
 test_loader = DataLoader(
     dataset = test_dataset,
-    batch_size = 32,
+    batch_size = 1,  # for predict to work
     shuffle=True,
     collate_fn=lambda batch: pad(batch)
 )
 
 dev_loader = DataLoader(
     dataset = dev_dataset,
-    batch_size = 32,
+    batch_size = 1,  # for predict to work
     shuffle=True,
     collate_fn=lambda batch: pad(batch)
 )
@@ -118,11 +121,33 @@ dev_loader = DataLoader(
 #     if i>3:
 #         quit()
 
-train_loader.to(DEVICE)
-test_loader.to(DEVICE)
-dev_loader.to(DEVICE)
+model = Transformer(
+    NORBERT='ltgoslo/norbert',
+    tokenizer=train_dataset.tokenizer,
+    num_labels=9, 
+    IGNORE_ID=-1, 
+    device=DEVICE,
+    epochs=10,
+    lr_scheduler=False,
+    factor=0.1,
+    lrs_patience=2,
+    loss_funct='cross-entropy',
+    random_state=1,
+    verbose=True,
+    lr=0.0001,
+    momentum=0.9,
+    epoch_patience=1,
+    label_indexer=None,
+    optmizer='AdamW'
+)
 
+print('Fitting model...')
+model.fit(train_loader=train_loader, verbose=True, dev_loader=dev_loader)
 
+print('Evaluating model...')
+binary_f1, propor_f1 = model.evaluate(test_loader)
+print("Binary F1: {}".format(binary_f1))
+print("Proportional F1: {}".format(propor_f1))
 
 
 

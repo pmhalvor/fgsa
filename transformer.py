@@ -6,6 +6,7 @@ from tqdm import tqdm
 import numpy as np
 import torch.nn as nn
 import torch
+import logging
 
 ## Local imports
 from metrics import binary_analysis, proportional_analysis
@@ -36,11 +37,26 @@ class Transformer(torch.nn.Module):
         if lf_type == 'binary-cross-entropy':
             return torch.nn.BCELoss()
 
-    def __init__(self, NORBERT, tokenizer, num_labels, IGNORE_ID,
-                 device='cpu', epochs=10, lr_scheduler=False, factor=0.1,
-                 lrs_patience=2, loss_funct='cross-entropy',
-                 random_state=None, verbose=False, lr=2e-5, momentum=0.9,
-                 epoch_patience=1, label_indexer=None, optmizer='SGD'):
+    def __init__(
+        self,
+        NORBERT,
+        tokenizer,
+        num_labels,
+        IGNORE_ID,
+        device='cpu',
+        epochs=10,
+        lr_scheduler=False,
+        factor=0.1,
+        lrs_patience=2,
+        loss_funct='cross-entropy',
+        random_state=None,
+        verbose=False,
+        lr=2e-5,
+        momentum=0.9,
+        epoch_patience=1,
+        label_indexer=None,
+        optmizer='SGD'
+    ):
 
         super().__init__()
 
@@ -172,7 +188,7 @@ class Transformer(torch.nn.Module):
         Returns:
         None
         """
-        iterator = tqdm(range(self.epochs)) if verbose else range(self.epochs)
+        iterator = range(self.epochs)  # tqdm(range(self.epochs)) if False else 
 
         for epoch in iterator:
             _loss = []
@@ -186,9 +202,8 @@ class Transformer(torch.nn.Module):
                 )
                 _loss.append(loss.item())
 
-                if verbose:
-                    print(f"Batch: {b}  |"
-                          f"  Train Loss: {loss}  |")
+                logging.info("Epoch:{} \t Batch:{} \t Loss:{}".format(epoch, b, loss.item()))
+                print("Epoch:{} \t Batch:{} \t Loss:{}".format(epoch, b, loss.item()))
 
             if self._early_stop(epoch_idx=epoch,
                                 patience=self.epoch_patience):
