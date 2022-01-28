@@ -55,7 +55,7 @@ logging.info('----------------------------------  New Preprocess ---------------
 ERROR_COUNT = 0
 KNOWN_ERRONEOUS_IDS = ['703281-03-01', '705034-09-03']
 LOWER = True
-OUTPUT_DIR = "../data/norec_fine/"
+OUTPUT_DIR = "../../data/norec_fine/"
 ##############################
 
 # read in json data

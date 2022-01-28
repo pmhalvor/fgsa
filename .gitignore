@@ -1,6 +1,6 @@
 # User specificed 
 dev_*.ipynb
-old-slurms/
+old*
 
 
 

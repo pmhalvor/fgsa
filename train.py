@@ -11,7 +11,7 @@ from dataset import Norec, NorecOneHot
 
 ####################  config  ####################
 logging.basicConfig(
-    filename='out.log',
+    filename='log/out.log',
     level=logging.INFO,
     format='%(asctime)s %(levelname)s %(message)s'
 )
@@ -75,7 +75,7 @@ def pad(batch):  # removed: both=False
 
 
 # load train/dev/test data so every build has complete result set
-train_dataset = NorecOneHot(data_path=DATA_DIR + "norec_fine/train/", proportion=0.3)
+train_dataset = NorecOneHot(data_path=DATA_DIR + "norec_fine/train/", proportion=0.15)
 test_dataset = NorecOneHot(data_path=DATA_DIR + "norec_fine/test/")
 dev_dataset = NorecOneHot(data_path=DATA_DIR + "norec_fine/dev/")
 

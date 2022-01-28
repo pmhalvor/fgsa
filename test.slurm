@@ -5,9 +5,9 @@
 # Project:
 #SBATCH --account=ec37
 # Wall time limit: --time=DD-HH:MM:SS
-#SBATCH --time=02:30:00
+#SBATCH --time=00:10:00
 # Memory requested:
-#SBATCH --mem 20G
+#SBATCH --mem 10G
 # Run on GPU
 #SBATCH --partition=accel
 #SBATCH --gres=gpu:1
@@ -22,5 +22,5 @@ module load Miniconda3/4.9.2
 module load PyTorch/1.7.1-foss-2020b
 
 
-## Do some work:
-python train.py
+## Call test folder:
+pytest test/
