@@ -39,9 +39,9 @@ import shutil
 from nltk.tokenize import word_tokenize
 
 from tqdm import tqdm 
-from norec_fine import get_bio_expression
-from norec_fine import get_bio_holder
-from norec_fine import get_bio_target
+from bio import get_bio_expression
+from bio import get_bio_holder
+from bio import get_bio_target
 
 #########  config  ###########
 logging.basicConfig(

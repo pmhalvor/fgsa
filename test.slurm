@@ -23,4 +23,4 @@ module load PyTorch/1.7.1-foss-2020b
 
 
 ## Call test folder:
-pytest test/
+pytest . -vv
