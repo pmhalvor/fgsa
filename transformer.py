@@ -246,7 +246,7 @@ class Transformer(torch.nn.Module):
         self.eval()
         self.predictions, self.golds, self.sents = [], [], []
 
-        for batch in tqdm(test_loader):
+        for batch in test_loader:  # removed tqdm
             out = self.forward(batch)
             y_pred = out.logits.argmax(2)
             self.predictions.append(y_pred.squeeze(0).tolist())
