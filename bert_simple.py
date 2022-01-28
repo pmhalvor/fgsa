@@ -9,6 +9,13 @@ from torch.nn.utils.rnn import pad_packed_sequence
 from transformers import BertModel
 
 
+"""
+WARNING: This may be a non-working version.
+
+See transformer.py for other version.
+
+"""
+
 class BertSimple(nn.Module):
     def __init__(
         self, 
@@ -87,4 +94,7 @@ class BertSimple(nn.Module):
                 )
 
                 # TODO continue dev when this has been checked
+
+
+
 

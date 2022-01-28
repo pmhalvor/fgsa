@@ -1,0 +1,313 @@
+from itertools import chain
+from torch.nn.utils.rnn import pad_packed_sequence, PackedSequence
+from transformers import BertForTokenClassification, BertTokenizer, BertModel
+from tqdm import tqdm
+
+import numpy as np
+import torch.nn as nn
+import torch
+
+## Local imports
+from metrics import binary_analysis, proportional_analysis
+from metrics import get_analysis
+
+
+class Transformer(torch.nn.Module):
+    """
+    Why is this class called Transformer? It's literally just a Bert head.
+    """
+
+    @staticmethod
+    def _lossFunct(lf_type, IGNORE_ID):
+        """
+        Returns the specified loss function from torch.nn
+        ______________________________________________________________
+        Parameters:
+        lf_type: str
+            The loss function to return
+        ______________________________________________________________
+        Returns:
+        lf: torch.nn.function
+            The specified loss function
+        """
+        if lf_type == "cross-entropy":  # I:(N,C) O:(N)
+            return torch.nn.CrossEntropyLoss(ignore_index=IGNORE_ID)
+
+        if lf_type == 'binary-cross-entropy':
+            return torch.nn.BCELoss()
+
+    def __init__(self, NORBERT, tokenizer, num_labels, IGNORE_ID,
+                 device='cpu', epochs=10, lr_scheduler=False, factor=0.1,
+                 lrs_patience=2, loss_funct='cross-entropy',
+                 random_state=None, verbose=False, lr=2e-5, momentum=0.9,
+                 epoch_patience=1, label_indexer=None, optmizer='SGD'):
+
+        super().__init__()
+
+        # seeding
+        self.verbose = verbose
+        self.random_state = random_state
+        if self.random_state is not None:
+            torch.manual_seed(self.random_state)
+            np.random.seed(self.random_state)
+
+        # global parameters
+        self.NORBERT = NORBERT
+        self.num_labels = num_labels
+        self.IGNORE_ID = IGNORE_ID
+        self.device = device
+        self.epochs = epochs
+        self.lr_scheduler = lr_scheduler
+        self.factor = factor
+        self.patience = lrs_patience
+        self.epoch_patience = epoch_patience
+        self.loss_funct_str = loss_funct
+        self._loss_funct = self._lossFunct(
+            lf_type=loss_funct,
+            IGNORE_ID=self.IGNORE_ID
+        )
+        self.lr = lr
+        self.momentum = momentum
+        self.last_epoch = None
+
+        # setting model
+        self.tokenizer = tokenizer
+        self.model = BertForTokenClassification.from_pretrained(
+            self.NORBERT,
+            num_labels=self.num_labels,
+        ).to(torch.device(self.device))
+
+        # setting model's optimizer
+        self.optmizer = optmizer
+        if self.optmizer == 'SGD':
+            self._opt = torch.optim.SGD(
+                params=self.model.parameters(),
+                lr=self.lr,
+                momentum=self.momentum
+            )
+        elif self.optmizer == 'AdamW':
+            self._opt = torch.optim.AdamW(
+                params=self.model.parameters(),
+                lr=self.lr,
+            )
+
+        # setting learning rate's scheduler
+        self._scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
+            optimizer=self._opt,
+            mode='min',
+            factor=self.factor,
+            patience=self.patience
+        )
+
+        # storing scores
+        self.losses = []
+        self.binary_f1 = []
+        self.propor_f1 = []
+
+        # early stop
+        self.early_stop_epoch = None
+
+        # label indexer
+        self.label_indexer = label_indexer
+
+        # storing outputs
+        self.outputs = None
+
+    def forward(self, batch):
+        """
+        Performs a feed forward step.
+        ______________________________________________________________
+        Parameters:
+        batch: tuple containing (input_ids, targets, att_maks)
+
+        ______________________________________________________________
+        Returns:
+        outputs: torch.Tensor
+
+        """
+        return self.model(
+            input_ids=batch[0].to(torch.device(self.device)),
+            attention_mask=batch[2].to(torch.device(self.device)),
+            output_hidden_states=True
+        )
+
+    def backward(self, outputs, targets):
+        """
+        Performs a backpropogation step computing the loss.
+        ______________________________________________________________
+        Parameters:
+        output:
+            The output after forward with shape (batch_size, num_classes).
+        target:
+            The real targets.
+        ______________________________________________________________
+        Returns:
+        loss: float
+            How close the estimate was to the gold standard.
+        """
+        computed_loss = self._loss_funct(
+            input=outputs,
+            target=targets.to(torch.device(self.device))
+            )
+
+        # calculating gradients
+        computed_loss.backward()
+
+        # updating weights from the model by calling optimizer.step()
+        self._opt.step()
+
+        return computed_loss
+
+    def fit(self, train_loader=None, verbose=False, dev_loader=None):
+        """
+        Fits the model to the training data using the models
+        initialized values. Runs for the models number of epochs.
+        ______________________________________________________________
+        Parameters:
+        laoder: torch.nn.Dataloader=None
+            Dataloader object to load the batches, defaults to None
+        verbose: bool=False
+            If True: prints out progressive output, defaults to False
+        ______________________________________________________________
+        Returns:
+        None
+        """
+        iterator = tqdm(range(self.epochs)) if verbose else range(self.epochs)
+
+        for epoch in iterator:
+            _loss = []
+
+            for b, batch in enumerate(train_loader):
+                self.train()
+                self.outputs = self.forward(batch=batch)
+                loss = self.backward(
+                    outputs=self.outputs.logits.permute(0, 2, 1),
+                    targets=batch[1]
+                )
+                _loss.append(loss.item())
+
+                if verbose:
+                    print(f"Batch: {b}  |"
+                          f"  Train Loss: {loss}  |")
+
+            if self._early_stop(epoch_idx=epoch,
+                                patience=self.epoch_patience):
+                print('Early stopped!')
+
+                self.losses.append(np.mean(_loss))
+
+                if verbose:
+                    print(f"Epoch: {epoch}  |"
+                          f"  Train Loss: {self.losses[epoch]}")
+
+                if dev_loader is not None:
+                    binary_f1, propor_f1 = \
+                        self.evaluate(test_loader=dev_loader)
+                    self.binary_f1.append(binary_f1)
+                    self.propor_f1.append(propor_f1)
+                break
+
+            else:
+                self.losses.append(np.mean(_loss))
+
+                if verbose:
+                    print(f"Epoch: {epoch}  |"
+                          f"  Train Loss: {self.losses[epoch]}")
+
+                if dev_loader is not None:
+                    binary_f1, propor_f1 = \
+                        self.evaluate(test_loader=dev_loader)
+                    self.binary_f1.append(binary_f1)
+                    self.propor_f1.append(propor_f1)
+
+        self.last_epoch = epoch
+        return self
+
+    def predict(self, test_loader):
+        """
+        :param test_loader: torch.utils.data.DataLoader object with
+                            batch_size=1
+        """
+        self.eval()
+        self.predictions, self.golds, self.sents = [], [], []
+
+        for batch in tqdm(test_loader):
+            out = self.forward(batch)
+            y_pred = out.logits.argmax(2)
+            self.predictions.append(y_pred.squeeze(0).tolist())
+            self.golds.append(batch[1].squeeze(0).tolist())
+
+            for i in batch[0]:
+                self.decoded_sentence = \
+                    self.tokenizer.convert_ids_to_tokens(i)
+                self.sents.append(self.decoded_sentence)
+
+        # #################### truncating predictions, golds and sents
+        self.predictions__, self.golds__, self.sents__ = [], [], []
+        for l_p, l_g, l_s in zip(self.predictions, self.golds, self.sents):
+            predictions_, golds_, sents_ = [], [], []
+
+            for e_p, e_g, e_s in zip(l_p, l_g, l_s):
+                if e_g != self.IGNORE_ID:
+                    predictions_.append(e_p)
+                    golds_.append(e_g)
+                    sents_.append(e_s)
+
+            self.predictions__.append(predictions_)
+            self.golds__.append(golds_)
+            self.sents__.append(sents_)
+        # ####################
+
+        return self.predictions__, self.golds__, self.sents__
+
+    def evaluate(self, test_loader):
+        """
+        Returns the binary and proportional F1 scores of the model on the
+        examples passed via test_loader.
+
+        :param test_loader: torch.utils.data.DataLoader object with
+                            batch_size=1
+        """
+        preds, golds, sents = self.predict(test_loader)
+        flat_preds = [int(i) for l in preds for i in l]
+        flat_golds = [int(i) for l in golds for i in l]
+
+        print(len(sents))
+        print(f'preds')
+        print(len(preds))
+        print(len(preds[0]))
+        print(len(preds[1]))
+        print('golds')
+        print(len(golds))
+        print(len(golds[0]))
+        print(len(golds[1]))
+
+        analysis = get_analysis(
+            sents=sents,
+            y_pred=preds,
+            y_test=golds
+        )
+
+        binary_f1 = binary_analysis(analysis)
+        propor_f1 = proportional_analysis(flat_golds, flat_preds)
+        return binary_f1, propor_f1
+
+    # changed from val_losses to losses
+    # but can be binary_f1 or propor_f1
+    def _early_stop(self, epoch_idx, patience):
+        if epoch_idx < patience:
+            return False
+
+        start = epoch_idx - patience
+
+        # up to this index
+        for count, loss in enumerate(
+                self.losses[start + 1: epoch_idx + 1]):
+            if loss > self.losses[start]:
+                if count + 1 == patience:
+                    self.early_stop_epoch = start
+                    return True
+            else:
+                break
+
+        return False
