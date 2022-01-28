@@ -56,6 +56,12 @@ class NorecOneHot(Dataset):
         self.IGNORE_ID = -1  # FIXME might have to be positive? & check encode() -> holder
         # self.BIO_indexer['[MASK]'] = self.IGNORE_ID
 
+        # check shapes
+        assert len(self.sentence) == len(self.labels)
+        assert len(self.sentence[0]) == len(self.labels[0])
+        assert len(self.sentence[-1]) == len(self.labels[-1])
+
+
     @staticmethod
     def load_raw_data(data_path) -> Tuple[List,List,List,List]:
         """
@@ -160,6 +166,8 @@ class NorecOneHot(Dataset):
                     encoded.append(0)
             else:                       # outside everything
                 encoded.append(0)
+
+        assert len(encoded) == len(expression)
         return encoded
 
 
@@ -188,6 +196,10 @@ class NorecOneHot(Dataset):
             self.current_sentence,
             is_split_into_words=True,
         )  # TODO .squeeze(0) ?
+
+        # bert tokenize expands to <start> tok #en #s in sent #ence <end>
+        # yet labels are only mapped to full words
+        # how should this be solved? 
 
         # store token info needed for training
         self.input_ids = self.tokens['input_ids']

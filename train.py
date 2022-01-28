@@ -1,30 +1,22 @@
 from torch.utils.data import DataLoader
-from transformers import BertConfig, BertModel
-from transformer import Transformer  # TODO change to BertSimple
-import torch
-import json
 import logging
-import sys
+import torch
 
+## LOCAL
 from dataset import Norec, NorecOneHot 
+from transformer import Transformer  # TODO change to BertSimple
+import config 
 
 
 ####################  config  ####################
-logging.basicConfig(
-    filename='log/out.log',
-    level=logging.INFO,
-    format='%(asctime)s %(levelname)s %(message)s'
-)
-logger = logging.getLogger(__name__)
-# logger.addHandler(logging.StreamHandler(sys.stdout))  # didnt work as expected
-logging.info('----------------------------------  new run: model.py ----------------------------------')
-
-DATA_DIR = "/fp/homes01/u01/ec-pmhalvor/data/"  # TODO hide personal info
-DEVICE = 'cuda' if torch.cuda.is_available() else "cpu"
+config.log_train()
+DATA_DIR = config.DATA_DIR
+DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 ###################################################
 
-#################### refator out ####################
-def pad(batch):  # removed: both=False
+
+#################### refactor out ####################
+def pad(batch):
     """
     Pad batches according to largest sentence.
 
@@ -53,8 +45,8 @@ def pad(batch):  # removed: both=False
         padded_masks.append(
             torch.nn.functional.pad(
                 mask,
-                (0, longest_sentence - mask.size(0)),  # removed:  if not both else(0, longest_sentence*2 - y.size(0))
-                value=0  # no longer last index in 
+                (0, longest_sentence - mask.size(0)),
+                value=0  # 1 means item present, 0 means padding TODO check if needed 
             )
         )
         padded_labels.append(
@@ -73,19 +65,11 @@ def pad(batch):  # removed: both=False
 #####################################################
 
 
-
 # load train/dev/test data so every build has complete result set
-train_dataset = NorecOneHot(data_path=DATA_DIR + "norec_fine/train/", proportion=0.15)
-test_dataset = NorecOneHot(data_path=DATA_DIR + "norec_fine/test/")
-dev_dataset = NorecOneHot(data_path=DATA_DIR + "norec_fine/dev/")
-
-# for i in range(3):
-#     print('------- Index {} -------'.format(i))
-#     print(train_dataset.sentence[i])
-#     print(train_dataset.labels[i])
-#     print('Tensorfied: ')
-#     print(train_dataset[i])
-#     print('------------------------\n')
+logging.info("Loading datasets..")
+train_dataset = NorecOneHot(data_path=DATA_DIR + "train/", proportion=0.15)
+test_dataset = NorecOneHot(data_path=DATA_DIR + "test/", proportion=0.15)
+dev_dataset = NorecOneHot(data_path=DATA_DIR + "dev/", proportion=0.15)
 
 
 # data loader
@@ -95,20 +79,19 @@ train_loader = DataLoader(
     shuffle=True,
     collate_fn=lambda batch: pad(batch)
 )
-
 test_loader = DataLoader(
     dataset = test_dataset,
     batch_size = 1,  # for predict to work
     shuffle=True,
     collate_fn=lambda batch: pad(batch)
 )
-
 dev_loader = DataLoader(
     dataset = dev_dataset,
     batch_size = 1,  # for predict to work
     shuffle=True,
     collate_fn=lambda batch: pad(batch)
 )
+logging.info("Datasets loaded.")
 
 
 # for i, batch in enumerate(train_loader):
@@ -121,6 +104,7 @@ dev_loader = DataLoader(
 #     if i>3:
 #         quit()
 
+logging.info("Initializing model..")
 model = Transformer(
     NORBERT='ltgoslo/norbert',
     tokenizer=train_dataset.tokenizer,
@@ -141,13 +125,13 @@ model = Transformer(
     optmizer='AdamW'
 )
 
-print('Fitting model...')
+logging.info('Fitting model...')
 model.fit(train_loader=train_loader, verbose=True, dev_loader=dev_loader)
 
-print('Evaluating model...')
+logging.info('Evaluating model...')
 binary_f1, propor_f1 = model.evaluate(test_loader)
-print("Binary F1: {}".format(binary_f1))
-print("Proportional F1: {}".format(propor_f1))
+logging.info("Binary F1: {}".format(binary_f1))
+logging.info("Proportional F1: {}".format(propor_f1))
 
 
 
