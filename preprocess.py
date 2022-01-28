@@ -33,13 +33,15 @@ import logging
 import json
 import os
 import shutil
+
 # import nltk  # TODO only run first time through 
 # nltk.download('punkt')
-
 from nltk.tokenize import word_tokenize
+
 from tqdm import tqdm 
-from norec_fine import get_bio_target
 from norec_fine import get_bio_expression
+from norec_fine import get_bio_holder
+from norec_fine import get_bio_target
 
 #########  config  ###########
 logging.basicConfig(
@@ -95,6 +97,10 @@ def parse_data(data):
 
                 # encode expression
                 expression = encode_expression(text, tokens, opinion, expression)
+
+                # encode holder
+                # TODO Implement holder
+                holder = encode_holder(text, tokens, opinion, expression)
 
                 # encode polarity
                 target_polarity = encode_target_polarity(target, opinion, target_polarity)
@@ -185,6 +191,38 @@ def encode_expression(text, tokens, opinion, expression):
     ]
         
     return expression
+
+
+def encode_holder(text, tokens, opinion, expression):
+    """
+    Encode labelled polar expressions to BIO, where B=1, I=2, O=0.
+    Ensure the correct tokens in orginal text is being labelled.
+    """
+    bio_holder = get_bio_holder(opinion)
+    # TODO check this is all i need
+    encoded = [str(0) for _ in tokens]
+
+    if bio_holder[0][0] is not None:
+
+        for ele in bio_holder:
+            start_index = ele[0]
+            bio_labels = ele[1]
+
+            tokens_before = len(word_tokenize(text[:start_index]))
+            encoded[tokens_before] = str(1)
+            for i in range(tokens_before + 1, tokens_before + len(bio_labels)):  # + 1 bc B is labelled above
+                encoded[i] = str(2)
+        
+    # check encoded holder matches dataset holder
+    check(encoded, tokens, opinion, 'Holder')
+
+    # fill holder with new encoding
+    holder = [
+        enc if int(enc) > 0 and int(tar) == 0 else tar 
+        for enc, tar in zip(encoded, holder)
+    ]
+        
+    return holder
 
 
 def encode_target_polarity(target, opinion, target_polarity):
