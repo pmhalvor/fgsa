@@ -4,8 +4,10 @@ import torch
 import json
 import logging
 
-from dataset import Norec 
+from dataset import Norec, NorecOneHot 
 
+
+####################  config  ####################
 logging.basicConfig(
     filename='out.log',
     level=logging.INFO,
@@ -14,47 +16,73 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 logging.info('----------------------------------  new run: model.py ----------------------------------')
 
+DATA_DIR = "/fp/homes01/u01/ec-pmhalvor/data/"  # TODO hide personal info
+DEVICE = 'cuda' if torch.cuda.is_available() else "cpu"
+###################################################
 
-def pad(batch, IGNORE_ID, both=False):
-    longest_sentence = max([X.size(0) for X, y, z in batch])
-    new_X, new_y, new_z = [], [], []
+#################### refator out ####################
+def pad(batch):  # removed: both=False
+    """
+    Pad batches according to largest sentence.
 
-    for X, y, z in batch:
-        new_X.append(torch.nn.functional.pad(
-            X,
-            (0, longest_sentence - X.size(0)),
-            value=0)  # find padding index in bert
+    A sentence in the batch has shape [3, sentence_length] and looks like:
+        (
+            tensor([  102,  3707, 29922,  1773,  4658, 13502,  1773,  3325,  3357, 19275,
+                    3896,  3638,  3169, 10566,  8030, 30337,  2857,  3707,  4297, 24718,
+                    9426, 29916, 28004,  8004, 30337, 15271,  4895, 10219,  6083,  4297,
+                    26375, 20322, 26273,   103]), 
+            tensor([1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+                    1, 1, 1, 1, 1, 1, 1, 1, 1, 1]), 
+            tensor([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,0])
         )
-        new_y.append(torch.nn.functional.pad(
-            y,
-            (0, longest_sentence - y.size(0)) if not both else(0, longest_sentence*2 - y.size(0)),
-            value=IGNORE_ID)
+    """
+    longest_sentence = max([ids.size(0) for ids, _, _ in batch])
+    padded_ids, padded_masks, padded_labels = [], [], []
+
+    for id, mask, label in batch:
+        padded_ids.append(
+            torch.nn.functional.pad(
+                id,
+                (0, longest_sentence - id.size(0)),
+                value=0  # padding token can vary between Berts
+            )
         )
-        new_z.append(torch.nn.functional.pad(
-            z,
-            (0, longest_sentence - z.size(0)),
-            value=0)
+        padded_masks.append(
+            torch.nn.functional.pad(
+                mask,
+                (0, longest_sentence - mask.size(0)),  # removed:  if not both else(0, longest_sentence*2 - y.size(0))
+                value=0  # no longer last index in 
+            )
+        )
+        padded_labels.append(
+            torch.nn.functional.pad(
+                label,
+                (0, longest_sentence - label.size(0)),
+                value=-1  # NOTE cannot pad with 0 since thats used as label O FIXME make sure negative works
+            )
         )
 
-    new_X = torch.stack(new_X).long()
-    new_y = torch.stack(new_y).long()
-    new_z = torch.stack(new_z).long()
+    ids = torch.stack(padded_ids).long()
+    masks = torch.stack(padded_masks).long()
+    labels = torch.stack(padded_labels).long()
 
-    return new_X, new_y, new_z
+    return ids, masks, labels
+#####################################################
 
 
 
-data_dir = "$HOME/data/"  # TODO hide personal info
+# load train/dev/test data so every build has complete result set
+train_dataset = NorecOneHot(data_path=DATA_DIR + "norec_fine/train/")
+test_dataset = NorecOneHot(data_path=DATA_DIR + "norec_fine/test/")
+dev_dataset = NorecOneHot(data_path=DATA_DIR + "norec_fine/dev/")
 
-train_dataset = Norec(
-    data_path=data_dir + "norec_fine/train/"
-)
-
-dev_dataset = Norec(
-    data_path=data_dir + "norec_fine/dev/"
-)
-
-# TODO split train data into train/test.
+# for i in range(3):
+#     print('------- Index {} -------'.format(i))
+#     print(train_dataset.sentence[i])
+#     print(train_dataset.labels[i])
+#     print('Tensorfied: ')
+#     print(train_dataset[i])
+#     print('------------------------\n')
 
 
 # data loader
@@ -62,19 +90,37 @@ train_loader = DataLoader(
     dataset = train_dataset,
     batch_size = 32,
     shuffle=True,
-    collate_fn=lambda batch: pad(batch=batch, IGNORE_ID=train_dataset.IGNORE_ID)
+    collate_fn=lambda batch: pad(batch)
+)
+
+test_loader = DataLoader(
+    dataset = test_dataset,
+    batch_size = 32,
+    shuffle=True,
+    collate_fn=lambda batch: pad(batch)
 )
 
 dev_loader = DataLoader(
     dataset = dev_dataset,
     batch_size = 32,
     shuffle=True,
-    collate_fn=lambda batch: pad(batch=batch, IGNORE_ID=dev_dataset.IGNORE_ID)
+    collate_fn=lambda batch: pad(batch)
 )
 
 
+# for i, batch in enumerate(train_loader):
+#     print('------- Index {} -------'.format(i))
+#     print(batch[0].shape)
+#     print(batch[1].shape)
+#     print(batch[2].shape)
+#     print('------------------------\n')
 
+#     if i>3:
+#         quit()
 
+train_loader.to(DEVICE)
+test_loader.to(DEVICE)
+dev_loader.to(DEVICE)
 
 
 

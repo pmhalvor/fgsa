@@ -322,7 +322,7 @@ class OurDataset(Dataset):
 class NorecOneHot(Dataset):
     def __init__(
         self, 
-        bert_path="lgtoslo/norbert",
+        bert_path="ltgoslo/norbert",
         data_path="$HOME/data/norec_fine/train", 
     ):
         """
@@ -401,11 +401,11 @@ class NorecOneHot(Dataset):
         with open(data_path+'/opinion.txt') as f:  # NOTE file name: opinion -> object name: expression 
             expression = [[int(ele) for ele in line.strip().split(' ')] for line in f.readlines()]
 
-        with open(data_path+'/polarity.txt') as f:
+        with open(data_path+'/target_polarity.txt') as f:
             polarity = [[int(ele) for ele in line.strip().split(' ')] for line in f.readlines()]
 
-        with open(data_path+'/sentence.txt') as f:
-            sentence = [[int(ele) for ele in line.strip().split(' ')] for line in f.readlines()]
+        with open(data_path+'/sentence.txt') as f:  # only needs tokens as strings
+            sentence = [line.strip().split(' ') for line in f.readlines()]
 
         with open(data_path+'/target.txt') as f:
             target = [[int(ele) for ele in line.strip().split(' ')] for line in f.readlines()]
