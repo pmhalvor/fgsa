@@ -34,14 +34,23 @@ class NorecOneHot(Dataset):
         self.tokenizer = BertTokenizer.from_pretrained(bert_path)
 
         # NOTE opinion -> expression for consistency w/ project description
-        self.expression, self.holder, self.sentence, self.polarity, self.target = self.load_raw_data(data_path)
+        data = self.load_raw_data(data_path)
+        self.expression = data[0]
+        self.holder = data[1]
+        self.sentence = data[2]
+        self.polarity = data[3]
+        self.target = data[4]
 
-        self.labels = self.one_hot_encode(
+        one_hot_labels = self.one_hot_encode(
             self.expression,
             self.holder,
             self.polarity, 
             self.target,
         )
+
+
+        self.tokenized_sentence, self.labels = self.tokenize(self.sentence, one_hot_label)
+
 
         if proportion is not None:
             count = int(len(self.sentence)*proportion)
@@ -52,6 +61,7 @@ class NorecOneHot(Dataset):
             self.holder = self.holder[:count]
             self.polarity =  self.polarity[:count]
             self.target = self.target[:count]
+            self.tokenized_sentence = self.tokenized_sentence[:count]
 
         self.IGNORE_ID = -1  # FIXME might have to be positive? & check encode() -> holder
         # self.BIO_indexer['[MASK]'] = self.IGNORE_ID
@@ -62,8 +72,7 @@ class NorecOneHot(Dataset):
         assert len(self.sentence[-1]) == len(self.labels[-1])
 
 
-    @staticmethod
-    def load_raw_data(data_path) -> Tuple[List,List,List,List]:
+    def load_raw_data(self, data_path) -> Tuple[List,List,List,List,List]:
         """
         Load data into Python objects.
 
@@ -71,7 +80,7 @@ class NorecOneHot(Dataset):
             data_path (str): path to data dir. See Misc. below for dir. structure
 
         Returns:
-            expression, holder, sentence, polarity, target
+            (expression, holder, sentence, polarity, target, tokenzied_sentence)
 
         Misc:
             Expected data dir. structure:
@@ -108,7 +117,8 @@ class NorecOneHot(Dataset):
             polarity = [[int(ele) for ele in line.strip().split(' ')] for line in f.readlines()]
 
         with open(data_path+'/sentence.txt') as f:  # only needs tokens as strings
-            sentence = [line.strip().split(' ') for line in f.readlines()]
+            # sentence = [line.strip().split(' ') for line in f.readlines()]
+            sentence = [line for line in f.readlines()]
 
         with open(data_path+'/target.txt') as f:
             target = [[int(ele) for ele in line.strip().split(' ')] for line in f.readlines()]
@@ -120,7 +130,7 @@ class NorecOneHot(Dataset):
             logging.warning("holder.txt not found at path {}. Generating blank list...".format(data_path))
             holder = [[-1 for _ in line] for line in target]  # TODO give ignore index?
 
-        return expression, holder, sentence, polarity, target
+        return (expression, holder, sentence, polarity, target)
 
 
     @staticmethod
@@ -171,6 +181,23 @@ class NorecOneHot(Dataset):
         return encoded
 
 
+    def tokenize(self, sentence, one_hot_label):
+        tokenized_sentence = []
+        expanded_labels = []
+        used_labels = one_hot_label.copy()
+
+        for i, line in enumerate(sentence):
+            input_ids = self.tokenizer(line)['input_ids']
+            tokens = self.tokenizer.decode(input_ids)
+            for i, t, l in enumerate(zip(tokens, one_hot_label)):
+                """
+                Here we need to expand one_hot_labels to correctly match length of tokens.
+                """
+
+
+        return []
+
+
     def one_hot_encode(
         self,
         expression, 
@@ -192,10 +219,11 @@ class NorecOneHot(Dataset):
         self.current_label = self.labels[index]
 
         # tokenize sentence
-        self.tokens = self.tokenizer(
-            self.current_sentence,
-            is_split_into_words=True,
-        )  # TODO .squeeze(0) ?
+        # self.tokens = self.tokenizer(
+        #     self.current_sentence,
+        #     is_split_into_words=True,
+        # )  # TODO .squeeze(0) ?
+        self.tokens = self.tokenized_sentence[index]
 
         # bert tokenize expands to <start> tok #en #s in sent #ence <end>
         # yet labels are only mapped to full words
