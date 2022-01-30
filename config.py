@@ -3,28 +3,39 @@ import logging
 # TODO download from git automagically
 DATA_DIR = "/fp/homes01/u01/ec-pmhalvor/data/norec_fine/"  # TODO hide personal info
 
-def log_test(level=logging.INFO):
+
+def log_test(level=logging.INFO, name='test'):
     """
-    Not in use anymore
+    Expected to run by pytest. See pytest.ini for config. 
+    Gets printed out in terminal/ slurm file. 
     """
-    raise NotImplementedError
-    logging.basicConfig(
-        filename='../log/test.log',
-        level=level,
-        format='%(asctime)s %(levelname)s %(message)s'
-    )
     logger = logging.getLogger(__name__)
-    logging.info('----------------------------------  new test run ----------------------------------')
+    logger.setLevel(level)
+    logger.info('---------  new run: {} ---------'.format(name))
     return logger
 
 
-def log_train(level=logging.INFO):
+def log_train(level=logging.INFO, name=''):
+    name = '-'+name if name is not '' else name
     logging.basicConfig(
-        filename='log/out.log',
+        filename='log/train{}.log'.format(name),
         level=level,
-        format='%(asctime)s %(levelname)s %(message)s'
+        format='%(asctime)s [%(levelname)8s] %(message)s (%(filename)s:%(lineno)s)'
     )
     logger = logging.getLogger(__name__)
     # logger.addHandler(logging.StreamHandler(sys.stdout))  # didnt work as expected
-    logging.info('----------------------------------  new run: model.py ----------------------------------')
+    logging.info('---------  new run: train{} ---------'.format(name))
+    return logger
+
+
+def log_pre(level=logging.INFO, name=''):
+    name = '-'+name if name is not '' else name
+    logging.basicConfig(
+        filename='log/pre{}.log'.format(name),
+        level=level,
+        format='%(asctime)s [%(levelname)8s] %(message)s (%(filename)s:%(lineno)s)'
+    )
+    logger = logging.getLogger(__name__)
+    # logger.addHandler(logging.StreamHandler(sys.stdout))  # didnt work as expected
+    logging.info('---------  new run: pre{} ---------'.format(name))
     return logger

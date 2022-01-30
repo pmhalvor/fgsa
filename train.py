@@ -9,7 +9,7 @@ import config
 
 
 ####################  config  ####################
-config.log_train()
+config.log_train(name='Transformer-dev')
 DATA_DIR = config.DATA_DIR
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 ###################################################
