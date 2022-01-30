@@ -1,5 +1,6 @@
 """
 This file should preprocess the NoReC_fine data to format IMN expects.
+Expects git@github.com:ltgoslo/norec_fine is cloned to parent directory '../'
 
 IMN format:
 
@@ -29,33 +30,32 @@ norec/
 
 """
 
+import argparse
 import logging
 import json
 import os
 import shutil
 
-# import nltk  # TODO only run first time through 
-# nltk.download('punkt')
+from nltk  import download 
 from nltk.tokenize import word_tokenize
-
 from tqdm import tqdm 
+
 from bio import get_bio_expression
 from bio import get_bio_holder
 from bio import get_bio_target
+import config
 
 #########  config  ###########
-logging.basicConfig(
-    filename='out.log',
-    level=logging.INFO,
-    format='%(asctime)s %(levelname)s %(message)s'
-)
-logger = logging.getLogger(__name__)
-logging.info('----------------------------------  New Preprocess ----------------------------------')
-
+config.log_pre(name="adding-holder")
 ERROR_COUNT = 0
 KNOWN_ERRONEOUS_IDS = ['703281-03-01', '705034-09-03']
 LOWER = True
-OUTPUT_DIR = "../../data/norec_fine/"
+OUTPUT_DIR = "/fp/homes01/u01/ec-pmhalvor/data/norec_fine/"
+
+try:
+    word_tokenize('text')
+except LookupError:
+    nltk.download('punkt')  # only needed for first run
 ##############################
 
 # read in json data
@@ -68,16 +68,18 @@ def read_data(filename):
 
 
 # extract targets, expressions, polarities, and sentences
-def parse_data(data):
+def parse_data(data, interactive=False):
     """
-    Returns lists of targets, expressions, target polarities, and sentences in IMN format.
+    Returns Dict[(str, List)] of targets, expressions, target polarities, and sentences in IMN format.
     """
-    targets = []
     expressions = []
-    target_polarities = []
+    holders = []
     sentences = []
+    targets = []
+    target_polarities = []
 
-    for i, line in tqdm(enumerate(data)):
+    data_itr = tqdm(enumerate(data)) if interactive else enumerate(data)
+    for i, line in data_itr:
 
         if line["sent_id"] in KNOWN_ERRONEOUS_IDS:
             continue
@@ -85,8 +87,9 @@ def parse_data(data):
         text = line["text"]
         tokens = word_tokenize(text)  # NOTE potential flaw. Cross check with res/res_15
 
-        target = [str(0) for _ in tokens]
         expression = [str(0) for _ in tokens]
+        holder = [str(0) for _ in tokens]
+        target = [str(0) for _ in tokens]
         target_polarity = [str(0) for _ in tokens]
         
         if line['opinions']:
@@ -100,7 +103,7 @@ def parse_data(data):
 
                 # encode holder
                 # TODO Implement holder
-                holder = encode_holder(text, tokens, opinion, expression)
+                holder = encode_holder(text, tokens, opinion, holder)
 
                 # encode polarity
                 target_polarity = encode_target_polarity(target, opinion, target_polarity)
@@ -108,22 +111,19 @@ def parse_data(data):
         # tokenized sentence back as string
         sentence = ' '.join(tokens).lower()
 
-        targets.append(target)
         expressions.append(expression)
-        target_polarities.append(target_polarity)
+        holders.append(holder)
         sentences.append(sentence)
+        targets.append(target)
+        target_polarities.append(target_polarity)
         
-        # print(target)
-        # print(expression)
-        # print(target_polarity)
-        # print(sentence)
-        # print('\n\n ----------------------------------------')
-        # print(i)
-        # if i>100:
-        #     break
-        
-
-    return [targets, expressions, target_polarities, sentences]
+    return {
+        'opinion': expressions,  # NOTE expression -> opinion due IMN format expectations
+        'holder': holders, 
+        'sentence': sentences,
+        'target': targets, 
+        'target_polarity': target_polarities, 
+    }
 
 
 def encode_target(text, tokens, opinion, target):
@@ -153,12 +153,12 @@ def encode_target(text, tokens, opinion, target):
     check(encoded, tokens, opinion, 'Target')
 
     # fill target with new encoding
-    target = [
+    encoded_target = [
         enc if int(enc) > 0 and int(tar) == 0 else tar 
         for enc, tar in zip(encoded, target)
     ]
         
-    return target
+    return encoded_target
 
 
 def encode_expression(text, tokens, opinion, expression):
@@ -185,15 +185,15 @@ def encode_expression(text, tokens, opinion, expression):
     check(encoded, tokens, opinion, 'Polar_expression')
 
     # fill expression with new encoding
-    expression = [
+    encoded_expression = [
         enc if int(enc) > 0 and int(tar) == 0 else tar 
         for enc, tar in zip(encoded, expression)
     ]
         
-    return expression
+    return encoded_expression
 
 
-def encode_holder(text, tokens, opinion, expression):
+def encode_holder(text, tokens, opinion, holder):
     """
     Encode labelled polar expressions to BIO, where B=1, I=2, O=0.
     Ensure the correct tokens in orginal text is being labelled.
@@ -214,15 +214,15 @@ def encode_holder(text, tokens, opinion, expression):
                 encoded[i] = str(2)
         
     # check encoded holder matches dataset holder
-    check(encoded, tokens, opinion, 'Holder')
+    check(encoded, tokens, opinion, 'Source')
 
     # fill holder with new encoding
-    holder = [
+    encoded_holder = [
         enc if int(enc) > 0 and int(tar) == 0 else tar 
         for enc, tar in zip(encoded, holder)
     ]
-        
-    return holder
+    
+    return encoded_holder
 
 
 def encode_target_polarity(target, opinion, target_polarity):
@@ -313,44 +313,73 @@ def store_data(filename, data):
     print(f"Saved {filename}")
 
 
-def run():
+def run(interactive=True, overwrite=False):
     datasets = [
         "test", 
         "train", 
         "dev",
     ]
+    print("interactive: {}".format(interactive))
+    print("overwrite: {}".format(overwrite))
 
     try:
         os.mkdir(OUTPUT_DIR)
     except FileExistsError:
-        answer = input(f"Directory {OUTPUT_DIR} already exists.\n Replace? [y/n]")
-        if "n" in answer:
+        if interactive:
+            # allow user to decide whether or not to overwrite
+            answer = input(f"Directory {OUTPUT_DIR} already exists.\n Replace? [y/n]")
+            if "n" in answer:
+                pass
+            shutil.rmtree(OUTPUT_DIR)
+            os.mkdir(OUTPUT_DIR)
+        elif overwrite:
+            # force overwrite
+            shutil.rmtree(OUTPUT_DIR)
+            os.mkdir(OUTPUT_DIR)
+        else:
             return None
-        shutil.rmtree(OUTPUT_DIR)
-        os.mkdir(OUTPUT_DIR)
+
+    except FileNotFoundError as e:
+        print("Directory not found. Try using a full path for OUTPUT_DIR in config.")
+        return None
 
     for dataset in datasets:
         data = read_data(f'../norec_fine/{dataset}.json')
 
-        print(f"Parsing {dataset}...")
+        print(f"\n Parsing {dataset}...")
         logging.info(f"\n Parsing {dataset}...")
-        parsed_package = parse_data(data)
-        partitions = ["target", "opinion", "target_polarity", "sentence"]
+        parsed_package = parse_data(data, interactive=interactive)
+        partitions = [
+            'opinion',
+            'holder',
+            'sentence',
+            'target',
+            'target_polarity',
+        ]
 
         global ERROR_COUNT
         logging.info(f'Errors for {dataset}: {ERROR_COUNT}')
         logging.info('- - - - - - - - - - - - - - - - - - - - - - - - - - -')
         ERROR_COUNT = 0
 
-
         print(f"Storing {dataset}...")
         os.mkdir(OUTPUT_DIR+dataset)
-        for partition, list_data in zip(partitions, parsed_package):
-            store_data(OUTPUT_DIR+os.path.join(dataset, partition), list_data)
+        for partition in partitions:
+            filepath = os.path.join(OUTPUT_DIR, dataset, partition)
+            store_data(filepath, parsed_package[partition])
 
 
 if __name__ == "__main__":
-    run()
+
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-i", "--interactive", dest="interactive", type=int, default=0, help="Interactive if overwrite necessary")
+    parser.add_argument("-o", "--overwrite", dest="overwrite", type=int, default=1, help="Force overwrite (if not interactive)")
+    args = parser.parse_args()
+
+    run(**vars(args))
+
+    print("complete")
     
 
     
