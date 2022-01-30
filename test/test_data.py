@@ -86,22 +86,23 @@ def test_data_rows():
 
 
 
-@pytest.mark.skip(reason="TODO fix holder before continuing")
 def test_dataset_shape():
-    train_dataset = NorecOneHot(data_path=DATA_DIR + "train/", proportion=0.01)
+    train_dataset = NorecOneHot(data_path=DATA_DIR + "train/", proportion=0.05)
 
-    for i in range(3):
-        LOGGER.info(train_dataset.sentence[i])
-        LOGGER.info(train_dataset[i][0].shape)
-        LOGGER.info(train_dataset[i][1].shape)
-        LOGGER.info(train_dataset[i][2].shape)
+    # START HERE
 
-        # check shapes
-        assert train_dataset[i][0].shape == train_dataset[i][1].shape
-        assert train_dataset[i][0].shape == train_dataset[i][2].shape
+    # for i in range(3):
+    #     LOGGER.info(train_dataset.sentence[i])
+    #     LOGGER.info(train_dataset[i][0].shape)
+    #     LOGGER.info(train_dataset[i][1].shape)
+    #     LOGGER.info(train_dataset[i][2].shape)
+
+    #     # check shapes
+    #     assert train_dataset[i][0].shape == train_dataset[i][1].shape
+    #     assert train_dataset[i][0].shape == train_dataset[i][2].shape
 
 
-@pytest.mark.skip(reason="TODO fix holder before continuing")
+# @pytest.mark.skip(reason="TODO fix holder before continuing")
 def test_dataset_values():
     train_dataset = NorecOneHot(data_path=DATA_DIR + "train/", proportion=0.01)
     test_dataset = NorecOneHot(data_path=DATA_DIR + "test/", proportion=0.05)

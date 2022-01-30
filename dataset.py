@@ -6,6 +6,54 @@ import logging
 
 
 class NorecOneHot(Dataset):
+    @staticmethod
+    def encode(expression, holder, polarity, target) -> List:
+        """
+        Handmade one-hot encoder.
+
+          Value       Label
+            0           O                       \n
+            1       B-Expression                \n
+            2       I-Expression                \n
+            3       B-Holder                    \n
+            4       I-Holder                    \n
+            5       B-Target-Positive           \n
+            6       I-Target-Positive           \n
+            7       B-Target-Negative           \n
+            8       I-Target-Negative           \n
+
+        """
+        encoded = []
+        for e, h, p, t in zip(expression, holder, target, polarity):
+            if e == 1:                  # beginning expression
+                encoded.append(1)
+            elif e == 2:                # inside expression
+                encoded.append(2)
+            elif h == 1:                # beginning holder
+                encoded.append(3)
+            elif h == 2:                # inside holder
+                encoded.append(4)
+            elif t == 1:                # beginning target
+                if p == 1:              # postive  TODO double check 1=positive and 2=negative
+                    encoded.append(5)
+                elif p == 2:            # negative
+                    encoded.append(7)
+                else:                   # neutral  NOTE norec_fine should not use this
+                    encoded.append(0)
+            elif t == 2:                # inside target
+                if p == 1:              # postive
+                    encoded.append(6)
+                elif p == 2:            # negative
+                    encoded.append(8)
+                else:                   # neutral 
+                    encoded.append(0)
+            else:                       # outside everything
+                encoded.append(0)
+
+        assert len(encoded) == len(expression)
+        return encoded
+
+
     def __init__(
         self, 
         bert_path="ltgoslo/norbert",
@@ -31,17 +79,26 @@ class NorecOneHot(Dataset):
 
         
         """
+        self.IGNORE_ID = -1  # FIXME might have to be positive? & check encode() -> holder
+        # self.BIO_indexer['[MASK]'] = self.IGNORE_ID
+
         self.tokenizer = BertTokenizer.from_pretrained(bert_path)
 
         # NOTE opinion -> expression for consistency w/ project description
         data = self.load_raw_data(data_path)
         self.expression = data[0]
         self.holder = data[1]
-        self.sentence = data[2]
-        self.polarity = data[3]
+        self.polarity = data[2]
+        self.sentence = data[3]
         self.target = data[4]
 
-        one_hot_labels = self.one_hot_encode(
+        logging.info("sentence:    {}".format(len(self.sentence)))
+        logging.info("expression:  {}".format(len(self.expression)))
+        logging.info("holder:      {}".format(len(self.holder)))
+        logging.info("polarity:    {}".format(len(self.polarity)))
+        logging.info("target:      {}".format(len(self.target)))
+
+        self.label = self.one_hot_encode(
             self.expression,
             self.holder,
             self.polarity, 
@@ -49,27 +106,34 @@ class NorecOneHot(Dataset):
         )
 
 
-        self.tokenized_sentence, self.labels = self.tokenize(self.sentence, one_hot_labels)
-
+        logging.info("sentence:      {}".format(len(self.sentence)))
+        logging.info("label: {}".format(len(self.label)))
+        self.tokenized_sentence, self.expanded_label = self.tokenize(self.sentence, self.label)
+        logging.info("tokenized_sentence: {}".format(len(self.tokenized_sentence)))
+        logging.info("expanded_label:     {}".format(len(self.expanded_label)))
 
         if proportion is not None:
             count = int(len(self.sentence)*proportion)
-            self.sentence = self.sentence[:count]
-            self.labels = self.labels[:count]
+            self.expanded_label = self.expanded_label[:count]
+            self.tokenized_sentence = self.tokenized_sentence[:count]
             # below not needed, but ok to have
             self.expression = self.expression[:count]
             self.holder = self.holder[:count]
+            self.label = self.label[:count]
             self.polarity =  self.polarity[:count]
+            self.sentence = self.sentence[:count]
             self.target = self.target[:count]
-            self.tokenized_sentence = self.tokenized_sentence[:count]
-
-        self.IGNORE_ID = -1  # FIXME might have to be positive? & check encode() -> holder
-        # self.BIO_indexer['[MASK]'] = self.IGNORE_ID
 
         # check shapes
-        assert len(self.sentence) == len(self.labels)
-        assert len(self.sentence[0]) == len(self.labels[0])
-        assert len(self.sentence[-1]) == len(self.labels[-1])
+        logging.info("sentence: {}".format(len(self.tokenized_sentence)))
+        logging.info("label:    {}".format(len(self.expanded_label)))
+        logging.info("sentence: {}".format(len(self.tokenized_sentence[0])))
+        logging.info("expanded_label:    {}".format(len(self.expanded_label[0])))
+        logging.info("sentence: {}".format(len(self.tokenized_sentence[-1])))
+        logging.info("expanded_label:    {}".format(len(self.expanded_label[-1])))
+        assert len(self.tokenized_sentence) == len(self.expanded_label)
+        assert len(self.tokenized_sentence[0]) == len(self.expanded_label[0])
+        assert len(self.tokenized_sentence[-1]) == len(self.expanded_label[-1])
 
 
     def load_raw_data(self, data_path) -> Tuple[List,List,List,List,List]:
@@ -125,83 +189,60 @@ class NorecOneHot(Dataset):
 
         try:  # Some datasets won't have this annotation, and should therefore ignore it. 
             with open(data_path+'/holder.txt') as f:  # NOTE filename opinion -> object name expression 
-                expression = [[int(ele) for ele in line.strip().split(' ')] for line in f.readlines()]
+                holder = [[int(ele) for ele in line.strip().split(' ')] for line in f.readlines()]
         except FileNotFoundError:
             logging.warning("holder.txt not found at path {}. Generating blank list...".format(data_path))
             holder = [[-1 for _ in line] for line in target]  # TODO give ignore index?
 
-        return (expression, holder, sentence, polarity, target)
+        return (expression, holder, polarity, sentence, target)
 
 
-    @staticmethod
-    def encode(expression, holder, polarity, target) -> List:
+    def tokenize(self, sentences, labels):
         """
-        Handmade one-hot encoder.
-
-          Value       Label
-            0           O                       \n
-            1       B-Expression                \n
-            2       I-Expression                \n
-            3       B-Holder                    \n
-            4       I-Holder                    \n
-            5       B-Target-Positive           \n
-            6       I-Target-Positive           \n
-            7       B-Target-Negative           \n
-            8       I-Target-Negative           \n
-
+        Parameters:
+            sentences: List[str] raw lists from data set
+            labels: List[List[int]] one hot encoded labels
         """
-        encoded = []
-        for e, h, p, t in zip(expression, holder, target, polarity):
-            if e == 1:                  # beginning expression
-                encoded.append(1)
-            elif e == 2:                # inside expression
-                encoded.append(2)
-            elif h == 1:                # beginning holder
-                encoded.append(3)
-            elif h == 2:                # inside holder
-                encoded.append(4)
-            elif t == 1:                # beginning target
-                if p == 1:              # postive  TODO double check 1=positive and 2=negative
-                    encoded.append(5)
-                elif p == 2:            # negative
-                    encoded.append(7)
-                else:                   # neutral  NOTE norec_fine should not use this
-                    encoded.append(0)
-            elif t == 2:                # inside target
-                if p == 1:              # postive
-                    encoded.append(6)
-                elif p == 2:            # negative
-                    encoded.append(8)
-                else:                   # neutral 
-                    encoded.append(0)
-            else:                       # outside everything
-                encoded.append(0)
-
-        assert len(encoded) == len(expression)
-        return encoded
-
-
-    def tokenize(self, sentence, one_hot_label):
         tokenized_sentences = []
         expanded_labels = []
-        unused_labels = one_hot_label.copy()
 
-        for i, line in enumerate(sentence):
-            tokenized_sentence = self.tokenizer(line)
+        logging.info("sentences:      {}".format(len(sentences)))
+        logging.info("labels: {}".format(len(labels)))
+
+        for i, (sentence, label) in enumerate(zip(sentences, labels)):
+            tokenized_sentence = self.tokenizer(sentence)
             tokenized_sentences.append(tokenized_sentence)
 
             input_ids = tokenized_sentence['input_ids']
-            tokens = self.tokenizer.decode(input_ids)
+            tokens = self.tokenizer.decode(input_ids).strip().split(' ')
 
-            for i, t, l in enumerate(zip(tokens, one_hot_label)):
+            expanded_label = [self.IGNORE_ID]  #  Needs start token 
+            unused_label = label.copy()
+
+            logging.info("tokens: \n\t{}".format(tokens))
+            logging.info("sentence: \n\t{}".format(sentence))
+            logging.info("label: \n\t{}".format(label))
+
+            for i, t in enumerate(tokens):
                 """
                 Here we need to expand one_hot_labels to correctly match length of tokens.
                 """
                 if t.startswith("##"):
-                    expanded_labels.append(expanded_labels[-1])
+                    expanded_label.append(expanded_label[-1])
                     # FIXME this is going to create multiple B tags..
+                elif i==len(tokens)-2:
+                    expanded_label.append(self.IGNORE_ID)  # Needs end token
+                    break
                 else:
-                    expanded_labels.append(unused_labels.pop(0))
+                    logging.info("else unused_label: \t{}".format(unused_label))
+                    logging.info("else expanded_label:\t{}".format(expanded_label))
+                    logging.info("else label:\t\t\t{}".format(label))
+                    expanded_label.append(unused_label.pop(0))
+
+    
+            # logging.info("expanded_label: \n\t{}".format(expanded_label))
+
+            expanded_labels.append(expanded_label)
 
         return tokenized_sentences, expanded_labels
 
@@ -213,18 +254,18 @@ class NorecOneHot(Dataset):
         polarity,
         target,
     ):
-        self.labels = [
+        one_hot_label = [
             self.encode(e, h, p, t)
             for e, h, p, t in zip(expression, holder, polarity, target)
         ]
-        return self.labels
+        return one_hot_label
 
 
     def __getitem__(self, index):
         self.index = index
 
-        self.current_sentence = self.sentence[index]
-        self.current_label = self.labels[index]
+        # self.current_sentence = self.sentence[index]
+        self.current_label = self.label[index]
 
         # tokenize sentence
         # self.tokens = self.tokenizer(
