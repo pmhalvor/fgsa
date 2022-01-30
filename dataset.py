@@ -49,7 +49,7 @@ class NorecOneHot(Dataset):
         )
 
 
-        self.tokenized_sentence, self.labels = self.tokenize(self.sentence, one_hot_label)
+        self.tokenized_sentence, self.labels = self.tokenize(self.sentence, one_hot_labels)
 
 
         if proportion is not None:
@@ -182,20 +182,28 @@ class NorecOneHot(Dataset):
 
 
     def tokenize(self, sentence, one_hot_label):
-        tokenized_sentence = []
+        tokenized_sentences = []
         expanded_labels = []
-        used_labels = one_hot_label.copy()
+        unused_labels = one_hot_label.copy()
 
         for i, line in enumerate(sentence):
-            input_ids = self.tokenizer(line)['input_ids']
+            tokenized_sentence = self.tokenizer(line)
+            tokenized_sentences.append(tokenized_sentence)
+
+            input_ids = tokenized_sentence['input_ids']
             tokens = self.tokenizer.decode(input_ids)
+
             for i, t, l in enumerate(zip(tokens, one_hot_label)):
                 """
                 Here we need to expand one_hot_labels to correctly match length of tokens.
                 """
+                if t.startswith("##"):
+                    expanded_labels.append(expanded_labels[-1])
+                    # FIXME this is going to create multiple B tags..
+                else:
+                    expanded_labels.append(unused_labels.pop(0))
 
-
-        return []
+        return tokenized_sentences, expanded_labels
 
 
     def one_hot_encode(
