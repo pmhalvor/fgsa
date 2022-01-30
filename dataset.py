@@ -82,7 +82,7 @@ class NorecOneHot(Dataset):
         self.IGNORE_ID = -1  # FIXME might have to be positive? & check encode() -> holder
         # self.BIO_indexer['[MASK]'] = self.IGNORE_ID
 
-        self.tokenizer = BertTokenizer.from_pretrained(bert_path, do_basic_tokenize=True)
+        self.tokenizer = BertTokenizer.from_pretrained(bert_path)
 
         # NOTE opinion -> expression for consistency w/ project description
         data = self.load_raw_data(data_path)
@@ -213,12 +213,12 @@ class NorecOneHot(Dataset):
             tokenized_sentence = self.tokenizer(sentence, is_split_into_words=True)
 
             input_ids = tokenized_sentence['input_ids']
-            tokens = self.tokenizer.decode(input_ids).strip().split(' ')
+            tokens = self.tokenizer.decode(input_ids).strip().split(' ')[1:-1]
 
             expanded_label = []  #  Needs start token 
             unused_label = label.copy()
 
-            if len(tokens)-2 != len(label):
+            if len(tokens) != len(label):
                 logging.info("Mismatch labels. Skipping.")
                 logging.info("tokens:{} \t labels:{}".format(len(tokens), len(label)))
                 logging.info("sentence: \n{}".format(sentence))
@@ -239,8 +239,8 @@ class NorecOneHot(Dataset):
                     expanded_label.append(self.IGNORE_ID)  # Needs end token
                 elif t == '[SEP]':
                     expanded_label.append(self.IGNORE_ID)  # Needs end token
-                elif i==len(tokens)-2:
-                    expanded_label.append(self.IGNORE_ID)  # Needs end token
+                # elif i==len(tokens)-2:
+                    # expanded_label.append(self.IGNORE_ID)  # Needs end token
                     break
                 else:
                     expanded_label.append(unused_label.pop(0))

@@ -37,16 +37,16 @@ import os
 import shutil
 
 from nltk  import download 
-from nltk.tokenize import word_tokenize
 from tqdm import tqdm 
 
 from bio import get_bio_expression
 from bio import get_bio_holder
 from bio import get_bio_target
+from bio import word_tokenize
 import config
 
 #########  config  ###########
-config.log_pre(name="adding-holder")
+config.log_pre(name="adding-BertTokenizer")
 ERROR_COUNT = 0
 KNOWN_ERRONEOUS_IDS = ['703281-03-01', '705034-09-03']
 LOWER = True
@@ -177,7 +177,17 @@ def encode_expression(text, tokens, opinion, expression):
             bio_labels = ele[1]
 
             tokens_before = len(word_tokenize(text[:start_index]))
-            encoded[tokens_before] = str(1)
+            try:
+                encoded[tokens_before] = str(1)
+            except IndexError:
+                print(tokens_before)
+                print(text)
+                print(start_index)
+                print(text[:start_index])
+                print(tokens)
+                print(bio_expression)
+                print(opinion)
+                quit()
             for i in range(tokens_before + 1, tokens_before + len(bio_labels)):  # + 1 bc B is labelled above
                 encoded[i] = str(2)
         
