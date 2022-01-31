@@ -6,12 +6,15 @@ Copied here for completeness.
 # from nltk import word_tokenize
 import config
 from transformers import BertTokenizer
+from transformers import WordpieceTokenizer
 
 tokenizer = BertTokenizer.from_pretrained(config.BERT_PATH)
+# tokenizer = WordpieceTokenizer.from_pretrained(config.BERT_PATH)
 
 def word_tokenize(text):
-    input_ids = tokenizer(text, is_split_into_words=True)['input_ids']
-    tokens = tokenizer.decode(input_ids).strip().split(' ')[1:-1]
+    tokens = tokenizer.tokenize(text, is_split_into_words=True)  # ['input_ids']
+
+    # tokens = tokenizer.decode(input_ids).strip().split(' ')[1:-1]
     return tokens
 
     # BUG this now forces punctuation to closest binding word,
