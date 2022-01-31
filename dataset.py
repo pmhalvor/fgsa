@@ -79,10 +79,8 @@ class NorecOneHot(Dataset):
 
         
         """
-        self.IGNORE_ID = -1  # FIXME might have to be positive? & check encode() -> holder
-        # self.BIO_indexer['[MASK]'] = self.IGNORE_ID
-
         self.tokenizer = BertTokenizer.from_pretrained(bert_path)
+        self.IGNORE_ID = -1  # FIXME get form BertTokenizer
 
         # NOTE opinion -> expression for consistency w/ project description
         data = self.load_raw_data(data_path)
@@ -92,11 +90,6 @@ class NorecOneHot(Dataset):
         self.sentence = data[3]
         self.target = data[4]
 
-        # logging.info("sentence:    {}".format(len(self.sentence)))
-        # logging.info("expression:  {}".format(len(self.expression)))
-        # logging.info("holder:      {}".format(len(self.holder)))
-        # logging.info("polarity:    {}".format(len(self.polarity)))
-        # logging.info("target:      {}".format(len(self.target)))
 
         self.label = self.one_hot_encode(
             self.expression,
@@ -105,18 +98,12 @@ class NorecOneHot(Dataset):
             self.target,
         )
 
-        # logging.info("sentence:      {}".format(len(self.sentence)))
-        # logging.info("label: {}".format(len(self.label)))
-        # self.tokenized_sentence, self.expanded_label = self.tokenize(self.sentence, self.label)
-        # logging.info("tokenized_sentence: {}".format(len(self.tokenized_sentence)))
-        # logging.info("expanded_label:     {}".format(len(self.expanded_label)))
-
         if proportion is not None:
             count = int(len(self.sentence)*proportion)
-            # self.expanded_label = self.expanded_label[:count]
-            # self.tokenized_sentence = self.tokenized_sentence[:count]
+
             self.label = self.label[:count]
             self.sentence = self.sentence[:count]
+
             # below not needed, but ok to have
             self.expression = self.expression[:count]
             self.holder = self.holder[:count]
@@ -124,12 +111,6 @@ class NorecOneHot(Dataset):
             self.target = self.target[:count]
 
         # check shapes
-        # logging.info("sentence: {}".format(len(self.sentence)))
-        # logging.info("label:    {}".format(len(self.label)))
-        # logging.info("sentence: {}".format(len(self.sentence[0])))
-        # logging.info("label:    {}".format(len(self.label[0])))
-        # logging.info("sentence: {}".format(len(self.sentence[-1])))
-        # logging.info("label:    {}".format(len(self.label[-1])))
         assert len(self.sentence) == len(self.label)
         assert len(self.sentence[0]) == len(self.label[0])
         assert len(self.sentence[-1]) == len(self.label[-1])
@@ -181,7 +162,6 @@ class NorecOneHot(Dataset):
 
         with open(data_path+'/sentence.txt') as f:  # only needs tokens as strings
             sentence = [line.strip().split(' ') for line in f.readlines()]
-            # sentence = [line for line in f.readlines()]
 
         with open(data_path+'/target.txt') as f:
             target = [[int(ele) for ele in line.strip().split(' ')] for line in f.readlines()]
@@ -194,63 +174,6 @@ class NorecOneHot(Dataset):
             holder = [[-1 for _ in line] for line in target]  # TODO give ignore index?
 
         return (expression, holder, polarity, sentence, target)
-
-
-    # def tokenize(self, sentences, labels):
-    #     """
-    #     Parameters:
-    #         sentences: List[str] raw lists from data set
-    #         labels: List[List[int]] one hot encoded labels
-    #     """
-    #     tokenized_sentences = []
-    #     expanded_labels = []
-
-        # logging.info("sentences:      {}".format(len(sentences)))
-        # logging.info("labels: {}".format(len(labels)))
-
-    #     for i, (sentence, label) in enumerate(zip(sentences, labels)):
-    #         # tokenized_sentence = sentence  # self.tokenizer(sentence, is_split_into_words=True)
-
-    #         # input_ids = tokenized_sentence['input_ids']
-    #         # tokens = self.tokenizer.decode(input_ids).strip().split(' ')[1:-1]
-    #         tokens = sentence
-
-    #         expanded_label = []  #  Needs start token 
-    #         unused_label = label.copy()
-
-    #         if len(tokens) != len(label):
-                # logging.info("Mismatch labels. Skipping.")
-                # logging.info("tokens:{} \t labels:{}".format(len(tokens), len(label)))
-                # logging.info("sentence: \n{}".format(sentence))
-                # logging.info("tokens: \n{}".format(tokens))
-                # logging.info("label: \n{}".format(label))
-    #             continue
-
-    #         for i, t in enumerate(tokens):
-    #             """
-    #             Here we need to expand one_hot_labels to correctly match length of tokens.
-    #             """
-    #             if t.startswith("##"):
-    #                 expanded_label.append(expanded_label[-1])
-    #                 # FIXME this is going to create multiple B tags..
-    #             elif t == '[CLS]':
-    #                 expanded_label.append(self.IGNORE_ID)  # Needs end token
-    #             elif t == '[UNK]':
-    #                 expanded_label.append(self.IGNORE_ID)  # Needs end token
-    #             elif t == '[SEP]':
-    #                 expanded_label.append(self.IGNORE_ID)  # Needs end token
-    #             # elif i==len(tokens)-2:
-    #                 # expanded_label.append(self.IGNORE_ID)  # Needs end token
-    #                 break
-    #             else:
-    #                 expanded_label.append(unused_label.pop(0))
-    #                 # FIXME is this a problem with pre processing?
-    #                 # It looks like joined-words are split with bert, but kept as single token in preprocessing.
-
-    #         expanded_labels.append(expanded_label)
-    #         tokenized_sentences.append(tokenized_sentence)
-
-    #     return tokenized_sentences, expanded_labels
 
 
     def one_hot_encode(
@@ -270,19 +193,9 @@ class NorecOneHot(Dataset):
     def __getitem__(self, index):
         self.index = index
 
-        # self.current_sentence = self.sentence[index]
         self.current_label = self.label[index]
 
-        # tokenize sentence
-        # self.tokens = self.tokenizer(
-        #     self.current_sentence,
-        #     is_split_into_words=True,
-        # )  # TODO .squeeze(0) ?
         self.tokens = self.sentence[index]
-
-        # bert tokenize expands to <start> tok #en #s in sent #ence <end>
-        # yet labels are only mapped to full words
-        # how should this be solved? 
 
         # store token info needed for training
         self.input_ids = self.tokenizer.convert_tokens_to_ids(self.tokens)  # FIXME move to raw data

@@ -94,16 +94,6 @@ dev_loader = DataLoader(
 logging.info("Datasets loaded.")
 
 
-# for i, batch in enumerate(train_loader):
-#     print('------- Index {} -------'.format(i))
-#     print(batch[0].shape)
-#     print(batch[1].shape)
-#     print(batch[2].shape)
-#     print('------------------------\n')
-
-#     if i>3:
-#         quit()
-
 logging.info("Initializing model..")
 model = Transformer(
     NORBERT='ltgoslo/norbert',
@@ -132,20 +122,3 @@ logging.info('Evaluating model...')
 binary_f1, propor_f1 = model.evaluate(test_loader)
 logging.info("Binary F1: {}".format(binary_f1))
 logging.info("Proportional F1: {}".format(propor_f1))
-
-
-
-
-#################### GRAVEYARD ####################
-# with open(data_path + "norbert/bert_config.json") as f:
-#     config_data = json.load(f)
-
-# try:
-#     config = BertConfig(**config_data)
-# except:
-#     config = BertConfig()
-
-
-# model = BertModel(config)
-
-# print(model.__dict__)

@@ -3,30 +3,14 @@ These methods were borrowed from norec_fine repo.
 Found at: https://github.com/ltgoslo/norec_fine/convert_to_bio.py
 Copied here for completeness. 
 """
-# from nltk import word_tokenize
 import config
 from transformers import BertTokenizer
-from transformers import WordpieceTokenizer
 
 tokenizer = BertTokenizer.from_pretrained(config.BERT_PATH)
-# tokenizer = WordpieceTokenizer.from_pretrained(config.BERT_PATH)
 
 def word_tokenize(text):
-    tokens = tokenizer.tokenize(text, is_split_into_words=True)  # ['input_ids']
-
-    # tokens = tokenizer.decode(input_ids).strip().split(' ')[1:-1]
-    return tokens
-
-    # BUG this now forces punctuation to closest binding word,
-    # yet some annotations requires punctuation to be alone.
-    # What to do?
-    #   Skip those annotations?
-    #   Force BERT to separate punctuation (how the fuck?)
-    #   Try not using is_split_as_words
-    #   Try using tokenizer.tokenize() -> tokenizer.encode() -> input_ids
-    #   Some unseen answer...?
-
-
+    return tokenizer.tokenize(text, is_split_into_words=True)
+    
 
 def get_bio_target(opinion):
     try:
