@@ -3,8 +3,14 @@ These methods were borrowed from norec_fine repo.
 Found at: https://github.com/ltgoslo/norec_fine/convert_to_bio.py
 Copied here for completeness. 
 """
-from nltk import word_tokenize
+import config
+from transformers import BertTokenizer
 
+tokenizer = BertTokenizer.from_pretrained(config.BERT_PATH)
+
+def word_tokenize(text):
+    return tokenizer.tokenize(text, is_split_into_words=True)
+    
 
 def get_bio_target(opinion):
     try:
