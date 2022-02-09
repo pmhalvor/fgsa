@@ -156,12 +156,13 @@ class BertSimple(nn.Module):
         # calculating gradients
         computed_loss.backward()
 
-        logging.info("Children: {}".format(self.bert.named_children()))
-        # logging.info("Weights: {}".format(self.bert.weight.grad))
+        for name, module in self.bert.named_children():
+            logging.info("Name:{}  Module:{}".format(name, module))
 
         # updating weights from the model by calling optimizer.step()
         self.optimizer.step()
 
+        quit()
         return computed_loss
 
 
