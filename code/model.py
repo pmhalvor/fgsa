@@ -104,7 +104,7 @@ class BertSimple(nn.Module):
                 
                 # apply loss
                 loss = self.backward(preditions.permute(0, 2, 1), targets)
-                logging.info("Epoch:{} \t Batch:{} \t Loss:{}".format(epoch, b, loss.item()))
+                logging.info("Epoch:{:3}Batch:{:3}Loss:{}".format(epoch, b, loss.item()))
 
     
     def forward(self, batch):
