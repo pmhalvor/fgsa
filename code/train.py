@@ -22,17 +22,17 @@ logging.info("Loading datasets..")
 train_dataset = NorecOneHot(
     data_path=DATA_DIR + "train/", 
     ignore_id=-100,
-    proportion=0.1,
+    proportion=0.05,
     )
 test_dataset = NorecOneHot(
     data_path=DATA_DIR + "test/", 
     ignore_id=-100,
-    proportion=0.1,
+    proportion=0.05,
     )
 dev_dataset = NorecOneHot(
     data_path=DATA_DIR + "dev/", 
     ignore_id=-100,
-    proportion=0.1,
+    proportion=0.05,
     )
 
 
