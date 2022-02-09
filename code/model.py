@@ -90,7 +90,7 @@ class BertSimple(nn.Module):
             loader_iterator = tqdm(train_loader)
             for b, batch in enumerate(train_loader):
                 self.train()        # turn off eval mode
-                self.zero_grad()    # clear updates from prev epoch
+                # self.zero_grad()    # clear updates from prev epoch
 
                 outputs = self.forward(batch)
                 
@@ -107,8 +107,8 @@ class BertSimple(nn.Module):
                     logging.info("logits shape: {}".format(outputs.logits.shape))
                     logging.info("logits premuted: {}".format(outputs.logits.permute(0, 2, 1).shape))
                     logging.info("loss: {}".format(outputs.loss))
-                else:
-                    quit()
+                # else:
+                #     quit()
                 
                 # apply loss
                 loss = self.backward(outputs.logits.permute(0, 2, 1), targets)
@@ -155,6 +155,8 @@ class BertSimple(nn.Module):
 
         # calculating gradients
         computed_loss.backward()
+
+        logging.info("Weights: {}".format(self.bert.weights.grad))
 
         # updating weights from the model by calling optimizer.step()
         self.optimizer.step()
