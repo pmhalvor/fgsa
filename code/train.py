@@ -21,18 +21,18 @@ DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 logging.info("Loading datasets..")
 train_dataset = NorecOneHot(
     data_path=DATA_DIR + "train/", 
-    ignore_id=-100,
+    ignore_id=-1,
     proportion=0.05,
     )
 test_dataset = NorecOneHot(
     data_path=DATA_DIR + "test/", 
-    ignore_id=-100,
+    ignore_id=-1,
     proportion=0.05,
     tokenizer=train_dataset.tokenizer,
     )
 dev_dataset = NorecOneHot(
     data_path=DATA_DIR + "dev/", 
-    ignore_id=-100,
+    ignore_id=-1,
     proportion=0.05,
     tokenizer=train_dataset.tokenizer,
     )
@@ -64,7 +64,7 @@ logging.info("Initializing model..")
 
 model = BertSimple(
     device=DEVICE,
-    ignore_id=-100,
+    ignore_id=-1,
     num_labels=9, 
     tokenizer=train_dataset.tokenizer,
 )
