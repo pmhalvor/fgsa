@@ -98,11 +98,15 @@ class BertSimple(nn.Module):
 
                 if epoch<3 and b<3:
                     # logging.info("Keys in output dict: {}".format(outputs.__dict__.keys()))
+                    logging.info("batch[0][:3]: {}".format(batch[0][:3]))
+                    logging.info("target[:3]: {}".format(targets[:3]))
                     logging.info("target[:3]: {}".format(targets[:3]))
                     logging.info("target shape: {}".format(targets.shape))
                     logging.info("logits shape: {}".format(outputs.logits.shape))
                     logging.info("logits premuted: {}".format(outputs.logits.permute(0, 2, 1).shape))
                     logging.info("loss: {}".format(outputs.loss))
+                else:
+                    quit()
                 
                 # apply loss
                 loss = self.backward(outputs.logits.permute(0, 2, 1), targets)

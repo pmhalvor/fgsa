@@ -70,7 +70,7 @@ model = BertSimple(
 )
 
 logging.info('Fitting model...')
-model.fit(train_loader=train_loader, epochs=10)
+model.fit(train_loader=train_loader, epochs=2)
 
 logging.info('Evaluating model...')
 binary_f1, proportion_f1 = model.evaluate(dev_loader)
