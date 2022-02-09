@@ -18,7 +18,7 @@ def log_test(level=logging.INFO, name='test'):
 def log_train(level=logging.INFO, name=''):
     name = '-'+name if name is not '' else name
     logging.basicConfig(
-        filename='log/train{}.log'.format(name),
+        filename='../log/train{}.log'.format(name),
         level=level,
         format='%(asctime)s [%(levelname)8s] %(message)s (%(filename)s:%(lineno)s)'
     )
@@ -31,7 +31,7 @@ def log_train(level=logging.INFO, name=''):
 def log_pre(level=logging.INFO, name=''):
     name = '-'+name if name is not '' else name
     logging.basicConfig(
-        filename='log/pre{}.log'.format(name),
+        filename='../log/pre{}.log'.format(name),
         level=level,
         format='%(asctime)s [%(levelname)8s] %(message)s (%(filename)s:%(lineno)s)'
     )

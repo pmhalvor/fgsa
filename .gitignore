@@ -1,7 +1,7 @@
 # User specificed 
 dev_*.ipynb
 old*
-
+.old
 
 
 
