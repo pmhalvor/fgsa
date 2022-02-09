@@ -196,15 +196,23 @@ class BertSimple(nn.Module):
         self.eval()
         self.predictions, self.golds, self.sentences = [], [], []
 
-        for batch in test_loader:  # removed tqdm
+        for i, batch in enumerate(test_loader):  # removed tqdm
             outputs = self.forward(batch)
 
             y_pred = outputs.logits.argmax(2)  # TODO is this what happens in CELoss?
 
+            # FIXME i think this is all just to print outputs
+            # Try implementing as batch size 32 evaluations..
+            
+            logging.info('New test output:-----------------------------------------')
             logging.info("y_pred.shape:{}".format(y_pred.shape))
             logging.info("batch[1].shape:{}".format(batch[1].shape))
             logging.info("y_pred.squeeze(0).shape:{}".format(y_pred.squeeze(0).shape))
             logging.info("batch[1].squeeze(0).shape:{}".format(batch[1].squeeze(0).shape))
+            
+            
+            logging.info("y_pred.squeeze(0):{}".format(y_pred.squeeze(0)))
+            logging.info("batch[1].squeeze(0):{}".format(batch[1].squeeze(0)))
             
             # FIXME Why are we squeezing?
             self.predictions.append(y_pred.squeeze(0).tolist())
@@ -217,8 +225,9 @@ class BertSimple(nn.Module):
                     self.sentences.append(self.decoded_sentence)
                 logging.info("decoded_sentence:{}".format(self.decoded_sentence))
 
-            logging.info('Quiting...')
-            quit()
+            if i>5:
+                logging.info('Quiting...')
+                quit()
         # # #################### truncating predictions, golds and sentences
         # self.predictions__, self.golds__, self.sentences__ = [], [], []
         # for l_p, l_g, l_s in zip(self.predictions, self.golds, self.sentences):
