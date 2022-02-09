@@ -158,8 +158,8 @@ class BertSimple(nn.Module):
 
         for name, module in self.bert.named_children():
             if name == "bert":
-                for n, m in module:
-                    logging.info("Name:{}  Module:{}".format(n, m))
+                for n, m in module.named_children():
+                    logging.info("Name:{}  grad:{}".format(n, m.grad))
 
         # updating weights from the model by calling optimizer.step()
         self.optimizer.step()
