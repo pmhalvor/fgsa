@@ -8,6 +8,9 @@ before_install:
   - pip install codecov
 install:
   - pip install -r requirements.txt # install package + test dependencies
+  - cd ..
+  - git clone git@github.com:ltgoslo/norec_fine.git
+  - cd fgsa
 script: pytest # run tests
 after_success:
   - codecov # submit coverage
