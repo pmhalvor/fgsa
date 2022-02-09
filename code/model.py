@@ -115,7 +115,7 @@ class BertSimple(nn.Module):
             x: token ids for a batch
         """
         input_ids = batch[0].to(torch.device(self.device))
-        labels = batch[1]  # not to be used here
+        labels = batch[1].to(torch.device(self.device))
         attention_mask = batch[2].to(torch.device(self.device))
 
         return self.bert(
