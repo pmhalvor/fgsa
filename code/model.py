@@ -107,9 +107,12 @@ class BertSimple(nn.Module):
                 outputs = self.forward(batch)
 
                 # TODO continue dev when this has been checked
-                logging.info("Shape: {}".format(outputs.logits.shape))
-                logging.info("Keys in output dict: {}".format(outputs.__dict__.keys()))
-                quit()
+                if epoch<1 and b<1:
+                    logging.info("Keys in output dict: {}".format(outputs.__dict__.keys()))
+                    logging.info("loss shape: {}".format(outputs.loss.shape))
+                    logging.info("Logits shape: {}".format(outputs.logits.shape))
+                    logging.info("attentions shape: {}".format(outputs.attentions.shape))
+                    logging.info("hidden_states shape: {}".format(outputs.hidden_states.shape))
 
 class Transformer(torch.nn.Module):
     """
