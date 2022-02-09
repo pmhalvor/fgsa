@@ -42,19 +42,19 @@ dev_dataset = NorecOneHot(
 train_loader = DataLoader(
     dataset = train_dataset,
     batch_size = 32,
-    shuffle=True,
+    shuffle=False,
     collate_fn=lambda batch: pad(batch)
 )
 # test_loader = DataLoader(
 #     dataset = test_dataset,
 #     batch_size = 32,  # for predict to work
-#     shuffle=True,
+#     shuffle=False,
 #     collate_fn=lambda batch: pad(batch)
 # )
 dev_loader = DataLoader(
     dataset = dev_dataset,
     batch_size = 32,  
-    shuffle=True,
+    shuffle=False,
     collate_fn=lambda batch: pad(batch)
 )
 logging.info("Datasets loaded.")
