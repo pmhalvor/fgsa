@@ -200,6 +200,7 @@ class BertSimple(nn.Module):
             outputs = self.forward(batch)
 
             y_pred = outputs.logits.argmax(2)  # TODO is this what happens in CELoss?
+            sm_y_pred = self.softmax(outputs.logits)
 
             # FIXME i think this is all just to print outputs
             # Try implementing as batch size 32 evaluations..
@@ -209,6 +210,8 @@ class BertSimple(nn.Module):
             logging.info("y_pred.shape:{}".format(y_pred.shape))
             logging.info("batch[2]:{}".format(batch[2]))
             logging.info("batch[2].shape:{}".format(batch[2].shape))
+            logging.info("sm_y_pred:{}".format(sm_y_pred))
+            logging.info("sm_y_pred.shape:{}".format(sm_y_pred.shape))
 
 
             # logging.info("y_pred.squeeze(0).shape:{}".format(y_pred.squeeze(0).shape))
