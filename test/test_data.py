@@ -13,7 +13,6 @@ LOGGER = logging.getLogger(__name__)
 config.log_test(level=logging.INFO, name="test dataset")
 
 
-@pytest.mark.skip(reason="TODO: move preprocess to root dir for Travis CI")
 def test_data_dir():
     actual_heads = {}
     
@@ -60,7 +59,6 @@ def test_data_dir():
     assert actual_heads == expected_heads
 
 
-@pytest.mark.skip(reason="TODO: move preprocess to root dir for Travis CI")
 def test_dataset_shape():
     train_dataset = NorecOneHot(data_path=DATA_DIR + "train/", proportion=0.05)
 
@@ -75,7 +73,6 @@ def test_dataset_shape():
         assert train_dataset[i][0].shape == train_dataset[i][2].shape
 
 
-@pytest.mark.skip(reason="TODO: move preprocess to root dir for Travis CI")
 def test_dataset_values():
     train_dataset = NorecOneHot(data_path=DATA_DIR + "train/", proportion=0.01)
     test_dataset = NorecOneHot(data_path=DATA_DIR + "test/", proportion=0.05)

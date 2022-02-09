@@ -96,7 +96,7 @@ class BertSimple(nn.Module):
                 
                 targets = batch[2]
 
-                if epoch<3 and b<3:
+                if epoch<1 and b<1:
                     # logging.info("Keys in output dict: {}".format(outputs.__dict__.keys()))
                     logging.info("batch[0][:3]: {}".format(batch[0][:3]))
                     logging.info("batch[0].shape: {}".format(batch[0].shape))
