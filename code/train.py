@@ -45,15 +45,15 @@ train_loader = DataLoader(
     shuffle=True,
     collate_fn=lambda batch: pad(batch)
 )
-test_loader = DataLoader(
-    dataset = test_dataset,
-    batch_size = 1,  # for predict to work
-    shuffle=True,
-    collate_fn=lambda batch: pad(batch)
-)
+# test_loader = DataLoader(
+#     dataset = test_dataset,
+#     batch_size = 32,  # for predict to work
+#     shuffle=True,
+#     collate_fn=lambda batch: pad(batch)
+# )
 dev_loader = DataLoader(
     dataset = dev_dataset,
-    batch_size = 1,  # for predict to work
+    batch_size = 32,  
     shuffle=True,
     collate_fn=lambda batch: pad(batch)
 )
@@ -70,10 +70,10 @@ model = BertSimple(
 )
 
 logging.info('Fitting model...')
-model.fit(train_loader=train_loader, dev_loader=dev_loader, epochs=1)
+model.fit(train_loader=train_loader, epochs=1)
 
 logging.info('Evaluating model...')
-binary_f1, proportion_f1 = model.evaluate(test_loader)
+binary_f1, proportion_f1 = model.evaluate(dev_loader)
 logging.info("Binary F1: {}".format(binary_f1))
 logging.info("Proportional F1: {}".format(proportion_f1))
 

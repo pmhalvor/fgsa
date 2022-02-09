@@ -59,7 +59,7 @@ class NorecOneHot(Dataset):
         bert_path="ltgoslo/norbert",
         data_path="$HOME/data/norec_fine/train",
         proportion=None, 
-        ignore_id=-100,
+        ignore_id=-1,
         tokenizer=None,
     ):
         """

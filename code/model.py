@@ -30,7 +30,7 @@ class BertSimple(nn.Module):
         bert_path="ltgoslo/norbert",  
         bert_dropout=0.1,           # TODO tune
         bert_finetune=True,         # TODO tune
-        ignore_id=-100,
+        ignore_id=-1,
         lr=0.01,                    # TODO tune
         lr_scheduler_factor=0.1,    # TODO tune
         lr_scheduler_patience=2,    # TODO tune
@@ -81,7 +81,7 @@ class BertSimple(nn.Module):
         )
 
 
-    def fit(self, train_loader, dev_loader, epochs=10):
+    def fit(self, train_loader, epochs=10):
         for epoch in range(epochs):
             self.train()
             epoch_loss = 0
@@ -96,13 +96,12 @@ class BertSimple(nn.Module):
                 
                 targets = batch[2]
 
-                # TODO continue dev when this has been checked
-                if epoch<3 and b<3:
-                    # logging.info("Keys in output dict: {}".format(outputs.__dict__.keys()))
-                    logging.info("target shape: {}".format(targets.shape))
-                    logging.info("logits shape: {}".format(outputs.logits.shape))
-                    logging.info("logits premuted: {}".format(outputs.logits.permute(0, 2, 1).shape))
-                    logging.info("loss: {}".format(outputs.loss))
+                # if epoch<3 and b<3:
+                #     # logging.info("Keys in output dict: {}".format(outputs.__dict__.keys()))
+                #     logging.info("target shape: {}".format(targets.shape))
+                #     logging.info("logits shape: {}".format(outputs.logits.shape))
+                #     logging.info("logits premuted: {}".format(outputs.logits.permute(0, 2, 1).shape))
+                #     logging.info("loss: {}".format(outputs.loss))
                 
                 # apply loss
                 loss = self.backward(outputs.logits.permute(0, 2, 1), targets)
@@ -205,25 +204,27 @@ class BertSimple(nn.Module):
             # Try implementing as batch size 32 evaluations..
 
             logging.info('New test output:-----------------------------------------')
+            logging.info("y_pred:{}".format(y_pred))
             logging.info("y_pred.shape:{}".format(y_pred.shape))
+            logging.info("batch[2]:{}".format(batch[2]))
             logging.info("batch[2].shape:{}".format(batch[2].shape))
-            logging.info("y_pred.squeeze(0).shape:{}".format(y_pred.squeeze(0).shape))
-            logging.info("batch[2].squeeze(0).shape:{}".format(batch[2].squeeze(0).shape))
-            
-            
-            logging.info("y_pred.squeeze(0):{}".format(y_pred.squeeze(0)))
-            logging.info("batch[2].squeeze(0):{}".format(batch[2].squeeze(0)))
-            
-            # FIXME Why are we squeezing? bc only 1 item in first dir (batch_size=1)
-            self.predictions.append(y_pred.squeeze(0).tolist())
-            self.golds.append(batch[2].squeeze(0).tolist())
 
-            if self.tokenizer is not None:
-                for i in batch[0]:
-                    self.decoded_sentence = \
-                        self.tokenizer.convert_ids_to_tokens(i)
-                    self.sentences.append(self.decoded_sentence)
-                logging.info("decoded_sentence:{}".format(self.decoded_sentence))
+
+            # logging.info("y_pred.squeeze(0).shape:{}".format(y_pred.squeeze(0).shape))
+            # logging.info("batch[2].squeeze(0).shape:{}".format(batch[2].squeeze(0).shape))
+            # logging.info("y_pred.squeeze(0):{}".format(y_pred.squeeze(0)))
+            # logging.info("batch[2].squeeze(0):{}".format(batch[2].squeeze(0)))
+            
+            # # FIXME Why are we squeezing? bc only 1 item in first dir (batch_size=1)
+            # self.predictions.append(y_pred.squeeze(0).tolist())
+            # self.golds.append(batch[2].squeeze(0).tolist())
+
+            # if self.tokenizer is not None:
+            #     for i in batch[0]:
+            #         self.decoded_sentence = \
+            #             self.tokenizer.convert_ids_to_tokens(i)
+            #         self.sentences.append(self.decoded_sentence)
+            #     logging.info("decoded_sentence:{}".format(self.decoded_sentence))
 
             if b>5:
                 logging.info('Quiting...')
