@@ -1,25 +1,103 @@
-from itertools import chain
-from torch.nn.utils.rnn import pad_packed_sequence, PackedSequence
-from transformers import BertForTokenClassification, BertTokenizer, BertModel
+import argparse
 from tqdm import tqdm
 
-import numpy as np
-import torch.nn as nn
+## ML specific
+from torch.nn.utils.rnn import pad_packed_sequence
+from transformers import BertModel
 import torch
-import logging
+import torch.nn as nn
 
-## Local imports
-from metrics import binary_analysis, proportional_analysis
-from metrics import get_analysis
+
+class BertSimple(nn.Module):
+    """
+    Built specifically for fgsa code
+    """
+    def __init__(
+        self, 
+        device,
+        bert_path="ltgoslo/norbert",  
+        bert_dropout=0.1,       # TODO tune
+        bert_finetune = True,   # TODO tune
+        learning_rate=0.01,     # TODO tune
+        output_dim=5,  # target, holder, expression, polarity, intensity
+    ):
+        """
+        Set up model specific architectures. 
+
+        """
+        super(BertSimple, self).__init__()
+
+        self.device = device
+        self.dropout = bert_dropout  # TODO potentially refactor name?
+        self.learning_rate = learning_rate
+        self.output_dim = output_dim
+
+        # initialize contextual embeddings
+        self.bert = BertModel.from_pretrained(bert_path)
+        self.bert.requires_grad = bert_finetune
+        self.bert_dropout = nn.Dropout(self.dropout)
+
+        # ensure everything is on specified device
+        self.bert = self.bert.to(self.device)
+        self.bert_dropout = self.bert_dropout.to(self.device)  # TODO is this needed?
+
+        # set up output layer
+        self.linear = nn.Linear(
+            in_features=768,  # size of bert embeddings
+            out_features=5
+        )
+        self.linear = self.linear.to(self.device)
+
+        # optimizer in model for sklearn-style fit() training
+        self.optimizer = torch.optim.Adam(
+            self.parameters(),
+            lr=self.learning_rate
+        )  # TODO test other optimizers?
+
+    def forward(self, x):
+        """
+        One forward step of training for our model.
+
+        Parameters:
+            x: token ids for a batch
+        """
+
+        emb = self.bert(
+            x.to(self.device),
+            output_hidden_states=True,
+        )
+
+        emb = emb.last_hidden_state
+
+        import IPython
+        IPython.embed()
+
+    def fit(self, train_loader, dev_loader, epochs=10):
+        for epoch in range(epochs):
+            self.train()
+            epoch_loss = 0
+            num_batches = 0
+
+            loader_iterator = tqdm(train_loader)
+            for raw_text, x, y, mask, idx in train_loader:
+                self.zero_grad()  # clear updates from prev epoch
+
+                batches_len, seq_len = x.shape
+
+                preds = self.forward(
+                    x.to(self.device)  # FIXME does this need to happen everywhere? 
+                )
+
+                # TODO continue dev when this has been checked
 
 
 class Transformer(torch.nn.Module):
     """
-    Why is this class called Transformer? It's literally just a Bert head.
+    Taken from my solution to IN5550 exam.
     """
 
     @staticmethod
-    def _lossFunct(lf_type, IGNORE_ID):
+    def _lossFunc(lf_type, IGNORE_ID):
         """
         Returns the specified loss function from torch.nn
         ______________________________________________________________
@@ -78,7 +156,7 @@ class Transformer(torch.nn.Module):
         self.patience = lrs_patience
         self.epoch_patience = epoch_patience
         self.loss_funct_str = loss_funct
-        self._loss_funct = self._lossFunct(
+        self._loss_funct = self._lossFunc(
             lf_type=loss_funct,
             IGNORE_ID=self.IGNORE_ID
         )
@@ -326,3 +404,5 @@ class Transformer(torch.nn.Module):
                 break
 
         return False
+
+

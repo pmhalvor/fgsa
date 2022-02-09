@@ -4,7 +4,8 @@ import torch
 
 ## LOCAL
 from dataset import Norec, NorecOneHot 
-from transformer import Transformer  # TODO change to BertSimple
+from model import Transformer 
+from model import BertSimple
 from utils import pad
 import config 
 

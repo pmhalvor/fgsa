@@ -215,7 +215,7 @@ class NorecOneHot(Dataset):
 class Norec(Dataset):
     def __init__(
         self, 
-        bert_path="lgtoslo/norbert",
+        bert_path="ltgoslo/norbert",
         data_path="$HOME/data/norec_fine/train", 
     ):
         """
