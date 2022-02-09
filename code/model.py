@@ -196,7 +196,7 @@ class BertSimple(nn.Module):
         self.eval()
         self.predictions, self.golds, self.sentences = [], [], []
 
-        for i, batch in enumerate(test_loader):  # removed tqdm
+        for b, batch in enumerate(test_loader):  # removed tqdm
             outputs = self.forward(batch)
 
             y_pred = outputs.logits.argmax(2)  # TODO is this what happens in CELoss?
@@ -225,7 +225,7 @@ class BertSimple(nn.Module):
                     self.sentences.append(self.decoded_sentence)
                 logging.info("decoded_sentence:{}".format(self.decoded_sentence))
 
-            if i>5:
+            if b>5:
                 logging.info('Quiting...')
                 quit()
         # # #################### truncating predictions, golds and sentences
