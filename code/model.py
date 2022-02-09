@@ -94,7 +94,7 @@ class BertSimple(nn.Module):
 
                 outputs = self.forward(batch)
                 
-                targets = batch[1]
+                targets = batch[2]
 
                 # TODO continue dev when this has been checked
                 if epoch<3 and b<3:
@@ -117,8 +117,8 @@ class BertSimple(nn.Module):
             x: token ids for a batch
         """
         input_ids = batch[0].to(torch.device(self.device))
-        labels = batch[1].to(torch.device(self.device))
-        attention_mask = batch[2].to(torch.device(self.device))
+        attention_mask = batch[1].to(torch.device(self.device))
+        labels = batch[2].to(torch.device(self.device))
 
         return self.bert(
             input_ids = input_ids,
@@ -203,20 +203,20 @@ class BertSimple(nn.Module):
 
             # FIXME i think this is all just to print outputs
             # Try implementing as batch size 32 evaluations..
-            
+
             logging.info('New test output:-----------------------------------------')
             logging.info("y_pred.shape:{}".format(y_pred.shape))
-            logging.info("batch[1].shape:{}".format(batch[1].shape))
+            logging.info("batch[2].shape:{}".format(batch[2].shape))
             logging.info("y_pred.squeeze(0).shape:{}".format(y_pred.squeeze(0).shape))
-            logging.info("batch[1].squeeze(0).shape:{}".format(batch[1].squeeze(0).shape))
+            logging.info("batch[2].squeeze(0).shape:{}".format(batch[2].squeeze(0).shape))
             
             
             logging.info("y_pred.squeeze(0):{}".format(y_pred.squeeze(0)))
-            logging.info("batch[1].squeeze(0):{}".format(batch[1].squeeze(0)))
+            logging.info("batch[2].squeeze(0):{}".format(batch[2].squeeze(0)))
             
-            # FIXME Why are we squeezing?
+            # FIXME Why are we squeezing? bc only 1 item in first dir (batch_size=1)
             self.predictions.append(y_pred.squeeze(0).tolist())
-            self.golds.append(batch[1].squeeze(0).tolist())
+            self.golds.append(batch[2].squeeze(0).tolist())
 
             if self.tokenizer is not None:
                 for i in batch[0]:
