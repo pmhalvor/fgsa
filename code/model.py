@@ -100,7 +100,7 @@ class BertSimple(nn.Module):
                     logging.info("target shape: {}".format(targets.shape))
                     logging.info("logits shape: {}".format(outputs.logits.shape))
                     logging.info("logits premuted: {}".format(outputs.logits.permute(0, 2, 1).shape))
-                    logging.info("loss shape: {}".format(outputs.loss.shape))
+                    logging.info("loss: {}".format(outputs.loss))
                 
                 # apply loss
                 loss = self.backward(outputs.logits.permute(0, 2, 1), targets)
