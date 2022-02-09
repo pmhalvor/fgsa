@@ -100,10 +100,11 @@ class BertSimple(nn.Module):
                     logging.info("target shape: {}".format(targets.shape))
                     logging.info("logits shape: {}".format(outputs.logits.shape))
                     logging.info("logits premuted: {}".format(outputs.logits.permute(0, 2, 1).shape))
+                    logging.info("loss shape: {}".format(outputs.loss.shape))
                 
                 # apply loss
                 loss = self.backward(outputs.logits.permute(0, 2, 1), targets)
-                logging.info("Epoch:{} \t Batch:{} \t Loss:{}".format(epoch, b, loss.item()))
+                logging.info("Epoch:{}\tBatch:{}\tLoss:{}".format(epoch, b, loss.item()))
 
     
     def forward(self, batch):
@@ -114,13 +115,14 @@ class BertSimple(nn.Module):
             x: token ids for a batch
         """
         input_ids = batch[0].to(torch.device(self.device))
-        # labels = batch[1]  # not to be used here
+        labels = batch[1]  # not to be used here
         attention_mask = batch[2].to(torch.device(self.device))
 
         return self.bert(
             input_ids = input_ids,
             attention_mask = attention_mask,
-            output_hidden_states = True
+            output_hidden_states = True,
+            labels = labels
         )
 
 
