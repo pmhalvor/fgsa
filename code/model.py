@@ -157,7 +157,9 @@ class BertSimple(nn.Module):
         computed_loss.backward()
 
         for name, module in self.bert.named_children():
-            logging.info("Name:{}  Module:{}".format(name, module))
+            if name == "bert":
+                for n, m in module:
+                    logging.info("Name:{}  Module:{}".format(n, m))
 
         # updating weights from the model by calling optimizer.step()
         self.optimizer.step()
