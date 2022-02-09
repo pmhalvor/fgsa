@@ -169,7 +169,7 @@ class BertSimple(nn.Module):
                                                 for s, s_wrap in wrapper.named_children():
                                                     if s=="self":
                                                         for n, m in s_wrap.named_children():
-                                                            logging.info("Name:{}  Module:{}".format(n, m))
+                                                            logging.info("Name:{}  Module:{}  Weight:{}".format(n, m, m.weight))
 
         # updating weights from the model by calling optimizer.step()
         self.optimizer.step()
