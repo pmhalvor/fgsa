@@ -63,6 +63,7 @@ class BertSimple(nn.Module):
 
         # loss function
         self.loss = torch.nn.CrossEntropyLoss(ignore_index=ignore_id)
+        self.softmax = torch.nn.Softmax(2)  # NOTE: applied over dimension 2 (out of 0,1,2)
 
         # optimizer in model for sklearn-style fit() training
         self.optimizer = torch.optim.Adam(
@@ -90,19 +91,19 @@ class BertSimple(nn.Module):
                 self.train()        # turn off eval mode
                 self.zero_grad()    # clear updates from prev epoch
 
-                outputs = self.forward(batch)
-                
+                output = self.forward(batch)
+                preditions = self.softmax(output.logits)
                 targets = batch[1]
 
                 # TODO continue dev when this has been checked
                 if epoch<1 and b<1:
                     # logging.info("Keys in output dict: {}".format(outputs.__dict__.keys()))
                     logging.info("target shape: {}".format(targets.shape))
-                    logging.info("logits shape: {}".format(outputs.logits.shape))
-                    logging.info("logits premuted: {}".format(outputs.logits.permute(0, 2, 1).shape))
+                    logging.info("logits shape: {}".format(preditions.shape))
+                    logging.info("logits premuted: {}".format(preditions.permute(0, 2, 1).shape))
                 
                 # apply loss
-                loss = self.backward(outputs.logits.permute(0, 2, 1), targets)
+                loss = self.backward(preditions.permute(0, 2, 1), targets)
                 logging.info("Epoch:{} \t Batch:{} \t Loss:{}".format(epoch, b, loss.item()))
 
     
@@ -114,13 +115,14 @@ class BertSimple(nn.Module):
             x: token ids for a batch
         """
         input_ids = batch[0].to(torch.device(self.device))
-        # labels = batch[1]  # not to be used here
+        # labels = batch[1].to(torch.device(self.device))
         attention_mask = batch[2].to(torch.device(self.device))
 
         return self.bert(
             input_ids = input_ids,
             attention_mask = attention_mask,
-            output_hidden_states = True
+            output_hidden_states = True,
+            # labels = labels,
         )
 
 
