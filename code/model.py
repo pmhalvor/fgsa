@@ -30,11 +30,12 @@ class BertSimple(nn.Module):
         bert_path="ltgoslo/norbert",  
         bert_dropout=0.1,           # TODO tune
         bert_finetune=True,         # TODO tune
-        ignore_id=-100,
+        ignore_id=-1,
         lr=0.01,                    # TODO tune
         lr_scheduler_factor=0.1,    # TODO tune
         lr_scheduler_patience=2,    # TODO tune
         output_dim=5,  # target, holder, expression, polarity, intensity
+        tokenizer=None,
     ):
         """
         Set up model specific architectures. 
@@ -49,6 +50,7 @@ class BertSimple(nn.Module):
         self.lr_scheduler_factor = lr_scheduler_factor
         self.lr_scheduler_patience = lr_scheduler_patience
         self.output_dim = output_dim
+        self.tokenizer = tokenizer
 
         # initialize contextual embeddings
         self.bert = BertForTokenClassification.from_pretrained(
@@ -80,7 +82,7 @@ class BertSimple(nn.Module):
         )
 
 
-    def fit(self, train_loader, dev_loader, epochs=10):
+    def fit(self, train_loader, epochs=10):
         for epoch in range(epochs):
             self.train()
             epoch_loss = 0
@@ -91,19 +93,19 @@ class BertSimple(nn.Module):
                 self.train()        # turn off eval mode
                 self.zero_grad()    # clear updates from prev epoch
 
-                output = self.forward(batch)
-                preditions = self.softmax(output.logits)
-                targets = batch[1]
+                outputs = self.forward(batch)
+                
+                targets = batch[2]
 
-                # TODO continue dev when this has been checked
-                if epoch<1 and b<1:
-                    # logging.info("Keys in output dict: {}".format(outputs.__dict__.keys()))
-                    logging.info("target shape: {}".format(targets.shape))
-                    logging.info("logits shape: {}".format(preditions.shape))
-                    logging.info("logits premuted: {}".format(preditions.permute(0, 2, 1).shape))
+                # if epoch<3 and b<3:
+                #     # logging.info("Keys in output dict: {}".format(outputs.__dict__.keys()))
+                #     logging.info("target shape: {}".format(targets.shape))
+                #     logging.info("logits shape: {}".format(outputs.logits.shape))
+                #     logging.info("logits premuted: {}".format(outputs.logits.permute(0, 2, 1).shape))
+                #     logging.info("loss: {}".format(outputs.loss))
                 
                 # apply loss
-                loss = self.backward(preditions.permute(0, 2, 1), targets)
+                loss = self.backward(outputs.logits.permute(0, 2, 1), targets)
                 logging.info("Epoch:{:3} Batch:{:3} Loss:{}".format(epoch, b, loss.item()))
 
     
@@ -115,14 +117,14 @@ class BertSimple(nn.Module):
             x: token ids for a batch
         """
         input_ids = batch[0].to(torch.device(self.device))
-        # labels = batch[1].to(torch.device(self.device))
-        attention_mask = batch[2].to(torch.device(self.device))
+        attention_mask = batch[1].to(torch.device(self.device))
+        labels = batch[2].to(torch.device(self.device))
 
         return self.bert(
             input_ids = input_ids,
             attention_mask = attention_mask,
             output_hidden_states = True,
-            # labels = labels,
+            labels = labels
         )
 
 
@@ -162,15 +164,11 @@ class BertSimple(nn.Module):
         :param test_loader: torch.utils.data.DataLoader object with
                             batch_size=1
         """
-        # preds, golds, sents = self.predict(test_loader)
-        # flat_preds = [int(i) for l in preds for i in l]
-        # flat_golds = [int(i) for l in golds for i in l]
+        predictions, golds, sentences = self.predict(test_loader)
+        flat_predictions = [int(i) for l in predictions for i in l]
+        flat_golds = [int(i) for l in golds for i in l]
 
-        # print(len(sents))
-        # print(f'preds')
-        # print(len(preds))
-        # print(len(preds[0]))
-        # print(len(preds[1]))
+        # print(f'predictions')
         # print('golds')
         # print(len(golds))
         # print(len(golds[0]))
@@ -187,6 +185,68 @@ class BertSimple(nn.Module):
         # return binary_f1, propor_f1
         return None, None
 
+
+    def predict(self, test_loader):
+        """
+        Should resemble fit() for the most part
+
+        :param test_loader: torch.utils.data.DataLoader object with
+                            batch_size=1
+        """
+        self.eval()
+        self.predictions, self.golds, self.sentences = [], [], []
+
+        for b, batch in enumerate(test_loader):  # removed tqdm
+            outputs = self.forward(batch)
+
+            y_pred = outputs.logits.argmax(2)  # TODO is this what happens in CELoss?
+
+            # FIXME i think this is all just to print outputs
+            # Try implementing as batch size 32 evaluations..
+
+            logging.info('New test output:-----------------------------------------')
+            logging.info("y_pred:{}".format(y_pred))
+            logging.info("y_pred.shape:{}".format(y_pred.shape))
+            logging.info("batch[2]:{}".format(batch[2]))
+            logging.info("batch[2].shape:{}".format(batch[2].shape))
+
+
+            # logging.info("y_pred.squeeze(0).shape:{}".format(y_pred.squeeze(0).shape))
+            # logging.info("batch[2].squeeze(0).shape:{}".format(batch[2].squeeze(0).shape))
+            # logging.info("y_pred.squeeze(0):{}".format(y_pred.squeeze(0)))
+            # logging.info("batch[2].squeeze(0):{}".format(batch[2].squeeze(0)))
+            
+            # # FIXME Why are we squeezing? bc only 1 item in first dir (batch_size=1)
+            # self.predictions.append(y_pred.squeeze(0).tolist())
+            # self.golds.append(batch[2].squeeze(0).tolist())
+
+            # if self.tokenizer is not None:
+            #     for i in batch[0]:
+            #         self.decoded_sentence = \
+            #             self.tokenizer.convert_ids_to_tokens(i)
+            #         self.sentences.append(self.decoded_sentence)
+            #     logging.info("decoded_sentence:{}".format(self.decoded_sentence))
+
+            if b>5:
+                logging.info('Quiting...')
+                quit()
+        # # #################### truncating predictions, golds and sentences
+        # self.predictions__, self.golds__, self.sentences__ = [], [], []
+        # for l_p, l_g, l_s in zip(self.predictions, self.golds, self.sentences):
+        #     predictions_, golds_, sentences_ = [], [], []
+
+        #     for e_p, e_g, e_s in zip(l_p, l_g, l_s):
+        #         if e_g != self.IGNORE_ID:
+        #             predictions_.append(e_p)
+        #             golds_.append(e_g)
+        #             sentences_.append(e_s)
+
+        #     self.predictions__.append(predictions_)
+        #     self.golds__.append(golds_)
+        #     self.sentences__.append(sentences_)
+        # # ####################
+
+        return self.predictions, self.golds, self.sentences
 
 
 class Transformer(torch.nn.Module):

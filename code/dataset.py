@@ -59,7 +59,8 @@ class NorecOneHot(Dataset):
         bert_path="ltgoslo/norbert",
         data_path="$HOME/data/norec_fine/train",
         proportion=None, 
-        ignore_id=-100,
+        ignore_id=-1,
+        tokenizer=None,
     ):
         """
         One-hot encoded labels means BIO-tags for target, holder, expression represented 
@@ -80,7 +81,10 @@ class NorecOneHot(Dataset):
 
         
         """
-        self.tokenizer = BertTokenizer.from_pretrained(bert_path)
+        if tokenizer is not None:
+            self.tokenizer = tokenizer
+        else:
+            self.tokenizer = BertTokenizer.from_pretrained(bert_path)
         self.IGNORE_ID = ignore_id  # FIXME get form BertTokenizer
 
         # NOTE opinion -> expression for consistency w/ project description
