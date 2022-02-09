@@ -35,6 +35,7 @@ class BertSimple(nn.Module):
         lr_scheduler_factor=0.1,    # TODO tune
         lr_scheduler_patience=2,    # TODO tune
         output_dim=5,  # target, holder, expression, polarity, intensity
+        tokenizer=None,
     ):
         """
         Set up model specific architectures. 
@@ -49,6 +50,7 @@ class BertSimple(nn.Module):
         self.lr_scheduler_factor = lr_scheduler_factor
         self.lr_scheduler_patience = lr_scheduler_patience
         self.output_dim = output_dim
+        self.tokenizer = tokenizer
 
         # initialize contextual embeddings
         self.bert = BertForTokenClassification.from_pretrained(
@@ -208,13 +210,14 @@ class BertSimple(nn.Module):
             self.predictions.append(y_pred.squeeze(0).tolist())
             self.golds.append(batch[1].squeeze(0).tolist())
 
-            for i in batch[0]:
-                self.decoded_sentence = \
-                    self.tokenizer.convert_ids_to_tokens(i)
-                self.sentences.append(self.decoded_sentence)
-            
-            logging.info("decoded_sentence:{}".format(self.decoded_sentence))
+            if self.tokenizer is not None:
+                for i in batch[0]:
+                    self.decoded_sentence = \
+                        self.tokenizer.convert_ids_to_tokens(i)
+                    self.sentences.append(self.decoded_sentence)
+                logging.info("decoded_sentence:{}".format(self.decoded_sentence))
 
+            logging.info('Quiting...')
             quit()
         # # #################### truncating predictions, golds and sentences
         # self.predictions__, self.golds__, self.sentences__ = [], [], []

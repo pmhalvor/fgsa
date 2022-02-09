@@ -28,11 +28,13 @@ test_dataset = NorecOneHot(
     data_path=DATA_DIR + "test/", 
     ignore_id=-100,
     proportion=0.05,
+    tokenizer=train_dataset.tokenizer,
     )
 dev_dataset = NorecOneHot(
     data_path=DATA_DIR + "dev/", 
     ignore_id=-100,
     proportion=0.05,
+    tokenizer=train_dataset.tokenizer,
     )
 
 
@@ -64,6 +66,7 @@ model = BertSimple(
     device=DEVICE,
     ignore_id=-100,
     num_labels=9, 
+    tokenizer=train_dataset.tokenizer,
 )
 
 logging.info('Fitting model...')
