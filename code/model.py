@@ -109,10 +109,20 @@ class BertSimple(nn.Module):
                 # TODO continue dev when this has been checked
                 if epoch<1 and b<1:
                     logging.info("Keys in output dict: {}".format(outputs.__dict__.keys()))
-                    logging.info("loss shape: {}".format(outputs.loss.shape))
                     logging.info("Logits shape: {}".format(outputs.logits.shape))
-                    logging.info("attentions shape: {}".format(outputs.attentions.shape))
-                    logging.info("hidden_states shape: {}".format(outputs.hidden_states.shape))
+                    
+                    try:
+                        logging.info("attentions shape: {}".format(outputs.attentions.shape))
+                    except:
+                        logging.info("Could not show shape for attentions")
+
+                    try:
+                        logging.info("hidden_states shape: {}".format(outputs.hidden_states.shape))
+                    except:
+                        logging.info("Could not show shape for hidden_shape")
+
+
+
 
 class Transformer(torch.nn.Module):
     """
