@@ -107,7 +107,6 @@ class BertSimple(nn.Module):
                 outputs = self.forward(batch)
 
                 # TODO continue dev when this has been checked
-                logging.info(outputs.logits)
                 logging.info("Shape: {}".format(outputs.logits.shape))
                 logging.info("Keys in output dict: {}".format(outputs.__dict__.keys()))
                 quit()
