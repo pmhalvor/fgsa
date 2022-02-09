@@ -192,12 +192,12 @@ class BertSimple(nn.Module):
                             batch_size=1
         """
         self.eval()
-        self.predictions, self.golds, self.sents = [], [], []
+        self.predictions, self.golds, self.sentences = [], [], []
 
         for batch in test_loader:  # removed tqdm
             outputs = self.forward(batch)
 
-            y_pred = out.logits.argmax(2)  # TODO is this what happens in CELoss?
+            y_pred = outputs.logits.argmax(2)  # TODO is this what happens in CELoss?
 
             logging.info("y_pred.shape:{}".format(y_pred.shape))
             logging.info("batch[1].shape:{}".format(batch[1].shape))
@@ -211,28 +211,28 @@ class BertSimple(nn.Module):
             for i in batch[0]:
                 self.decoded_sentence = \
                     self.tokenizer.convert_ids_to_tokens(i)
-                self.sents.append(self.decoded_sentence)
+                self.sentences.append(self.decoded_sentence)
             
             logging.info("decoded_sentence:{}".format(self.decoded_sentence))
 
             quit()
-        # # #################### truncating predictions, golds and sents
-        # self.predictions__, self.golds__, self.sents__ = [], [], []
-        # for l_p, l_g, l_s in zip(self.predictions, self.golds, self.sents):
-        #     predictions_, golds_, sents_ = [], [], []
+        # # #################### truncating predictions, golds and sentences
+        # self.predictions__, self.golds__, self.sentences__ = [], [], []
+        # for l_p, l_g, l_s in zip(self.predictions, self.golds, self.sentences):
+        #     predictions_, golds_, sentences_ = [], [], []
 
         #     for e_p, e_g, e_s in zip(l_p, l_g, l_s):
         #         if e_g != self.IGNORE_ID:
         #             predictions_.append(e_p)
         #             golds_.append(e_g)
-        #             sents_.append(e_s)
+        #             sentences_.append(e_s)
 
         #     self.predictions__.append(predictions_)
         #     self.golds__.append(golds_)
-        #     self.sents__.append(sents_)
+        #     self.sentences__.append(sentences_)
         # # ####################
 
-        return self.predictions__, self.golds__, self.sents__
+        return self.predictions, self.golds, self.sentences
 
 
 class Transformer(torch.nn.Module):
