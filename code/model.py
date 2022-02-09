@@ -99,7 +99,9 @@ class BertSimple(nn.Module):
                 if epoch<3 and b<3:
                     # logging.info("Keys in output dict: {}".format(outputs.__dict__.keys()))
                     logging.info("batch[0][:3]: {}".format(batch[0][:3]))
-                    logging.info("batch[0][:3].shape: {}".format(batch[0][:3].shape))
+                    logging.info("batch[0].shape: {}".format(batch[0].shape))
+                    logging.info("batch[1][:3]: {}".format(batch[1][:3]))
+                    logging.info("batch[1].shape: {}".format(batch[1].shape))
                     logging.info("target[:3]: {}".format(targets[:3]))
                     logging.info("target shape: {}".format(targets.shape))
                     logging.info("logits shape: {}".format(outputs.logits.shape))

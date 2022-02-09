@@ -34,14 +34,14 @@ class NorecOneHot(Dataset):
             elif h == 2:                # inside holder
                 encoded.append(4)
             elif t == 1:                # beginning target
-                if p == 1:              # postive  TODO double check 1=positive and 2=negative
+                if p == 1:              # positive  TODO double check 1=positive and 2=negative
                     encoded.append(5)
                 elif p == 2:            # negative
                     encoded.append(7)
                 else:                   # neutral  NOTE norec_fine should not use this
                     encoded.append(0)
             elif t == 2:                # inside target
-                if p == 1:              # postive
+                if p == 1:              # positive
                     encoded.append(6)
                 elif p == 2:            # negative
                     encoded.append(8)
