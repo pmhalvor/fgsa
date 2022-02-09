@@ -59,6 +59,7 @@ class NorecOneHot(Dataset):
         bert_path="ltgoslo/norbert",
         data_path="$HOME/data/norec_fine/train",
         proportion=None, 
+        ignore_id=-100,
     ):
         """
         One-hot encoded labels means BIO-tags for target, holder, expression represented 
@@ -80,7 +81,7 @@ class NorecOneHot(Dataset):
         
         """
         self.tokenizer = BertTokenizer.from_pretrained(bert_path)
-        self.IGNORE_ID = -1  # FIXME get form BertTokenizer
+        self.IGNORE_ID = ignore_id  # FIXME get form BertTokenizer
 
         # NOTE opinion -> expression for consistency w/ project description
         data = self.load_raw_data(data_path)
@@ -171,7 +172,7 @@ class NorecOneHot(Dataset):
                 holder = [[int(ele) for ele in line.strip().split(' ')] for line in f.readlines()]
         except FileNotFoundError:
             logging.warning("holder.txt not found at path {}. Generating blank list...".format(data_path))
-            holder = [[-1 for _ in line] for line in target]  # TODO give ignore index?
+            holder = [[self.IGNORE_ID for _ in line] for line in target]  # TODO give ignore index?
 
         return (expression, holder, polarity, sentence, target)
 
@@ -250,7 +251,7 @@ class Norec(Dataset):
             "Negative": 2,
         }
 
-        self.IGNORE_ID = len(self.BIO_indexer)
+        self.IGNORE_ID = len(self.BIO_indexer) # Match to style above in NorecOneHot
         self.BIO_indexer['[MASK]'] = self.IGNORE_ID
 
 

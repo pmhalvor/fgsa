@@ -30,6 +30,7 @@ class BertSimple(nn.Module):
         bert_path="ltgoslo/norbert",  
         bert_dropout=0.1,           # TODO tune
         bert_finetune=True,         # TODO tune
+        ignore_id=-100,
         lr=0.01,                    # TODO tune
         lr_scheduler_factor=0.1,    # TODO tune
         lr_scheduler_patience=2,    # TODO tune
@@ -60,6 +61,9 @@ class BertSimple(nn.Module):
         self.bert = self.bert.to(self.device)
         self.bert_dropout = self.bert_dropout.to(self.device)  # TODO is this needed?
 
+        # loss function
+        self.loss = torch.nn.CrossEntropyLoss(ignore_index=ignore_id)
+
         # optimizer in model for sklearn-style fit() training
         self.optimizer = torch.optim.Adam(
             self.parameters(),
@@ -75,24 +79,6 @@ class BertSimple(nn.Module):
         )
 
 
-    def forward(self, batch):
-        """
-        One forward step of training for our model.
-
-        Parameters:
-            x: token ids for a batch
-        """
-        input_ids = batch[0]
-        labels = batch[1]  # not to be used here
-        attention_mask = batch[2]
-
-        return self.bert(
-            input_ids = input_ids,
-            attention_mask = attention_mask,
-            output_hidden_states = True
-        )
-
-
     def fit(self, train_loader, dev_loader, epochs=10):
         for epoch in range(epochs):
             self.train()
@@ -105,22 +91,98 @@ class BertSimple(nn.Module):
                 self.zero_grad()    # clear updates from prev epoch
 
                 outputs = self.forward(batch)
+                
+                targets = batch[1]
 
                 # TODO continue dev when this has been checked
                 if epoch<1 and b<1:
                     logging.info("Keys in output dict: {}".format(outputs.__dict__.keys()))
                     logging.info("Logits shape: {}".format(outputs.logits.shape))
-                    
-                    try:
-                        logging.info("attentions shape: {}".format(outputs.attentions.shape))
-                    except:
-                        logging.info("Could not show shape for attentions")
+                    logging.info("target shape: {}".format(targets.shape))
+                
+                # apply loss
+                loss = self.backward(outputs.logits, targets)
+                logging.info("Epoch:{} \t Batch:{} \t Loss:{}".format(epoch, b, loss.item()))
 
-                    try:
-                        logging.info("hidden_states shape: {}".format(outputs.hidden_states.shape))
-                    except:
-                        logging.info("Could not show shape for hidden_shape")
+    
+    def forward(self, batch):
+        """
+        One forward step of training for our model.
 
+        Parameters:
+            x: token ids for a batch
+        """
+        input_ids = batch[0].to(torch.device(self.device))
+        # labels = batch[1]  # not to be used here
+        attention_mask = batch[2].to(torch.device(self.device))
+
+        return self.bert(
+            input_ids = input_ids,
+            attention_mask = attention_mask,
+            output_hidden_states = True
+        )
+
+
+    def backward(self, outputs, targets):
+        """
+        Performs a backpropagation step computing the loss.
+        ______________________________________________________________
+        Parameters:
+        output:
+            The output after forward with shape (batch_size, num_classes).
+        target:
+            The real targets.
+        ______________________________________________________________
+        Returns:
+        loss: float
+            How close the estimate was to the gold standard.
+        """
+        computed_loss = self.loss(
+            input=outputs,
+            target=targets.to(torch.device(self.device))  # FIXME where is this supposed to happen?
+            )
+
+        # calculating gradients
+        computed_loss.backward()
+
+        # updating weights from the model by calling optimizer.step()
+        self.optimizer.step()
+
+        return computed_loss
+
+
+    def evaluate(self, test_loader):
+        """
+        Returns the binary and proportional F1 scores of the model on the
+        examples passed via test_loader.
+
+        :param test_loader: torch.utils.data.DataLoader object with
+                            batch_size=1
+        """
+        # preds, golds, sents = self.predict(test_loader)
+        # flat_preds = [int(i) for l in preds for i in l]
+        # flat_golds = [int(i) for l in golds for i in l]
+
+        # print(len(sents))
+        # print(f'preds')
+        # print(len(preds))
+        # print(len(preds[0]))
+        # print(len(preds[1]))
+        # print('golds')
+        # print(len(golds))
+        # print(len(golds[0]))
+        # print(len(golds[1]))
+
+        # analysis = get_analysis(
+        #     sents=sents,
+        #     y_pred=preds,
+        #     y_test=golds
+        # )
+
+        # binary_f1 = binary_analysis(analysis)
+        # propor_f1 = proportional_analysis(flat_golds, flat_preds)
+        # return binary_f1, propor_f1
+        return None, None
 
 
 

@@ -19,9 +19,21 @@ DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 
 # load train/dev/test data so every build has complete result set
 logging.info("Loading datasets..")
-train_dataset = NorecOneHot(data_path=DATA_DIR + "train/", proportion=0.1)
-test_dataset = NorecOneHot(data_path=DATA_DIR + "test/", proportion=0.1)
-dev_dataset = NorecOneHot(data_path=DATA_DIR + "dev/", proportion=0.1)
+train_dataset = NorecOneHot(
+    data_path=DATA_DIR + "train/", 
+    ignore_id=-100,
+    proportion=0.1,
+    )
+test_dataset = NorecOneHot(
+    data_path=DATA_DIR + "test/", 
+    ignore_id=-100,
+    proportion=0.1,
+    )
+dev_dataset = NorecOneHot(
+    data_path=DATA_DIR + "dev/", 
+    ignore_id=-100,
+    proportion=0.1,
+    )
 
 
 # data loader
@@ -50,7 +62,8 @@ logging.info("Initializing model..")
 
 model = BertSimple(
     device=DEVICE,
-    num_labels=9
+    ignore_id=-100,
+    num_labels=9, 
 )
 
 logging.info('Fitting model...')
