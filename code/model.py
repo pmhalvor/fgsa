@@ -15,10 +15,13 @@ class BertSimple(nn.Module):
     def __init__(
         self, 
         device,
+        num_labels,
         bert_path="ltgoslo/norbert",  
-        bert_dropout=0.1,       # TODO tune
-        bert_finetune = True,   # TODO tune
-        learning_rate=0.01,     # TODO tune
+        bert_dropout=0.1,           # TODO tune
+        bert_finetune=True,         # TODO tune
+        lr=0.01,                    # TODO tune
+        lr_scheduler_factor=0.1,    # TODO tune
+        lr_scheduler_patience=2,    # TODO tune
         output_dim=5,  # target, holder, expression, polarity, intensity
     ):
         """
@@ -29,24 +32,22 @@ class BertSimple(nn.Module):
 
         self.device = device
         self.dropout = bert_dropout  # TODO potentially refactor name?
-        self.learning_rate = learning_rate
+        self.finetune = bert_finetune
+        self.learning_rate = lr
+        self.lr_scheduler_factor = lr_scheduler_factor
+        self.lr_scheduler_patience = lr_scheduler_patience
         self.output_dim = output_dim
 
         # initialize contextual embeddings
-        self.bert = BertModel.from_pretrained(bert_path)
-        self.bert.requires_grad = bert_finetune
+        self.bert = BertForTokenClassification.from_pretrained(
+            bert_path, num_labels=num_labels
+        )
+        self.bert.requires_grad = self.finetune
         self.bert_dropout = nn.Dropout(self.dropout)
 
         # ensure everything is on specified device
         self.bert = self.bert.to(self.device)
         self.bert_dropout = self.bert_dropout.to(self.device)  # TODO is this needed?
-
-        # set up output layer
-        self.linear = nn.Linear(
-            in_features=768,  # size of bert embeddings
-            out_features=5
-        )
-        self.linear = self.linear.to(self.device)
 
         # optimizer in model for sklearn-style fit() training
         self.optimizer = torch.optim.Adam(
@@ -54,23 +55,32 @@ class BertSimple(nn.Module):
             lr=self.learning_rate
         )  # TODO test other optimizers?
 
-    def forward(self, x):
+        # setting learning rate's scheduler
+        self._scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
+            optimizer=self.optimizer,
+            mode='min',
+            factor=self.lr_scheduler_factor,
+            patience=self.lr_scheduler_patience
+        )
+
+
+    def forward(self, batch):
         """
         One forward step of training for our model.
 
         Parameters:
             x: token ids for a batch
         """
+        input_ids = batch[0]
+        labels = batch[1]  # not to be used here
+        attention_mask = batch[2]
 
-        emb = self.bert(
-            x.to(self.device),
-            output_hidden_states=True,
+        return self.bert(
+            input_ids = input_ids,
+            attention_mask = attention_mask,
+            output_hidden_states = True
         )
 
-        emb = emb.last_hidden_state
-
-        import IPython
-        IPython.embed()
 
     def fit(self, train_loader, dev_loader, epochs=10):
         for epoch in range(epochs):
@@ -79,17 +89,17 @@ class BertSimple(nn.Module):
             num_batches = 0
 
             loader_iterator = tqdm(train_loader)
-            for raw_text, x, y, mask, idx in train_loader:
-                self.zero_grad()  # clear updates from prev epoch
+            for b, batch in enumerate(train_loader):
+                self.train()        # turn off eval mode
+                self.zero_grad()    # clear updates from prev epoch
 
-                batches_len, seq_len = x.shape
-
-                preds = self.forward(
-                    x.to(self.device)  # FIXME does this need to happen everywhere? 
-                )
+                outputs = self.forward(batch)
 
                 # TODO continue dev when this has been checked
-
+                print(outputs.logits.keys())
+                print("Shape: {}".format(outputs.logits.shape))
+                print("Keys in output dict: {}".format(outputs.__dict__.keys()))
+                quit()
 
 class Transformer(torch.nn.Module):
     """
