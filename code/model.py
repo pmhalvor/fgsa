@@ -162,15 +162,11 @@ class BertSimple(nn.Module):
         :param test_loader: torch.utils.data.DataLoader object with
                             batch_size=1
         """
-        # preds, golds, sents = self.predict(test_loader)
-        # flat_preds = [int(i) for l in preds for i in l]
-        # flat_golds = [int(i) for l in golds for i in l]
+        predictions, golds, sentences = self.predict(test_loader)
+        flat_predictions = [int(i) for l in predictions for i in l]
+        flat_golds = [int(i) for l in golds for i in l]
 
-        # print(len(sents))
-        # print(f'preds')
-        # print(len(preds))
-        # print(len(preds[0]))
-        # print(len(preds[1]))
+        # print(f'predictions')
         # print('golds')
         # print(len(golds))
         # print(len(golds[0]))
@@ -187,6 +183,56 @@ class BertSimple(nn.Module):
         # return binary_f1, propor_f1
         return None, None
 
+
+    def predict(self, test_loader):
+        """
+        Should resemble fit() for the most part
+
+        :param test_loader: torch.utils.data.DataLoader object with
+                            batch_size=1
+        """
+        self.eval()
+        self.predictions, self.golds, self.sents = [], [], []
+
+        for batch in test_loader:  # removed tqdm
+            outputs = self.forward(batch)
+
+            y_pred = out.logits.argmax(2)  # TODO is this what happens in CELoss?
+
+            logging.info("y_pred.shape:{}".format(y_pred.shape))
+            logging.info("batch[1].shape:{}".format(batch[1].shape))
+            logging.info("y_pred.squeeze(0).shape:{}".format(y_pred.squeeze(0).shape))
+            logging.info("batch[1].squeeze(0).shape:{}".format(batch[1].squeeze(0).shape))
+            
+            # FIXME Why are we squeezing?
+            self.predictions.append(y_pred.squeeze(0).tolist())
+            self.golds.append(batch[1].squeeze(0).tolist())
+
+            for i in batch[0]:
+                self.decoded_sentence = \
+                    self.tokenizer.convert_ids_to_tokens(i)
+                self.sents.append(self.decoded_sentence)
+            
+            logging.info("decoded_sentence:{}".format(self.decoded_sentence))
+
+            quit()
+        # # #################### truncating predictions, golds and sents
+        # self.predictions__, self.golds__, self.sents__ = [], [], []
+        # for l_p, l_g, l_s in zip(self.predictions, self.golds, self.sents):
+        #     predictions_, golds_, sents_ = [], [], []
+
+        #     for e_p, e_g, e_s in zip(l_p, l_g, l_s):
+        #         if e_g != self.IGNORE_ID:
+        #             predictions_.append(e_p)
+        #             golds_.append(e_g)
+        #             sents_.append(e_s)
+
+        #     self.predictions__.append(predictions_)
+        #     self.golds__.append(golds_)
+        #     self.sents__.append(sents_)
+        # # ####################
+
+        return self.predictions__, self.golds__, self.sents__
 
 
 class Transformer(torch.nn.Module):
