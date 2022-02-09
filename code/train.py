@@ -11,7 +11,7 @@ import config
 
 
 ####################  config  ####################
-config.log_train(name='Transformer-dev')
+config.log_train(name='BertSimple-dev')
 DATA_DIR = config.DATA_DIR
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 ###################################################
@@ -47,30 +47,39 @@ logging.info("Datasets loaded.")
 
 
 logging.info("Initializing model..")
-model = Transformer(
-    NORBERT='ltgoslo/norbert',
-    tokenizer=train_dataset.tokenizer,
-    num_labels=9, 
-    IGNORE_ID=-1, 
+
+model = BertSimple(
     device=DEVICE,
-    epochs=2,
-    lr_scheduler=False,
-    factor=0.1,
-    lrs_patience=2,
-    loss_funct='cross-entropy',
-    random_state=1,
-    verbose=True,
-    lr=0.0001,
-    momentum=0.9,
-    epoch_patience=1,
-    label_indexer=None,
-    optmizer='AdamW'
+    num_labels=9
 )
 
 logging.info('Fitting model...')
 model.fit(train_loader=train_loader, verbose=True, dev_loader=dev_loader)
 
 logging.info('Evaluating model...')
-binary_f1, propor_f1 = model.evaluate(test_loader)
+binary_f1, proportion_f1 = model.evaluate(test_loader)
 logging.info("Binary F1: {}".format(binary_f1))
-logging.info("Proportional F1: {}".format(propor_f1))
+logging.info("Proportional F1: {}".format(proportion_f1))
+
+
+
+################   GRAVEYARD   ################
+# model = Transformer(
+#     NORBERT='ltgoslo/norbert',
+#     tokenizer=train_dataset.tokenizer,
+#     num_labels=9, 
+#     IGNORE_ID=-1, 
+#     device=DEVICE,
+#     epochs=2,
+#     lr_scheduler=False,
+#     factor=0.1,
+#     lrs_patience=2,
+#     loss_funct='cross-entropy',
+#     random_state=1,
+#     verbose=True,
+#     lr=0.0001,
+#     momentum=0.9,
+#     epoch_patience=1,
+#     label_indexer=None,
+#     optimizer='AdamW'
+# )
