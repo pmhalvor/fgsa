@@ -203,11 +203,12 @@ class BertSimple(nn.Module):
             # FIXME i think this is all just to print outputs
             # Try implementing as batch size 32 evaluations..
 
-            logging.info('New test output:-----------------------------------------')
-            logging.info("y_pred:{}".format(y_pred))
-            logging.info("y_pred.shape:{}".format(y_pred.shape))
-            logging.info("batch[2]:{}".format(batch[2]))
-            logging.info("batch[2].shape:{}".format(batch[2].shape))
+            if b<1 or torch.sum().item()>0:
+                logging.info('New test output:-----------------------------------------')
+                logging.info("y_pred:{}".format(y_pred))
+                logging.info("y_pred.shape:{}".format(y_pred.shape))
+                logging.info("batch[2]:{}".format(batch[2]))
+                logging.info("batch[2].shape:{}".format(batch[2].shape))
 
 
             # logging.info("y_pred.squeeze(0).shape:{}".format(y_pred.squeeze(0).shape))
@@ -226,9 +227,9 @@ class BertSimple(nn.Module):
             #         self.sentences.append(self.decoded_sentence)
             #     logging.info("decoded_sentence:{}".format(self.decoded_sentence))
 
-            if b>5:
-                logging.info('Quiting...')
-                quit()
+            # if b>5:
+            #     logging.info('Quiting...')
+            #     quit()
         # # #################### truncating predictions, golds and sentences
         # self.predictions__, self.golds__, self.sentences__ = [], [], []
         # for l_p, l_g, l_s in zip(self.predictions, self.golds, self.sentences):
