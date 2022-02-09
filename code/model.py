@@ -1,12 +1,23 @@
-import argparse
 from tqdm import tqdm
+from itertools import chain  # for Transformer
+import argparse
+import numpy as np  # for Transformer
+import logging
 
 ## ML specific
 from torch.nn.utils.rnn import pad_packed_sequence
-from transformers import BertModel
+from torch.nn.utils.rnn import PackedSequence  # for Transformer
 import torch
 import torch.nn as nn
 
+from transformers import BertForTokenClassification
+from transformers import BertModel
+from transformers import BertTokenizer  # for Transformer
+
+## Local imports
+from metrics import binary_analysis  # for Transformer
+from metrics import proportional_analysis  # for Transformer
+from metrics import get_analysis  # for Transformer
 
 class BertSimple(nn.Module):
     """
