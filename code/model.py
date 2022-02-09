@@ -159,9 +159,17 @@ class BertSimple(nn.Module):
         for parent, module in self.bert.named_children():
             if parent == "bert":
                 for child, mod in module.named_children():
-                    for name, md in mod.named_children():
-                        for n, m in md.named_children():
-                            logging.info("Name:{}  Module:{}".format(n, m))
+                    if child=="encoder":
+                        for layer, md in mod.named_children():
+                            if layer=="layer":
+                                for name, bert_layer in md.named_children():
+                                    if name=="0":
+                                        for att, wrapper in bert_layer.named_children():
+                                            if att=="attention":
+                                                for s, s_wrap in wrapper.named_children():
+                                                    if s=="self":
+                                                        for n, m in s_wrap.named_children():
+                                                            logging.info("Name:{}  Module:{}".format(n, m))
 
         # updating weights from the model by calling optimizer.step()
         self.optimizer.step()
