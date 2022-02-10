@@ -18,6 +18,7 @@ from transformers import BertTokenizer  # for Transformer
 from metrics import binary_analysis  # for Transformer
 from metrics import proportional_analysis  # for Transformer
 from metrics import get_analysis  # for Transformer
+from utils import decode_batch
 
 class BertSimple(nn.Module):
     """
@@ -96,21 +97,22 @@ class BertSimple(nn.Module):
                 
                 targets = batch[2]
 
-                if epoch<3 and b<3:
-                    # logging.info("Keys in output dict: {}".format(outputs.__dict__.keys()))
-                    # logging.info("batch[0][:3]: {}".format(batch[0][:3]))
-                    logging.info("batch[0].shape: {}".format(batch[0].shape))
-                    # logging.info("batch[1][:3]: {}".format(batch[1][:3]))
-                    logging.info("batch[1].shape: {}".format(batch[1].shape))
-                    # logging.info("target[:3]: {}".format(targets[:3]))
-                    logging.info("target shape: {}".format(targets.shape))
-                    logging.info("logits shape: {}".format(outputs.logits.shape))
-                    logging.info("logits premuted: {}".format(outputs.logits.permute(0, 2, 1).shape))
-                    logging.info("loss: {}".format(outputs.loss))
+                # if epoch<3 and b<3:
+                #     # # logging.info("Keys in output dict: {}".format(outputs.__dict__.keys()))
+                #     # # logging.info("batch[0][:3]: {}".format(batch[0][:3]))
+                #     # logging.info("batch[0].shape: {}".format(batch[0].shape))
+                #     # # logging.info("batch[1][:3]: {}".format(batch[1][:3]))
+                #     # logging.info("batch[1].shape: {}".format(batch[1].shape))
+                #     # # logging.info("target[:3]: {}".format(targets[:3]))
+                #     # logging.info("target shape: {}".format(targets.shape))
+                #     # logging.info("logits shape: {}".format(outputs.logits.shape))
+                #     # logging.info("logits premuted: {}".format(outputs.logits.permute(0, 2, 1).shape))
+                #     logging.info("loss: {}".format(outputs.loss))
                 
                 # apply loss
                 loss = self.backward(outputs.logits.permute(0, 2, 1), targets)
                 logging.info("Epoch:{:3} Batch:{:3} Loss:{}".format(epoch, b, loss.item()))
+        logging.info("Fit complete.")
 
     
     def forward(self, batch):
@@ -149,7 +151,7 @@ class BertSimple(nn.Module):
         # self.check_weights()
 
         computed_loss = self.loss(
-            input=outputs,
+            input=outputs.to(torch.device(self.device)),
             target=targets.to(torch.device(self.device))  # FIXME where is this supposed to happen?
             )
 
@@ -167,86 +169,108 @@ class BertSimple(nn.Module):
         return computed_loss
 
 
-    def evaluate(self, test_loader):
+    def evaluate(self, loader):
         """
         Returns the binary and proportional F1 scores of the model on the
-        examples passed via test_loader.
+        examples passed via loader.
 
-        :param test_loader: torch.utils.data.DataLoader object with
+        :param loader: torch.utils.data.DataLoader object with
                             batch_size=1
         """
-        predictions, golds = self.predict(test_loader)
-        flat_predictions = [int(i) for l in predictions for i in l]
-        flat_golds = [int(i) for l in golds for i in l]
+
+        for b, batch in enumerate(loader):
+            predictions = self.predict(batch)
+
+            # decode predictions and batch[2]
+            y_predict_decoded = decode_batch(predictions)
+            y_gold_decoded = decode_batch(batch[2])
+
+            logging.info("Compare sizes of predictions vs gold")
+            for p, g in zip(y_predict_decoded, y_gold_decoded):
+                logging.info("batch sizes: p={}  g={}".format(len(p), len(g)))
+                logging.info("sequence sizes: p={}  g={}".format(len(p[0]), len(g[0])))
+
+            break 
+        logging.info("Quitting in evaluation..")
+        quit()
 
 
-        logging.info("Len flat predictions: {}".format(len(flat_predictions)))
-        logging.info("Len flat golds: {}".format(len(flat_golds)))
 
-        logging.info("head flat predictions: \n{}".format(flat_predictions[:50]))
-        logging.info("head flat golds: \n{}".format(flat_golds[:50]))
+
+        # predictions, golds = self.predict(test_loader)
+        # flat_predictions = [int(i) for l in predictions for i in l]
+        # flat_golds = [int(i) for l in golds for i in l]
+
+
+        # logging.info("Len flat predictions: {}".format(len(flat_predictions)))
+        # logging.info("Len flat golds: {}".format(len(flat_golds)))
+
+        # logging.info("head flat predictions: \n{}".format(flat_predictions[:50]))
+        # logging.info("head flat golds: \n{}".format(flat_golds[:50]))
 
 
         # analysis = get_analysis(
-        #     sents=sents,
-        #     y_pred=preds,
+        #     y_pred=predictions,
         #     y_test=golds
         # )
-
         # binary_f1 = binary_analysis(analysis)
-        # propor_f1 = proportional_analysis(flat_golds, flat_preds)
+
+        # proportion_f1 = proportional_analysis(flat_golds, flat_predictions)
+
         # return binary_f1, propor_f1
         return None, None
 
 
-    def predict(self, test_loader):
+    def predict(self, batch):
         """
         Should resemble fit() for the most part
 
-        :param test_loader: torch.utils.data.DataLoader object with
-                            batch_size=1
+        :param batch: tensor containing batch of dev/test data 
         """
         self.eval()
-        self.predictions, self.golds, self.sentences = [], [], []
-
-        for b, batch in enumerate(test_loader):  # removed tqdm
-            outputs = self.forward(batch)
-
-            y_pred = outputs.logits.argmax(2)  # TODO is this what happens in CELoss?
-
-            # FIXME i think this is all just to print outputs
-            # Try implementing as batch size 32 evaluations..
-
-            logging.info('New test output:-----------------------------------------')
-            if b<1 or torch.sum(y_pred).item()>0:
-                logging.info("sum(y_pred):{}".format(torch.sum(y_pred).item()))
-                logging.info("y_pred.shape:{}".format(y_pred.shape))
-                logging.info("batch[2].shape:{}".format(batch[2].shape))
-                logging.info("batch[2]:{}".format(batch[2]))
+        self.predictions, self.golds= [], []
 
 
-            self.predictions += [ele for ele in y_pred.tolist()]
-            self.golds += [ele for ele in batch[2].tolist()]
-            # logging.info("y_pred.squeeze(0).shape:{}".format(y_pred.squeeze(0).shape))
-            # logging.info("batch[2].squeeze(0).shape:{}".format(batch[2].squeeze(0).shape))
-            # logging.info("y_pred.squeeze(0):{}".format(y_pred.squeeze(0)))
-            # logging.info("batch[2].squeeze(0):{}".format(batch[2].squeeze(0)))
+
+
+        # for b, batch in enumerate(test_loader):  # removed tqdm
+        #     outputs = self.forward(batch)
+
+        #     y_pred = outputs.logits.argmax(2)  # TODO is this what happens in CELoss?
+
+        #     # FIXME i think this is all just to print outputs
+        #     # Try implementing as batch size 32 evaluations..
+
+        #     logging.info('New test output:-----------------------------------------')
+        #     if b<1 or torch.sum(y_pred).item()>0:
+        #         logging.info("sum(y_pred):{}".format(torch.sum(y_pred).item()))
+        #         logging.info("y_pred.shape:{}".format(y_pred.shape))
+        #         logging.info("batch[2].shape:{}".format(batch[2].shape))
+        #         logging.info("batch[2]:{}".format(batch[2]))
+
+
+        #     self.predictions += [ele for ele in y_pred.tolist()]
+        #     self.golds += [ele for ele in batch[2].tolist()]
+        #     # logging.info("y_pred.squeeze(0).shape:{}".format(y_pred.squeeze(0).shape))
+        #     # logging.info("batch[2].squeeze(0).shape:{}".format(batch[2].squeeze(0).shape))
+        #     # logging.info("y_pred.squeeze(0):{}".format(y_pred.squeeze(0)))
+        #     # logging.info("batch[2].squeeze(0):{}".format(batch[2].squeeze(0)))
             
-            # # FIXME Why are we squeezing? bc only 1 item in first dir (batch_size=1)
-            # self.predictions.append(y_pred.squeeze(0).tolist())
-            # self.golds.append(batch[2].squeeze(0).tolist())
+        #     # # FIXME Why are we squeezing? bc only 1 item in first dir (batch_size=1)
+        #     # self.predictions.append(y_pred.squeeze(0).tolist())
+        #     # self.golds.append(batch[2].squeeze(0).tolist())
 
-            # if self.tokenizer is not None:
-            #     for i in batch[0]:
-            #         self.decoded_sentence = \
-            #             self.tokenizer.convert_ids_to_tokens(i)
-            #         self.sentences.append(self.decoded_sentence)
-            #     logging.info("decoded_sentence:{}".format(self.decoded_sentence))
+        #     # if self.tokenizer is not None:
+        #     #     for i in batch[0]:
+        #     #         self.decoded_sentence = \
+        #     #             self.tokenizer.convert_ids_to_tokens(i)
+        #     #         self.sentences.append(self.decoded_sentence)
+        #     #     logging.info("decoded_sentence:{}".format(self.decoded_sentence))
 
-            # if b>5:
-            #     logging.info('Quiting...')
-            #     quit()
-        # # #################### truncating predictions, golds and sentences
+        #     # if b>5:
+        #     #     logging.info('Quiting...')
+        #     #     quit()
+        # # # #################### truncating predictions, golds and sentences
         # self.predictions__, self.golds__, self.sentences__ = [], [], []
         # for l_p, l_g, l_s in zip(self.predictions, self.golds, self.sentences):
         #     predictions_, golds_, sentences_ = [], [], []
@@ -262,7 +286,7 @@ class BertSimple(nn.Module):
         #     self.sentences__.append(sentences_)
         # # ####################
 
-        return self.predictions, self.golds #, self.sentences
+        return self.predictions, self.golds 
 
 
     def check_weights(self):
