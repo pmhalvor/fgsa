@@ -169,11 +169,11 @@ class BertSimple(nn.Module):
                                                         for n, m in s_wrap.named_children():
                                                             logging.info("Name:{}  Module:{}  Weight:{}".format(n, m, m.weight))
                                                             break
-                                                    break
-                                            break
-                                    break
-                            break
-                    break
+                                                        break
+                                                break
+                                        break
+                                break
+                        break
                 
         # updating weights from the model by calling optimizer.step()
         self.optimizer.step()
