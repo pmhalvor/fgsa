@@ -223,15 +223,16 @@ class BertSimple(nn.Module):
 
     def predict(self, batch):
         """
-        Should resemble fit() for the most part
-
         :param batch: tensor containing batch of dev/test data 
         """
         self.eval()
-        self.predictions, self.golds= [], []
 
+        outputs = self.forward(batch)
 
+        self.predictions = outputs.logits.argmax(2)
 
+        return self.predictions
+        
 
         # for b, batch in enumerate(test_loader):  # removed tqdm
         #     outputs = self.forward(batch)
@@ -286,7 +287,7 @@ class BertSimple(nn.Module):
         #     self.sentences__.append(sentences_)
         # # ####################
 
-        return self.predictions, self.golds 
+        # return self.predictions, self.golds 
 
 
     def check_weights(self):
