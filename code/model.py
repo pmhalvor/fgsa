@@ -146,6 +146,8 @@ class BertSimple(nn.Module):
         loss: float
             How close the estimate was to the gold standard.
         """
+        self.check_weights()
+        
         computed_loss = self.loss(
             input=outputs,
             target=targets.to(torch.device(self.device))  # FIXME where is this supposed to happen?
@@ -154,51 +156,12 @@ class BertSimple(nn.Module):
         # calculating gradients
         computed_loss.backward()
 
-        for parent, module in self.bert.named_children():
-            if parent == "bert":
-                for child, mod in module.named_children():
-                    if child=="encoder":
-                        for layer, md in mod.named_children():
-                            if layer=="layer":
-                                for name, bert_layer in md.named_children():
-                                    if name=="0":
-                                        for att, wrapper in bert_layer.named_children():
-                                            if att=="attention":
-                                                for s, s_wrap in wrapper.named_children():
-                                                    if s=="self":
-                                                        for n, m in s_wrap.named_children():
-                                                            logging.info("Name:{}  Module:{}  Weight:{}".format(n, m, m.weight))
-                                                            break
-                                                        break
-                                                break
-                                        break
-                                break
-                        break
-                
+        self.check_weights()
+
         # updating weights from the model by calling optimizer.step()
         self.optimizer.step()
 
-        for parent, module in self.bert.named_children():
-            if parent == "bert":
-                for child, mod in module.named_children():
-                    if child=="encoder":
-                        for layer, md in mod.named_children():
-                            if layer=="layer":
-                                for name, bert_layer in md.named_children():
-                                    if name=="0":
-                                        for att, wrapper in bert_layer.named_children():
-                                            if att=="attention":
-                                                for s, s_wrap in wrapper.named_children():
-                                                    if s=="self":
-                                                        for n, m in s_wrap.named_children():
-                                                            logging.info("Name:{}  Module:{}  Weight:{}".format(n, m, m.weight))
-                                                            break
-                                                    break
-                                            break
-                                    break
-                            break
-                    break
-                
+        self.check_weights()
 
         quit()
         return computed_loss
@@ -297,6 +260,29 @@ class BertSimple(nn.Module):
 
         return self.predictions, self.golds, self.sentences
 
+
+    def check_weights(self):
+        for parent, module in self.bert.named_children():
+            if parent == "bert":
+                for child, mod in module.named_children():
+                    if child=="encoder":
+                        for layer, md in mod.named_children():
+                            if layer=="layer":
+                                for name, bert_layer in md.named_children():
+                                    if name=="0":
+                                        for att, wrapper in bert_layer.named_children():
+                                            if att=="attention":
+                                                for s, s_wrap in wrapper.named_children():
+                                                    if s=="self":
+                                                        for n, m in s_wrap.named_children():
+                                                            logging.info("Name:{}  Module:{}  Weight:{}".format(n, m, m.weight))
+                                                            break
+                                                        break
+                                                break
+                                        break
+                                break
+                        break
+                
 
 class Transformer(torch.nn.Module):
     """
