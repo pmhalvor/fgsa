@@ -1,0 +1,29 @@
+Starting job 23273 on gpu-2 at Thu Feb 10 19:26:17 CET 2022
+
+Traceback (most recent call last):
+  File "train.py", line 7, in <module>
+    from model import Transformer 
+ImportError: cannot import name 'Transformer' from 'model' (/fp/homes01/u01/ec-pmhalvor/nlp/msc/fgsa/code/model.py)
+
+Task and CPU usage stats:
+       JobID    JobName  AllocCPUS   NTasks     MinCPU MinCPUTask     AveCPU    Elapsed ExitCode 
+------------ ---------- ---------- -------- ---------- ---------- ---------- ---------- -------- 
+23273              fgsa          1                                             00:00:03      1:0 
+23273.batch       batch          1        1   00:00:01          0   00:00:01   00:00:03      1:0 
+23273.extern     extern          1        1   00:00:00          0   00:00:00   00:00:03      0:0 
+
+Memory usage stats:
+       JobID     MaxRSS MaxRSSTask     AveRSS MaxPages   MaxPagesTask   AvePages 
+------------ ---------- ---------- ---------- -------- -------------- ---------- 
+23273                                                                            
+23273.batch         52K          0        52K        0              0          0 
+23273.extern          0          0          0        0              0          0 
+
+Disk usage stats:
+       JobID  MaxDiskRead MaxDiskReadTask    AveDiskRead MaxDiskWrite MaxDiskWriteTask   AveDiskWrite 
+------------ ------------ --------------- -------------- ------------ ---------------- -------------- 
+23273                                                                                                 
+23273.batch             0               0              0            0                0              0 
+23273.extern        0.01M               0          0.01M            0                0              0 
+
+Job 23273 completed at Thu Feb 10 19:26:21 CET 2022
