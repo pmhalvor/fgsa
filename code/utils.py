@@ -59,11 +59,11 @@ def compare(tensor_1, tensor_2):
     return True
 
 
-def decode(labels):
+def decode(labels, mask):
     """  
     Parameters:
         labels (list): single row of data containing labels to decode
-        ignore_id (int): defaults to 0, since 0 excluded from evaluation? TODO check this
+        mask (None): parameter never used
 
     Encodings
 
@@ -180,10 +180,15 @@ def decode_batch(batch, mask=None):
 
     expressions, holders, polarities, targets = [], [], [], []
 
-    decoder = decode_mask if mask is not None else decode
+    if mask is not None:
+        decoder = decode_mask
+    else:
+        decoder = decode
+        mask = batch
 
-    for tensor in batch:
-        e, h, p, t = decoder(tensor.tolist(), mask=mask)
+
+    for tensor, m in zip(batch, mask):
+        e, h, p, t = decoder(tensor.tolist(), mask=m.tolist())
         expressions.append(e)
         holders.append(h)
         polarities.append(p)
@@ -199,9 +204,11 @@ def decode_batch(batch, mask=None):
 
 def score(true_aspect, predict_aspect, true_sentiment, predict_sentiment, train_op):
     """
+    Takes batch of inputs as lists
+
     Parameters:
-        true_aspect (list): padded or not?
-        predict_aspect (list): probably not padded, unless you used masked decoding
+        true_aspect (list): not padded, built from same decoding as predicted
+        predict_aspect (list): not padded, expects used masked when decoding
         true_sentiment (list): labels for target_polarity.txt. padded or not?
         predict_sentiment (list): 
     """
