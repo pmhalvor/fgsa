@@ -4,7 +4,6 @@ import torch
 
 ## LOCAL
 from dataset import Norec, NorecOneHot 
-from model import Transformer 
 from model import BertSimple
 from utils import pad
 import config 
@@ -24,12 +23,12 @@ train_dataset = NorecOneHot(
     ignore_id=-1,
     proportion=0.55,
     )
-test_dataset = NorecOneHot(
-    data_path=DATA_DIR + "test/", 
-    ignore_id=-1,
-    proportion=0.55,
-    tokenizer=train_dataset.tokenizer,
-    )
+# test_dataset = NorecOneHot(
+#     data_path=DATA_DIR + "test/", 
+#     ignore_id=-1,
+#     proportion=0.55,
+#     tokenizer=train_dataset.tokenizer,
+#     )
 dev_dataset = NorecOneHot(
     data_path=DATA_DIR + "dev/", 
     ignore_id=-1,
@@ -71,7 +70,7 @@ model = BertSimple(
 )
 
 logging.info('Fitting model...')
-model.fit(train_loader=train_loader, epochs=5)
+model.fit(train_loader=train_loader, dev_loader=dev_loader, epochs=5)
 
 logging.info('Evaluating model...')
 binary_f1, proportion_f1 = model.evaluate(dev_loader)
