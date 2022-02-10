@@ -216,7 +216,7 @@ class BertSimple(nn.Module):
             logging.info("f_target: {}".format(f_target))
             logging.info("f_expression: {}".format(f_expression))
             logging.info("f_holder: {}".format(f_holder))
-            logging.info("acc_polarity: {}".format(acc_s))
+            logging.info("acc_polarity: {}".format(acc_polarity))
             logging.info("f_polarity: {}".format(f_s))
             logging.info("f_absa: {}".format(f_absa))
 
