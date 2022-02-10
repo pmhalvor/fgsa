@@ -10,7 +10,7 @@ import config
 
 
 ####################  config  ####################
-config.log_train(name='BertSimple-dev')
+config.log_train(name='BertSimple-lr-tune')
 DATA_DIR = config.DATA_DIR
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 ###################################################
