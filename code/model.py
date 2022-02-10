@@ -19,6 +19,7 @@ from metrics import binary_analysis  # for Transformer
 from metrics import proportional_analysis  # for Transformer
 from metrics import get_analysis  # for Transformer
 from utils import decode_batch
+from utils import score
 
 class BertSimple(nn.Module):
     """
@@ -177,48 +178,35 @@ class BertSimple(nn.Module):
         :param loader: torch.utils.data.DataLoader object with
                             batch_size=1
         """
+        f_absa_overall = 0
 
         for b, batch in enumerate(loader):
             predictions = self.predict(batch)
 
             # decode predictions and batch[2]
-            y_predict_decoded = decode_batch(predictions)
-            y_gold_decoded = decode_batch(batch[2])
+            predict_decoded = decode_batch(predictions, mask=batch[1])
+            true_decoded = decode_batch(batch[2], mask=batch[1])
 
-            logging.info("Compare sizes of predictions vs gold")
-            for p, g in zip(y_predict_decoded, y_gold_decoded):
-                logging.info("batch sizes: p={}  g={}".format(len(p), len(g)))
-                logging.info("sequence sizes: p={}  g={}".format(len(p[0]), len(g[0])))
+            annotations = ['expression', 'holder', 'polarity', 'target']
 
-            break 
-        logging.info("Quitting in evaluation..")
-        quit()
+            f_target, f_expression, acc_polarity, f_polarity, f_absa = score(
+                true_aspect = true_decoded["targets"], 
+                predict_aspect = predict_decoded["targets"], 
+                true_sentiment = true_decoded["polarities"], 
+                predict_sentiment = predict_decoded["polarities"], 
+                train_op = False
+            )
 
+            logging.info("f_target: {}".format(f_target))
+            logging.info("f_expression: {}".format(f_expression))
+            logging.info("acc_polarity: {}".format(acc_s))
+            logging.info("f_polarity: {}".format(f_s))
+            logging.info("f_absa: {}".format(f_absa))
 
-
-
-        # predictions, golds = self.predict(test_loader)
-        # flat_predictions = [int(i) for l in predictions for i in l]
-        # flat_golds = [int(i) for l in golds for i in l]
-
-
-        # logging.info("Len flat predictions: {}".format(len(flat_predictions)))
-        # logging.info("Len flat golds: {}".format(len(flat_golds)))
-
-        # logging.info("head flat predictions: \n{}".format(flat_predictions[:50]))
-        # logging.info("head flat golds: \n{}".format(flat_golds[:50]))
+            f_absa_overall = (f_absa + f_absa_overall)/2.
 
 
-        # analysis = get_analysis(
-        #     y_pred=predictions,
-        #     y_test=golds
-        # )
-        # binary_f1 = binary_analysis(analysis)
-
-        # proportion_f1 = proportional_analysis(flat_golds, flat_predictions)
-
-        # return binary_f1, propor_f1
-        return None, None
+        return f_absa_overall, None
 
 
     def predict(self, batch):
@@ -233,62 +221,6 @@ class BertSimple(nn.Module):
 
         return self.predictions
         
-
-        # for b, batch in enumerate(test_loader):  # removed tqdm
-        #     outputs = self.forward(batch)
-
-        #     y_pred = outputs.logits.argmax(2)  # TODO is this what happens in CELoss?
-
-        #     # FIXME i think this is all just to print outputs
-        #     # Try implementing as batch size 32 evaluations..
-
-        #     logging.info('New test output:-----------------------------------------')
-        #     if b<1 or torch.sum(y_pred).item()>0:
-        #         logging.info("sum(y_pred):{}".format(torch.sum(y_pred).item()))
-        #         logging.info("y_pred.shape:{}".format(y_pred.shape))
-        #         logging.info("batch[2].shape:{}".format(batch[2].shape))
-        #         logging.info("batch[2]:{}".format(batch[2]))
-
-
-        #     self.predictions += [ele for ele in y_pred.tolist()]
-        #     self.golds += [ele for ele in batch[2].tolist()]
-        #     # logging.info("y_pred.squeeze(0).shape:{}".format(y_pred.squeeze(0).shape))
-        #     # logging.info("batch[2].squeeze(0).shape:{}".format(batch[2].squeeze(0).shape))
-        #     # logging.info("y_pred.squeeze(0):{}".format(y_pred.squeeze(0)))
-        #     # logging.info("batch[2].squeeze(0):{}".format(batch[2].squeeze(0)))
-            
-        #     # # FIXME Why are we squeezing? bc only 1 item in first dir (batch_size=1)
-        #     # self.predictions.append(y_pred.squeeze(0).tolist())
-        #     # self.golds.append(batch[2].squeeze(0).tolist())
-
-        #     # if self.tokenizer is not None:
-        #     #     for i in batch[0]:
-        #     #         self.decoded_sentence = \
-        #     #             self.tokenizer.convert_ids_to_tokens(i)
-        #     #         self.sentences.append(self.decoded_sentence)
-        #     #     logging.info("decoded_sentence:{}".format(self.decoded_sentence))
-
-        #     # if b>5:
-        #     #     logging.info('Quiting...')
-        #     #     quit()
-        # # # #################### truncating predictions, golds and sentences
-        # self.predictions__, self.golds__, self.sentences__ = [], [], []
-        # for l_p, l_g, l_s in zip(self.predictions, self.golds, self.sentences):
-        #     predictions_, golds_, sentences_ = [], [], []
-
-        #     for e_p, e_g, e_s in zip(l_p, l_g, l_s):
-        #         if e_g != self.IGNORE_ID:
-        #             predictions_.append(e_p)
-        #             golds_.append(e_g)
-        #             sentences_.append(e_s)
-
-        #     self.predictions__.append(predictions_)
-        #     self.golds__.append(golds_)
-        #     self.sentences__.append(sentences_)
-        # # ####################
-
-        # return self.predictions, self.golds 
-
 
     def check_weights(self):
         for parent, module in self.bert.named_children():
