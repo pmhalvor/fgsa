@@ -98,17 +98,15 @@ class BertSimple(nn.Module):
 
                 if epoch<1 and b<1:
                     # logging.info("Keys in output dict: {}".format(outputs.__dict__.keys()))
-                    logging.info("batch[0][:3]: {}".format(batch[0][:3]))
+                    # logging.info("batch[0][:3]: {}".format(batch[0][:3]))
                     logging.info("batch[0].shape: {}".format(batch[0].shape))
-                    logging.info("batch[1][:3]: {}".format(batch[1][:3]))
+                    # logging.info("batch[1][:3]: {}".format(batch[1][:3]))
                     logging.info("batch[1].shape: {}".format(batch[1].shape))
-                    logging.info("target[:3]: {}".format(targets[:3]))
+                    # logging.info("target[:3]: {}".format(targets[:3]))
                     logging.info("target shape: {}".format(targets.shape))
                     logging.info("logits shape: {}".format(outputs.logits.shape))
                     logging.info("logits premuted: {}".format(outputs.logits.permute(0, 2, 1).shape))
                     logging.info("loss: {}".format(outputs.loss))
-                # else:
-                #     quit()
                 
                 # apply loss
                 loss = self.backward(outputs.logits.permute(0, 2, 1), targets)
@@ -170,9 +168,37 @@ class BertSimple(nn.Module):
                                                     if s=="self":
                                                         for n, m in s_wrap.named_children():
                                                             logging.info("Name:{}  Module:{}  Weight:{}".format(n, m, m.weight))
-
+                                                            break
+                                                    break
+                                            break
+                                    break
+                            break
+                    break
+                
         # updating weights from the model by calling optimizer.step()
         self.optimizer.step()
+
+        for parent, module in self.bert.named_children():
+            if parent == "bert":
+                for child, mod in module.named_children():
+                    if child=="encoder":
+                        for layer, md in mod.named_children():
+                            if layer=="layer":
+                                for name, bert_layer in md.named_children():
+                                    if name=="0":
+                                        for att, wrapper in bert_layer.named_children():
+                                            if att=="attention":
+                                                for s, s_wrap in wrapper.named_children():
+                                                    if s=="self":
+                                                        for n, m in s_wrap.named_children():
+                                                            logging.info("Name:{}  Module:{}  Weight:{}".format(n, m, m.weight))
+                                                            break
+                                                    break
+                                            break
+                                    break
+                            break
+                    break
+                
 
         quit()
         return computed_loss
