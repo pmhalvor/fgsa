@@ -2,7 +2,7 @@
 dev_*.ipynb
 old*
 .old
-
+log/*
 
 
 # Byte-compiled / optimized / DLL files
