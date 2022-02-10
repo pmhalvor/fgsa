@@ -22,18 +22,18 @@ logging.info("Loading datasets..")
 train_dataset = NorecOneHot(
     data_path=DATA_DIR + "train/", 
     ignore_id=-1,
-    proportion=0.05,
+    proportion=0.55,
     )
 test_dataset = NorecOneHot(
     data_path=DATA_DIR + "test/", 
     ignore_id=-1,
-    proportion=0.05,
+    proportion=0.55,
     tokenizer=train_dataset.tokenizer,
     )
 dev_dataset = NorecOneHot(
     data_path=DATA_DIR + "dev/", 
     ignore_id=-1,
-    proportion=0.05,
+    proportion=0.55,
     tokenizer=train_dataset.tokenizer,
     )
 
@@ -71,32 +71,10 @@ model = BertSimple(
 )
 
 logging.info('Fitting model...')
-model.fit(train_loader=train_loader, epochs=1)
+model.fit(train_loader=train_loader, epochs=5)
 
 logging.info('Evaluating model...')
 binary_f1, proportion_f1 = model.evaluate(dev_loader)
 logging.info("Binary F1: {}".format(binary_f1))
 logging.info("Proportional F1: {}".format(proportion_f1))
 
-
-
-################   GRAVEYARD   ################
-# model = Transformer(
-#     NORBERT='ltgoslo/norbert',
-#     tokenizer=train_dataset.tokenizer,
-#     num_labels=9, 
-#     IGNORE_ID=-1, 
-#     device=DEVICE,
-#     epochs=2,
-#     lr_scheduler=False,
-#     factor=0.1,
-#     lrs_patience=2,
-#     loss_funct='cross-entropy',
-#     random_state=1,
-#     verbose=True,
-#     lr=0.0001,
-#     momentum=0.9,
-#     epoch_patience=1,
-#     label_indexer=None,
-#     optimizer='AdamW'
-# )
