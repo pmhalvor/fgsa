@@ -189,7 +189,7 @@ class BertSimple(nn.Module):
 
             annotations = ['expression', 'holder', 'polarity', 'target']
 
-            f_target, f_expression, acc_polarity, f_polarity, f_absa = score(
+            f_target, acc_polarity, f_polarity, f_absa = score(
                 true_aspect = true_decoded["targets"], 
                 predict_aspect = predict_decoded["targets"], 
                 true_sentiment = true_decoded["polarities"], 
@@ -198,7 +198,7 @@ class BertSimple(nn.Module):
             )
 
             logging.info("f_target: {}".format(f_target))
-            logging.info("f_expression: {}".format(f_expression))
+            # logging.info("f_expression: {}".format(f_expression))
             logging.info("acc_polarity: {}".format(acc_s))
             logging.info("f_polarity: {}".format(f_s))
             logging.info("f_absa: {}".format(f_absa))
