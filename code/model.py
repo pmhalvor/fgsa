@@ -96,7 +96,7 @@ class BertSimple(nn.Module):
                 
                 targets = batch[2]
 
-                if epoch<1 and b<1:
+                if epoch<3 and b<3:
                     # logging.info("Keys in output dict: {}".format(outputs.__dict__.keys()))
                     # logging.info("batch[0][:3]: {}".format(batch[0][:3]))
                     logging.info("batch[0].shape: {}".format(batch[0].shape))
@@ -146,8 +146,8 @@ class BertSimple(nn.Module):
         loss: float
             How close the estimate was to the gold standard.
         """
-        self.check_weights()
-        
+        # self.check_weights()
+
         computed_loss = self.loss(
             input=outputs,
             target=targets.to(torch.device(self.device))  # FIXME where is this supposed to happen?
@@ -156,14 +156,14 @@ class BertSimple(nn.Module):
         # calculating gradients
         computed_loss.backward()
 
-        self.check_weights()
+        # self.check_weights()
 
         # updating weights from the model by calling optimizer.step()
         self.optimizer.step()
 
-        self.check_weights()
+        # self.check_weights()
 
-        quit()
+        # quit()
         return computed_loss
 
 
@@ -215,12 +215,12 @@ class BertSimple(nn.Module):
             # FIXME i think this is all just to print outputs
             # Try implementing as batch size 32 evaluations..
 
-            if b<1 or torch.sum().item()>0:
-                logging.info('New test output:-----------------------------------------')
-                logging.info("y_pred:{}".format(y_pred))
+            logging.info('New test output:-----------------------------------------')
+            if b<1 or torch.sum(y_pred).item()>0:
+                logging.info("sum(y_pred):{}".format(torch.sum(y_pred).item()))
                 logging.info("y_pred.shape:{}".format(y_pred.shape))
-                logging.info("batch[2]:{}".format(batch[2]))
                 logging.info("batch[2].shape:{}".format(batch[2].shape))
+                logging.info("batch[2]:{}".format(batch[2]))
 
 
             # logging.info("y_pred.squeeze(0).shape:{}".format(y_pred.squeeze(0).shape))

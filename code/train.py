@@ -66,12 +66,12 @@ model = BertSimple(
     device=DEVICE,
     ignore_id=-1,
     num_labels=9, 
-    lr=0.000001,  # 0.00001
+    lr=0.0001,  # 0.00001
     tokenizer=train_dataset.tokenizer,
 )
 
 logging.info('Fitting model...')
-model.fit(train_loader=train_loader, epochs=2)
+model.fit(train_loader=train_loader, epochs=3)
 
 # logging.info('Evaluating model...')
 # binary_f1, proportion_f1 = model.evaluate(dev_loader)
