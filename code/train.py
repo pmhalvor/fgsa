@@ -65,7 +65,7 @@ model = BertSimple(
     device=DEVICE,
     ignore_id=-1,
     num_labels=9, 
-    lr=0.0001,  # 0.00001
+    lr=0.0000001,  # 0.00001
     tokenizer=train_dataset.tokenizer,
 )
 
