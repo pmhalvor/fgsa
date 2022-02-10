@@ -183,7 +183,7 @@ def decode_batch(batch, mask=None):
     decoder = decode_mask if mask is not None else decode
 
     for tensor in batch:
-        e, h, p, t = decoder(tensor.list(), mask=mask)
+        e, h, p, t = decoder(tensor.tolist(), mask=mask)
         expressions.append(e)
         holders.append(h)
         polarities.append(p)
