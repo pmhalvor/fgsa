@@ -74,7 +74,7 @@ class BertSimple(torch.nn.Module):
         )
 
 
-    def fit(self, train_loader, epochs=10):
+    def fit(self, train_loader, dev_loader=None, epochs=10):
         for epoch in range(epochs):
             self.train()
             epoch_loss = 0
@@ -93,6 +93,10 @@ class BertSimple(torch.nn.Module):
                 loss = self.backward(outputs.logits.permute(0, 2, 1), targets)
                 if b%13==0:
                     logging.info("Epoch:{:3} Batch:{:3} Loss:{}".format(epoch, b, loss.item()))
+        
+            if dev_loader is not None:
+                self.evaluate(dev_loader)
+
         logging.info("Fit complete.")
 
     
