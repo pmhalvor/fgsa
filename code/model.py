@@ -90,7 +90,7 @@ class BertSimple(nn.Module):
             loader_iterator = tqdm(train_loader)
             for b, batch in enumerate(train_loader):
                 self.train()        # turn off eval mode
-                # self.zero_grad()    # clear updates from prev epoch
+                self.zero_grad()    # clear updates from prev epoch
 
                 outputs = self.forward(batch)
                 
@@ -175,15 +175,17 @@ class BertSimple(nn.Module):
         :param test_loader: torch.utils.data.DataLoader object with
                             batch_size=1
         """
-        predictions, golds, sentences = self.predict(test_loader)
+        predictions, golds = self.predict(test_loader)
         flat_predictions = [int(i) for l in predictions for i in l]
         flat_golds = [int(i) for l in golds for i in l]
 
-        # print(f'predictions')
-        # print('golds')
-        # print(len(golds))
-        # print(len(golds[0]))
-        # print(len(golds[1]))
+
+        logging.info("Len flat predictions: {}".format(len(flat_predictions)))
+        logging.info("Len flat golds: {}".format(len(flat_golds)))
+
+        logging.info("head flat predictions: \n{}".format(flat_predictions[:50]))
+        logging.info("head flat golds: \n{}".format(flat_golds[:50]))
+
 
         # analysis = get_analysis(
         #     sents=sents,
@@ -223,6 +225,8 @@ class BertSimple(nn.Module):
                 logging.info("batch[2]:{}".format(batch[2]))
 
 
+            self.predictions += [ele for ele in y_pred.tolist()]
+            self.golds += [ele for ele in batch[2].tolist()]
             # logging.info("y_pred.squeeze(0).shape:{}".format(y_pred.squeeze(0).shape))
             # logging.info("batch[2].squeeze(0).shape:{}".format(batch[2].squeeze(0).shape))
             # logging.info("y_pred.squeeze(0):{}".format(y_pred.squeeze(0)))
@@ -258,7 +262,7 @@ class BertSimple(nn.Module):
         #     self.sentences__.append(sentences_)
         # # ####################
 
-        return self.predictions, self.golds, self.sentences
+        return self.predictions, self.golds #, self.sentences
 
 
     def check_weights(self):
