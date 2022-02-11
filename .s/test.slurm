@@ -1,16 +1,17 @@
 #!/bin/bash
 
 # Job name:
-#SBATCH --job-name=fgsa
+#SBATCH --job-name=fgsa-test
 # Project:
 #SBATCH --account=ec37
 # Wall time limit: --time=DD-HH:MM:SS
 #SBATCH --time=00:10:00
 # Memory requested:
-#SBATCH --mem 10G
+#SBATCH --mem-per-cpu=2G
+#SBATCH --qos=devel
 # Run on GPU
 #SBATCH --partition=accel
-#SBATCH --gres=gpu:1
+#SBATCH --gpus=1
 
 ## Set up job environment:
 set -o errexit  # Exit the script on any error

@@ -1,5 +1,6 @@
 from torch.utils.data import DataLoader
 import torch
+import logging
 
 ## LOCAL 
 from config import DATA_DIR
@@ -41,4 +42,5 @@ def test_BertSimple_fit():
     weights = model.check_weights()
 
     assert weights is not None
-    logging.info(weights)
+    logging.info(weights.shape)
+    logging.info(weights[0][0])

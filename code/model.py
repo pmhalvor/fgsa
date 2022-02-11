@@ -154,7 +154,7 @@ class BertSimple(torch.nn.Module):
         return computed_loss
 
 
-    def evaluate(self, loader):
+    def evaluate(self, loader, verbose=False):
         """
         Returns the binary and proportional F1 scores of the model on the
         examples passed via loader.
@@ -239,7 +239,7 @@ class BertSimple(torch.nn.Module):
                                                 for s, s_wrap in wrapper.named_children():
                                                     if s=="self":
                                                         for n, m in s_wrap.named_children():
-                                                            logging.info("Name:{}  Module:{}  Weight:{}".format(n, m, m.weight))
+                                                            # logging.info("Name:{}  Module:{}  Weight:{}".format(n, m, m.weight))
                                                             weights = m.weight
                                                             break
                                                         break

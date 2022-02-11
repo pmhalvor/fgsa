@@ -74,7 +74,7 @@ logging.info('Fitting model...')
 model.fit(train_loader=train_loader, dev_loader=dev_loader, epochs=5)
 
 logging.info('Evaluating model...')
-binary_f1, proportion_f1 = model.evaluate(dev_loader)
+binary_f1, proportion_f1 = model.evaluate(dev_loader, verbose=True)
 logging.info("Binary F1: {}".format(binary_f1))
 logging.info("Proportional F1: {}".format(proportion_f1))
 
