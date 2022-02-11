@@ -12,6 +12,7 @@ from transformers import BertModel  # TODO next step, Bert as head
 from utils import decode_batch
 from utils import score
 
+
 class BertSimple(torch.nn.Module):
     """
     Built specifically for fgsa code
@@ -196,14 +197,15 @@ class BertSimple(torch.nn.Module):
                 train_op = True
             )
 
-            logging.info("f_target: {}".format(f_target))
-            logging.info("f_expression: {}".format(f_expression))
-            logging.info("f_holder: {}".format(f_holder))
-            logging.info("acc_polarity: {}".format(acc_polarity))
-            logging.info("f_polarity: {}".format(f_polarity))
-            logging.info("f_absa: {}".format(f_absa))
+            if verbose:
+                logging.info("f_target: {}".format(f_target))
+                logging.info("f_expression: {}".format(f_expression))
+                logging.info("f_holder: {}".format(f_holder))
+                logging.info("acc_polarity: {}".format(acc_polarity))
+                logging.info("f_polarity: {}".format(f_polarity))
 
             f_absa_overall = (f_absa + f_absa_overall)/2.
+            logging.info("dev batch: {:3}   overall f1 absa: {}".format(b, f_absa_overall))
 
 
         return f_absa_overall, None
@@ -223,6 +225,7 @@ class BertSimple(torch.nn.Module):
         
 
     def check_weights(self):
+        weights = None
         for parent, module in self.bert.named_children():
             if parent == "bert":
                 for child, mod in module.named_children():
@@ -237,10 +240,11 @@ class BertSimple(torch.nn.Module):
                                                     if s=="self":
                                                         for n, m in s_wrap.named_children():
                                                             logging.info("Name:{}  Module:{}  Weight:{}".format(n, m, m.weight))
+                                                            weights = m.weight
                                                             break
                                                         break
                                                 break
                                         break
                                 break
                         break
-                
+        return weights

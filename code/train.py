@@ -3,15 +3,16 @@ import logging
 import torch
 
 ## LOCAL
-from dataset import Norec, NorecOneHot 
+from config import DATA_DIR
+from config import log_train
+from dataset import Norec
+from dataset import NorecOneHot 
 from model import BertSimple
 from utils import pad
-import config 
 
 
 ####################  config  ####################
-config.log_train(name='BertSimple-lr-tune')
-DATA_DIR = config.DATA_DIR
+log_train(name='BertSimple-lr-tune')
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 ###################################################
 
@@ -65,7 +66,7 @@ model = BertSimple(
     device=DEVICE,
     ignore_id=-1,
     num_labels=9, 
-    lr=0.0000001,  # 0.00001
+    lr=1e-7,  # 0.00001
     tokenizer=train_dataset.tokenizer,
 )
 
