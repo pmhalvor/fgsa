@@ -14,6 +14,7 @@ from utils import pad
 ####################  config  ####################
 log_train(name='BertSimple-lr-tune')
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
+logging.info('Running on device {}'.format(DEVICE))
 ###################################################
 
 

@@ -13,7 +13,9 @@ log_test()
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 logging.info('Running on device {}'.format(DEVICE))
 
+strictness = [True, False]
 
+@pytest.mark.parameterize("strict", strictness)
 def test_BertSimple_fit():
     train_dataset = NorecOneHot(
         data_path=DATA_DIR + "train/", 
@@ -32,7 +34,7 @@ def test_BertSimple_fit():
         device=DEVICE,
         ignore_id=-1,
         num_labels=9, 
-        lr=1e-7,  # 0.00001
+        lr=1e-10,  # 0.00001
         tokenizer=train_dataset.tokenizer,
     )
 
@@ -42,5 +44,6 @@ def test_BertSimple_fit():
     weights = model.check_weights()
 
     assert weights is not None
-    logging.info(weights.shape)
-    logging.info(weights[0][0])
+    assert weights.shape == torch.Size([768, 768])
+    if strict:
+        assert weights[0][0].item() == 0.0304  # very strict
