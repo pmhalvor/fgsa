@@ -9,6 +9,9 @@ from model import BertSimple
 from utils import pad
 
 log_test()
+DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
+logging.info('Running on device {}'.format(DEVICE))
+
 
 def test_BertSimple_fit():
     train_dataset = NorecOneHot(

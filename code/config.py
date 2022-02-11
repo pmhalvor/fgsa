@@ -1,8 +1,9 @@
 import logging
 
 # TODO download from git automagically
-DATA_DIR = "/fp/homes01/u01/ec-pmhalvor/data/norec_fine/"  # TODO hide personal info
 BERT_PATH = "ltgoslo/norbert"
+DATA_DIR = "/fp/homes01/u01/ec-pmhalvor/data/norec_fine/"  # TODO hide personal info
+
 
 def log_test(level=logging.INFO, name='test'):
     """
