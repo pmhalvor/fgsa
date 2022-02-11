@@ -1,0 +1,41 @@
+Starting job 23360 on gpu-2 at Fri Feb 11 10:49:04 CET 2022
+
+============================= test session starts ==============================
+platform linux -- Python 3.8.6, pytest-6.1.1, py-1.9.0, pluggy-0.13.1 -- /cluster/software/Python/3.8.6-GCCcore-10.2.0/bin/python
+cachedir: .pytest_cache
+rootdir: /fp/homes01/u01/ec-pmhalvor/nlp/msc/fgsa, configfile: pytest.ini
+collecting ... 
+----------------------------- live log collection ------------------------------
+2022-02-11 10:49:07 [    INFO] ---------  new run: test dataset --------- (config.py:15)
+2022-02-11 10:49:07 [    INFO] ---------  new run: test --------- (config.py:15)
+2022-02-11 10:49:07 [    INFO] Running on device cpu (test_model.py:14)
+collected 4 items
+
+test/test_data.py::test_data_dir PASSED                                  [ 25%]
+test/test_data.py::test_dataset_shape PASSED                             [ 50%]
+test/test_data.py::test_dataset_values PASSED                            [ 75%]
+test/test_model.py::test_BertSimple_fit /var/spool/slurmd/job23360/slurm_script: line 28: 1328077 Killed                  pytest . -vv
+slurmstepd: error: Detected 1 oom-kill event(s) in StepId=23360.batch cgroup. Some of your processes may have been killed by the cgroup out-of-memory handler.
+
+Task and CPU usage stats:
+       JobID    JobName  AllocCPUS   NTasks     MinCPU MinCPUTask     AveCPU    Elapsed ExitCode 
+------------ ---------- ---------- -------- ---------- ---------- ---------- ---------- -------- 
+23360         fgsa-test          1                                             00:00:30    0:125 
+23360.batch       batch          1        1   00:00:08          0   00:00:08   00:00:30    0:125 
+23360.extern     extern          1        1   00:00:00          0   00:00:00   00:00:30    0:125 
+
+Memory usage stats:
+       JobID     MaxRSS MaxRSSTask     AveRSS MaxPages   MaxPagesTask   AvePages 
+------------ ---------- ---------- ---------- -------- -------------- ---------- 
+23360                                                                            
+23360.batch        120K          0       120K        0              0          0 
+23360.extern          0          0          0        0              0          0 
+
+Disk usage stats:
+       JobID  MaxDiskRead MaxDiskReadTask    AveDiskRead MaxDiskWrite MaxDiskWriteTask   AveDiskWrite 
+------------ ------------ --------------- -------------- ------------ ---------------- -------------- 
+23360                                                                                                 
+23360.batch             0               0              0            0                0              0 
+23360.extern        0.01M               0          0.01M            0                0              0 
+
+Job 23360 completed at Fri Feb 11 10:49:35 CET 2022

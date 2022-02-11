@@ -1,6 +1,7 @@
 from torch.utils.data import DataLoader
 import torch
 import logging
+import pytest
 
 ## LOCAL 
 from config import DATA_DIR

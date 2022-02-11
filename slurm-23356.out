@@ -1,0 +1,83 @@
+Starting job 23356 on gpu-2 at Fri Feb 11 10:27:36 CET 2022
+
+============================= test session starts ==============================
+platform linux -- Python 3.8.6, pytest-6.1.1, py-1.9.0, pluggy-0.13.1 -- /cluster/software/Python/3.8.6-GCCcore-10.2.0/bin/python
+cachedir: .pytest_cache
+rootdir: /fp/homes01/u01/ec-pmhalvor/nlp/msc/fgsa, configfile: pytest.ini
+collecting ... collected 0 items / 2 errors
+
+==================================== ERRORS ====================================
+______________________ ERROR collecting test/test_data.py ______________________
+ImportError while importing test module '/fp/homes01/u01/ec-pmhalvor/nlp/msc/fgsa/test/test_data.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+/cluster/software/Python/3.8.6-GCCcore-10.2.0/lib/python3.8/site-packages/_pytest/python.py:571: in _importtestmodule
+    mod = import_path(self.fspath, mode=importmode)
+/cluster/software/Python/3.8.6-GCCcore-10.2.0/lib/python3.8/site-packages/_pytest/pathlib.py:517: in import_path
+    importlib.import_module(module_name)
+/cluster/software/Python/3.8.6-GCCcore-10.2.0/lib/python3.8/importlib/__init__.py:127: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+<frozen importlib._bootstrap>:1014: in _gcd_import
+    ???
+<frozen importlib._bootstrap>:991: in _find_and_load
+    ???
+<frozen importlib._bootstrap>:975: in _find_and_load_unlocked
+    ???
+<frozen importlib._bootstrap>:671: in _load_unlocked
+    ???
+/cluster/software/Python/3.8.6-GCCcore-10.2.0/lib/python3.8/site-packages/_pytest/assertion/rewrite.py:171: in exec_module
+    exec(co, module.__dict__)
+test_data.py:7: in <module>
+    from dataset import NorecOneHot
+E   ModuleNotFoundError: No module named 'dataset'
+_____________________ ERROR collecting test/test_model.py ______________________
+ImportError while importing test module '/fp/homes01/u01/ec-pmhalvor/nlp/msc/fgsa/test/test_model.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+/cluster/software/Python/3.8.6-GCCcore-10.2.0/lib/python3.8/site-packages/_pytest/python.py:571: in _importtestmodule
+    mod = import_path(self.fspath, mode=importmode)
+/cluster/software/Python/3.8.6-GCCcore-10.2.0/lib/python3.8/site-packages/_pytest/pathlib.py:517: in import_path
+    importlib.import_module(module_name)
+/cluster/software/Python/3.8.6-GCCcore-10.2.0/lib/python3.8/importlib/__init__.py:127: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+<frozen importlib._bootstrap>:1014: in _gcd_import
+    ???
+<frozen importlib._bootstrap>:991: in _find_and_load
+    ???
+<frozen importlib._bootstrap>:975: in _find_and_load_unlocked
+    ???
+<frozen importlib._bootstrap>:671: in _load_unlocked
+    ???
+/cluster/software/Python/3.8.6-GCCcore-10.2.0/lib/python3.8/site-packages/_pytest/assertion/rewrite.py:171: in exec_module
+    exec(co, module.__dict__)
+test_model.py:5: in <module>
+    from config import DATA_DIR
+E   ModuleNotFoundError: No module named 'config'
+=========================== short test summary info ============================
+ERROR test_data.py
+ERROR test_model.py
+!!!!!!!!!!!!!!!!!!! Interrupted: 2 errors during collection !!!!!!!!!!!!!!!!!!!!
+============================== 2 errors in 1.11s ===============================
+
+Task and CPU usage stats:
+       JobID    JobName  AllocCPUS   NTasks     MinCPU MinCPUTask     AveCPU    Elapsed ExitCode 
+------------ ---------- ---------- -------- ---------- ---------- ---------- ---------- -------- 
+23356              fgsa          1                                             00:00:03      2:0 
+23356.batch       batch          1        1   00:00:02          0   00:00:02   00:00:03      2:0 
+23356.extern     extern          1        1   00:00:00          0   00:00:00   00:00:03      0:0 
+
+Memory usage stats:
+       JobID     MaxRSS MaxRSSTask     AveRSS MaxPages   MaxPagesTask   AvePages 
+------------ ---------- ---------- ---------- -------- -------------- ---------- 
+23356                                                                            
+23356.batch        144K          0       144K        0              0          0 
+23356.extern          0          0          0        0              0          0 
+
+Disk usage stats:
+       JobID  MaxDiskRead MaxDiskReadTask    AveDiskRead MaxDiskWrite MaxDiskWriteTask   AveDiskWrite 
+------------ ------------ --------------- -------------- ------------ ---------------- -------------- 
+23356                                                                                                 
+23356.batch             0               0              0            0                0              0 
+23356.extern        0.01M               0          0.01M            0                0              0 
+
+Job 23356 completed at Fri Feb 11 10:27:40 CET 2022

@@ -1,0 +1,54 @@
+Starting job 23358 on gpu-2 at Fri Feb 11 10:33:40 CET 2022
+
+============================= test session starts ==============================
+platform linux -- Python 3.8.6, pytest-6.1.1, py-1.9.0, pluggy-0.13.1 -- /cluster/software/Python/3.8.6-GCCcore-10.2.0/bin/python
+cachedir: .pytest_cache
+rootdir: /fp/homes01/u01/ec-pmhalvor/nlp/msc/fgsa, configfile: pytest.ini
+collecting ... 
+----------------------------- live log collection ------------------------------
+2022-02-11 10:33:43 [    INFO] ---------  new run: test dataset --------- (config.py:15)
+2022-02-11 10:33:43 [    INFO] ---------  new run: test --------- (config.py:15)
+collected 3 items / 1 error / 2 selected
+
+==================================== ERRORS ====================================
+___________________ ERROR collecting code/test/test_model.py ___________________
+test/test_model.py:13: in <module>
+    logging.info('Running on device {}'.format(DEVICE))
+E   NameError: name 'logging' is not defined
+=============================== warnings summary ===============================
+config.py:20
+  /fp/homes01/u01/ec-pmhalvor/nlp/msc/fgsa/code/config.py:20: SyntaxWarning: "is not" with a literal. Did you mean "!="?
+    name = '-'+name if name is not '' else name
+
+config.py:33
+  /fp/homes01/u01/ec-pmhalvor/nlp/msc/fgsa/code/config.py:33: SyntaxWarning: "is not" with a literal. Did you mean "!="?
+    name = '-'+name if name is not '' else name
+
+-- Docs: https://docs.pytest.org/en/stable/warnings.html
+=========================== short test summary info ============================
+ERROR test/test_model.py - NameError: name 'logging' is not defined
+!!!!!!!!!!!!!!!!!!!! Interrupted: 1 error during collection !!!!!!!!!!!!!!!!!!!!
+========================= 2 warnings, 1 error in 1.01s =========================
+
+Task and CPU usage stats:
+       JobID    JobName  AllocCPUS   NTasks     MinCPU MinCPUTask     AveCPU    Elapsed ExitCode 
+------------ ---------- ---------- -------- ---------- ---------- ---------- ---------- -------- 
+23358              fgsa          1                                             00:00:04      2:0 
+23358.batch       batch          1        1   00:00:02          0   00:00:02   00:00:04      2:0 
+23358.extern     extern          1        1   00:00:00          0   00:00:00   00:00:04      0:0 
+
+Memory usage stats:
+       JobID     MaxRSS MaxRSSTask     AveRSS MaxPages   MaxPagesTask   AvePages 
+------------ ---------- ---------- ---------- -------- -------------- ---------- 
+23358                                                                            
+23358.batch        144K          0       144K        0              0          0 
+23358.extern          0          0          0        0              0          0 
+
+Disk usage stats:
+       JobID  MaxDiskRead MaxDiskReadTask    AveDiskRead MaxDiskWrite MaxDiskWriteTask   AveDiskWrite 
+------------ ------------ --------------- -------------- ------------ ---------------- -------------- 
+23358                                                                                                 
+23358.batch             0               0              0            0                0              0 
+23358.extern        0.01M               0          0.01M            0                0              0 
+
+Job 23358 completed at Fri Feb 11 10:33:44 CET 2022
