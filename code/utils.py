@@ -112,6 +112,47 @@ def decode(labels, mask):
     return expressions, holders, polarity, targets
 
 
+def decode_target(labels, mask):
+    """  
+    Parameters:
+        labels (list): single row of data containing labels to decode
+        mask (None): parameter never used
+
+    Encodings
+
+        Value       Label
+        0           O                \n
+        1       B-Positive           \n
+        2       I-Positive           \n
+        3       B-Negative           \n
+        4       I-Negative           \n
+
+    """
+    def append_all(e, h, p, t):
+        expressions.append(e)
+        holders.append(h)
+        polarity.append(p)
+        targets.append(t)
+    
+    expressions, holders, polarity, targets = [], [], [], []
+    
+    for ele in labels:
+        if ele == 0:
+            append_all(0, 0, 0, 0)
+        elif ele == 1:
+            append_all(0, 0, 1, 1)  # polarity 1  target 1
+        elif ele == 2:
+            append_all(0, 0, 1, 2)  # polarity 1  target 2
+        elif ele == 3:
+            append_all(0, 0, 2, 1)  # polarity 2  target 1
+        elif ele == 4:
+            append_all(0, 0, 2, 2)  # polarity 2  target 2
+        else:
+            append_all(0, 0, 0, 0)
+
+    return expressions, holders, polarity, targets
+
+
 def decode_mask(labels, mask):
     """  
     Parameters:
@@ -167,7 +208,50 @@ def decode_mask(labels, mask):
     return expressions, holders, polarity, targets
 
 
-def decode_batch(batch, mask=None):
+def decode_mask_target(labels, mask):
+    """  
+    Parameters:
+        labels (list): single row of data containing labels to decode
+        ignore_id (int): defaults to 0, since 0 excluded from evaluation? TODO check this
+
+    Encodings
+
+        Value       Label
+        0           O                \n
+        5       B-Positive           \n
+        6       I-Positive           \n
+        7       B-Negative           \n
+        8       I-Negative           \n
+
+    """
+    def append_all(e, h, p, t):
+        expressions.append(e)
+        holders.append(h)
+        polarity.append(p)
+        targets.append(t)
+    
+    expressions, holders, polarity, targets = [], [], [], []
+    
+    for ele, m in zip(labels, mask):
+        if m == 0:
+            break
+        elif ele == 0:
+            append_all(0, 0, 0, 0)  # outside
+        elif ele == 1:
+            append_all(0, 0, 1, 1)  # polarity 1  target 1
+        elif ele == 2:
+            append_all(0, 0, 1, 2)  # polarity 1  target 2
+        elif ele == 3:
+            append_all(0, 0, 2, 1)  # polarity 2  target 1
+        elif ele == 4:
+            append_all(0, 0, 2, 2)  # polarity 2  target 2
+        else:
+            append_all(0, 0, 0, 0)
+
+    return expressions, holders, polarity, targets
+
+
+def decode_batch(batch, mask=None, targets_only=False):
     """
     Wrapper class for decoding.
 
@@ -180,12 +264,17 @@ def decode_batch(batch, mask=None):
 
     expressions, holders, polarities, targets = [], [], [], []
 
-    if mask is not None:
-        decoder = decode_mask
+    # decide decoder according what data we are looking at
+    if mask is not None and targets_only is True:
+        decoder = decode_mask_target  # FIXME clean this up
+    elif mask is not None:
+        decoder = decode_mask 
+    elif targets_only is True:
+        decoder = decoder_target
+        mask = batch
     else:
         decoder = decode
         mask = batch
-
 
     for tensor, m in zip(batch, mask):
         e, h, p, t = decoder(tensor.tolist(), mask=m.tolist())
