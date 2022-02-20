@@ -293,8 +293,8 @@ class NorecTarget(NorecOneHot):
 
 
         self.label = self.one_hot_encode(
-            [0 for _ in self.target],  # for lazy inheritance
-            [0 for _ in self.target],  # for lazy inheritance
+            [0 for row in self.target for _ in row],  # for lazy inheritance
+            [0 for row in self.target for _ in row],  # for lazy inheritance
             self.polarity, 
             self.target,
         )
