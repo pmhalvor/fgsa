@@ -217,6 +217,142 @@ class NorecOneHot(Dataset):
         return len(self.sentence)
 
 
+class NorecTarget(NorecOneHot):
+    @staticmethod
+    def encode(expression, holder, polarity, target) -> List:
+        """
+        Handmade one-hot encoder.
+
+          Value       Label
+            0           O                \n
+            1       B-Positive           \n
+            2       I-Positive           \n
+            3       B-Negative           \n
+            4       I-Negative           \n
+
+        """
+        encoded = []
+        for e, h, p, t in zip(expression, holder, target, polarity):
+            if t == 1:                  # beginning target
+                if p == 1:              # positive  TODO double check 1=positive and 2=negative
+                    encoded.append(1)
+                elif p == 2:            # negative
+                    encoded.append(3)
+                else:                   # neutral  NOTE norec_fine should not use this
+                    encoded.append(0)
+            elif t == 2:                # inside target
+                if p == 1:              # positive
+                    encoded.append(2)
+                elif p == 2:            # negative
+                    encoded.append(4)
+                else:                   # neutral 
+                    encoded.append(0)
+            else:                       # outside everything
+                encoded.append(0)
+
+        assert len(encoded) == len(expression)
+        return encoded
+
+
+    def __init__(
+        self, 
+        bert_path="ltgoslo/norbert",
+        data_path="$HOME/data/norec_fine/train",
+        proportion=None, 
+        ignore_id=-1,
+        tokenizer=None,
+    ):
+        """
+        Dataset object that only gives targets and polarities. 
+        Built to isolate tasks, checking that model isn't too complex to learn. 
+
+        NOTE: Intensity is not checked here (yet)
+
+          Value       Label
+            0           O                \n
+            1       B-Positive           \n
+            2       I-Positive           \n
+            3       B-Negative           \n
+            4       I-Negative           \n
+
+        
+        """
+        if tokenizer is not None:
+            self.tokenizer = tokenizer
+        else:
+            self.tokenizer = BertTokenizer.from_pretrained(bert_path)
+        self.IGNORE_ID = ignore_id  # FIXME get form BertTokenizer
+
+        # NOTE opinion -> expression for consistency w/ project description
+        data = self.load_raw_data(data_path)
+        # self.expression = data[0]
+        # self.holder = data[1]
+        self.polarity = data[2]
+        self.sentence = data[3]
+        self.target = data[4]
+
+
+        self.label = self.one_hot_encode(
+            [0 for _ in self.target],  # for lazy inheritance
+            [0 for _ in self.target],  # for lazy inheritance
+            self.polarity, 
+            self.target,
+        )
+
+        if proportion is not None:
+            count = int(len(self.sentence)*proportion)
+
+            self.label = self.label[:count]
+            self.sentence = self.sentence[:count]
+
+            # below not needed, but ok to have
+            self.expression = self.expression[:count]
+            self.holder = self.holder[:count]
+            self.polarity =  self.polarity[:count]
+            self.target = self.target[:count]
+
+        # check shapes
+        assert len(self.sentence) == len(self.label)
+        assert len(self.sentence[0]) == len(self.label[0])
+        assert len(self.sentence[-1]) == len(self.label[-1])
+
+
+    def one_hot_encode(
+        self,
+        expression, 
+        holder,
+        polarity,
+        target,
+    ):
+        one_hot_label = [
+            self.encode(e, h, p, t)
+            for e, h, p, t in zip(expression, holder, polarity, target)
+        ]
+        return one_hot_label
+
+
+    def __getitem__(self, index):
+        self.index = index
+
+        self.current_label = self.label[index]
+
+        self.tokens = self.sentence[index]
+
+        # store token info needed for training
+        self.input_ids = self.tokenizer.convert_tokens_to_ids(self.tokens)  # FIXME move to raw data
+        self.attention_mask = [1 for _ in self.input_ids]
+
+        return (
+            torch.LongTensor(self.input_ids),
+            torch.LongTensor(self.attention_mask),
+            torch.LongTensor(self.current_label),
+        )
+    
+    
+    def __len__(self):
+        return len(self.sentence)
+
+
 class Norec(Dataset):
     def __init__(
         self, 
