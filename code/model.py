@@ -301,7 +301,7 @@ class BertLSTM(BertSimple):
             bidirectional=bidirectional,
         )
         self.output = torch.nn.Linear(
-            in_features= 786*2 if self.bidirectional else 786
+            in_features= 786*2 if self.bidirectional else 786,
             out_features=num_labels 
         )
         self.bert.requires_grad = self.finetune
