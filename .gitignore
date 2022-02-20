@@ -3,6 +3,8 @@ dev_*.ipynb
 old*
 .old
 log/*
+slurm/*
+
 
 
 # Byte-compiled / optimized / DLL files
