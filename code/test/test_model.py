@@ -16,8 +16,8 @@ logging.info('Running on device {}'.format(DEVICE))
 
 strictness = [True, False]
 
-@pytest.mark.parameterize("strict", strictness)
-def test_BertSimple_fit():
+@pytest.mark.parametrize("strict", strictness)
+def test_BertSimple_fit(strict):
     train_dataset = NorecOneHot(
         data_path=DATA_DIR + "train/", 
         ignore_id=-1,
@@ -40,7 +40,7 @@ def test_BertSimple_fit():
     )
 
     
-    model.fit(train_loader=train_loader, epochs=1)
+    model.fit(train_loader=train_loader, epochs=0)  # don't train
 
     weights = model.check_weights()
 
