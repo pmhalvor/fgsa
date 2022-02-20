@@ -170,8 +170,8 @@ class BertSimple(torch.nn.Module):
             predictions = self.predict(batch)
 
             # decode predictions and batch[2]
-            predict_decoded = decode_batch(predictions, mask=batch[1], self.targets_only)
-            true_decoded = decode_batch(batch[2], mask=batch[1], self.targets_only)
+            predict_decoded = decode_batch(predictions, mask=batch[1], targets_only=self.targets_only)
+            true_decoded = decode_batch(batch[2], mask=batch[1], targets_only=self.targets_only)
 
             annotations = ['expression', 'holder', 'polarity', 'target']
 
@@ -422,8 +422,8 @@ class BertLSTM(BertSimple):
             predictions = self.predict(batch)
 
             # decode predictions and batch[2]
-            predict_decoded = decode_batch(predictions, mask=batch[1], self.targets_only)
-            true_decoded = decode_batch(batch[2], mask=batch[1], self.targets_only)
+            predict_decoded = decode_batch(predictions, mask=batch[1], targets_only=self.targets_only)
+            true_decoded = decode_batch(batch[2], mask=batch[1], targets_only=self.targets_only)
 
             annotations = ['expression', 'holder', 'polarity', 'target']
 
