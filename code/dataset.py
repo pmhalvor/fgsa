@@ -251,7 +251,7 @@ class NorecTarget(NorecOneHot):
                 encoded.append(0)
 
         assert len(encoded) == len(target)
-        
+
         return encoded
 
 
@@ -284,14 +284,10 @@ class NorecTarget(NorecOneHot):
             self.tokenizer = BertTokenizer.from_pretrained(bert_path)
         self.IGNORE_ID = ignore_id  # FIXME get form BertTokenizer
 
-        # NOTE opinion -> expression for consistency w/ project description
         data = self.load_raw_data(data_path)
-        # self.expression = data[0]
-        # self.holder = data[1]
         self.polarity = data[2]
         self.sentence = data[3]
         self.target = data[4]
-
 
         self.label = self.one_hot_encode(
             [0 for row in self.target for _ in row],  # for lazy inheritance
@@ -307,8 +303,6 @@ class NorecTarget(NorecOneHot):
             self.sentence = self.sentence[:count]
 
             # below not needed, but ok to have
-            self.expression = self.expression[:count]
-            self.holder = self.holder[:count]
             self.polarity =  self.polarity[:count]
             self.target = self.target[:count]
 
@@ -316,42 +310,6 @@ class NorecTarget(NorecOneHot):
         assert len(self.sentence) == len(self.label)
         assert len(self.sentence[0]) == len(self.label[0])
         assert len(self.sentence[-1]) == len(self.label[-1])
-
-
-    def one_hot_encode(
-        self,
-        expression, 
-        holder,
-        polarity,
-        target,
-    ):
-        one_hot_label = [
-            self.encode(e, h, p, t)
-            for e, h, p, t in zip(expression, holder, polarity, target)
-        ]
-        return one_hot_label
-
-
-    def __getitem__(self, index):
-        self.index = index
-
-        self.current_label = self.label[index]
-
-        self.tokens = self.sentence[index]
-
-        # store token info needed for training
-        self.input_ids = self.tokenizer.convert_tokens_to_ids(self.tokens)  # FIXME move to raw data
-        self.attention_mask = [1 for _ in self.input_ids]
-
-        return (
-            torch.LongTensor(self.input_ids),
-            torch.LongTensor(self.attention_mask),
-            torch.LongTensor(self.current_label),
-        )
-    
-    
-    def __len__(self):
-        return len(self.sentence)
 
 
 class Norec(Dataset):
