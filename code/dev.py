@@ -5,7 +5,6 @@ import torch
 ## LOCAL
 from config import DATA_DIR
 from config import log_train
-from dataset import Norec
 from dataset import NorecTarget 
 from model import BertSimple
 from utils import pad
@@ -20,12 +19,12 @@ logging.info('Running on device {}'.format(DEVICE))
 
 # load train/dev/test data so every build has complete result set
 logging.info("Loading datasets..")
-train_dataset = NorecOneHot(
+train_dataset = NorecTarget(
     data_path=DATA_DIR + "train/", 
     ignore_id=-1,
     proportion=0.55,
     )
-dev_dataset = NorecOneHot(
+dev_dataset = NorecTarget(
     data_path=DATA_DIR + "dev/", 
     ignore_id=-1,
     proportion=0.55,
@@ -54,7 +53,7 @@ logging.info("Initializing model..")
 model = BertSimple(
     device=DEVICE,
     ignore_id=-1,
-    num_labels=9, 
+    num_labels=5, 
     lr=1e-7,  # 0.00001
     tokenizer=train_dataset.tokenizer,
 )
