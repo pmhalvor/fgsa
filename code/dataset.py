@@ -232,7 +232,7 @@ class NorecTarget(NorecOneHot):
 
         """
         encoded = []
-        for e, h, p, t in zip(expression, holder, target, polarity):
+        for p, t in zip(target, polarity):
             if t == 1:                  # beginning target
                 if p == 1:              # positive  TODO double check 1=positive and 2=negative
                     encoded.append(1)
@@ -250,7 +250,8 @@ class NorecTarget(NorecOneHot):
             else:                       # outside everything
                 encoded.append(0)
 
-        assert len(encoded) == len(expression)
+        assert len(encoded) == len(target)
+        
         return encoded
 
 
