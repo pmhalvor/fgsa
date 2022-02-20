@@ -22,12 +22,12 @@ logging.info("Loading datasets..")
 train_dataset = NorecTarget(
     data_path=DATA_DIR + "train/", 
     ignore_id=-1,
-    proportion=0.55,
+    proportion=0.05,
     )
 dev_dataset = NorecTarget(
     data_path=DATA_DIR + "dev/", 
     ignore_id=-1,
-    proportion=0.55,
+    proportion=0.05,
     tokenizer=train_dataset.tokenizer,
     )
 
