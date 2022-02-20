@@ -20,7 +20,8 @@ set -o nounset  # Treat any unset variables as an error
 # modules
 module --quiet purge  # Reset the modules to the system default
 module load Miniconda3/4.9.2
-module load PyTorch/1.7.1-foss-2020b
+module load PyTorch/1.9.0-fosscuda-2020b
+
 
 # Make cuda visible
 export CUDA_VISIBLE_DEVICES=1
