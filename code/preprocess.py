@@ -46,7 +46,7 @@ from bio import word_tokenize
 import config
 
 #########  config  ###########
-config.log_pre(name="adding-BertTokenizer")
+config.log_template(job="pre", name="adding-BertTokenizer")
 ERROR_COUNT = 0
 KNOWN_ERRONEOUS_IDS = ['703281-03-01', '705034-09-03']
 LOWER = True

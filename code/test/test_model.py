@@ -4,12 +4,12 @@ import logging
 
 ## LOCAL 
 from config import DATA_DIR
-from config import log_test
+# from config import log_test
 from dataset import NorecOneHot
 from model import BertSimple
 from utils import pad
 
-log_test()
+# log_test()
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 logging.info('Running on device {}'.format(DEVICE))
 

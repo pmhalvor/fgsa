@@ -4,7 +4,7 @@ import torch
 
 ## LOCAL
 from config import DATA_DIR
-from config import log_train
+from config import log_template
 from dataset import NorecTarget 
 from model import BertSimple
 from utils import pad
@@ -18,12 +18,12 @@ learning_rate = 1e-6
 proportion = 0.55
 load_checkpoint = False
 
-name = 'targets-55p-save'
-if proportion>0.05:
-    name += "-large"
+name = 'targets-{percent}p'.format(
+    percent=int(100*proportion)
+)
 if debug:
     name += "-debug"
-log_train(name=name)
+log_template(job='dev', name=name)
 
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 logging.info('Running on device {}'.format(DEVICE))

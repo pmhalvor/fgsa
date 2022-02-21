@@ -4,7 +4,7 @@ import torch
 
 ## LOCAL
 from config import DATA_DIR
-from config import log_train
+from config import log_template
 from dataset import Norec
 from dataset import NorecOneHot 
 from model import BertSimple
@@ -12,7 +12,20 @@ from utils import pad
 
 
 ####################  config  ####################
-log_train(name='BertSimple-lr-tune')
+debug = True 
+epochs = 200
+label_importance = 10
+learning_rate = 1e-6
+proportion = 0.55
+load_checkpoint = False
+
+name = 'full-{}p'.format(
+    percent=int(proportion*100)
+)
+if debug:
+    name += "-debug"
+log_template(job="train", name=name)
+
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 logging.info('Running on device {}'.format(DEVICE))
 ###################################################
@@ -25,12 +38,12 @@ train_dataset = NorecOneHot(
     ignore_id=-1,
     proportion=0.55,
     )
-# test_dataset = NorecOneHot(
-#     data_path=DATA_DIR + "test/", 
-#     ignore_id=-1,
-#     proportion=0.55,
-#     tokenizer=train_dataset.tokenizer,
-#     )
+test_dataset = NorecOneHot(
+    data_path=DATA_DIR + "test/", 
+    ignore_id=-1,
+    proportion=0.55,
+    tokenizer=train_dataset.tokenizer,
+    )
 dev_dataset = NorecOneHot(
     data_path=DATA_DIR + "dev/", 
     ignore_id=-1,
@@ -46,12 +59,12 @@ train_loader = DataLoader(
     shuffle=False,
     collate_fn=lambda batch: pad(batch)
 )
-# test_loader = DataLoader(
-#     dataset = test_dataset,
-#     batch_size = 32,  # for predict to work
-#     shuffle=False,
-#     collate_fn=lambda batch: pad(batch)
-# )
+test_loader = DataLoader(
+    dataset = test_dataset,
+    batch_size = 32,  # for predict to work
+    shuffle=False,
+    collate_fn=lambda batch: pad(batch)
+)
 dev_loader = DataLoader(
     dataset = dev_dataset,
     batch_size = 32,  
@@ -62,14 +75,18 @@ logging.info("Datasets loaded.")
 
 
 logging.info("Initializing model..")
-
-model = BertSimple(
-    device=DEVICE,
-    ignore_id=-1,
-    num_labels=9, 
-    lr=1e-7,  # 0.00001
-    tokenizer=train_dataset.tokenizer,
-)
+if load_checkpoint:
+    logging.info("... from checkpoint: {}".format())
+    model = torch.load("/checklist/" + name + '.pt', map_location=torch.device(DEVICE))
+else:
+    model = BertSimple(
+        device=DEVICE,
+        ignore_id=-1,
+        num_labels=5, 
+        lr=learning_rate,
+        tokenizer=train_dataset.tokenizer,
+        label_importance=label_importance,
+    )
 
 logging.info('Fitting model...')
 model.fit(train_loader=train_loader, dev_loader=dev_loader, epochs=5)
@@ -79,4 +96,7 @@ easy_f1, hard_f1 = model.evaluate(dev_loader, verbose=True)
 
 logging.info("Easy F1: {}".format(easy_f1))
 logging.info("Hard F1: {}".format(hard_f1))
+
+logging.info("Saving model to {}".format("/checkpoints/" + name + '.pt'))
+torch.save(model, "/checkpoints/" + name + '.pt')
 
