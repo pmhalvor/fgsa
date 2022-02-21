@@ -61,7 +61,7 @@ class BertSimple(torch.nn.Module):
         self.bert_dropout = self.bert_dropout.to(self.device)  # TODO is this needed?
 
         # loss function
-        w = 1. + label_importance(num_labels - 1)
+        w = 1. + label_importance*(num_labels - 1)
         weight = [1/w] + [
             label_importance/w for _ in range(num_labels)
         ]  # want labels to be 2 as important as 0s
