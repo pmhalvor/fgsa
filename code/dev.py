@@ -16,6 +16,7 @@ epochs = 200
 label_importance = 10
 learning_rate = 1e-6
 proportion = 0.55
+load_checkpoint = False
 
 name = 'targets-55p'
 if proportion>0.05:
@@ -23,6 +24,7 @@ if proportion>0.05:
 if debug:
     name += "-debug"
 log_train(name=name)
+
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 logging.info('Running on device {}'.format(DEVICE))
 ###################################################
@@ -61,14 +63,17 @@ logging.info("Datasets loaded.")
 
 logging.info("Initializing model..")
 
-model = BertSimple(
-    device=DEVICE,
-    ignore_id=-1,
-    num_labels=5, 
-    lr=learning_rate,
-    tokenizer=train_dataset.tokenizer,
-    label_importance=label_importance,
-)
+if load_checkpoint:
+    model = torch.load(name + '.pt', map_location=torch.device(DEVICE))
+else:
+    model = BertSimple(
+        device=DEVICE,
+        ignore_id=-1,
+        num_labels=5, 
+        lr=learning_rate,
+        tokenizer=train_dataset.tokenizer,
+        label_importance=label_importance,
+    )
 
 logging.info('Fitting model...')
 model.fit(train_loader=train_loader, dev_loader=train_loader, epochs=epochs)
@@ -77,4 +82,6 @@ logging.info('Evaluating model...')
 binary_f1, proportion_f1 = model.evaluate(train_loader, verbose=True)
 logging.info("Binary F1: {}".format(binary_f1))
 logging.info("Proportional F1: {}".format(proportion_f1))
+
+torch.save(model, name + '.pt')
 
