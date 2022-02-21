@@ -232,7 +232,7 @@ class NorecTarget(NorecOneHot):
 
         """
         encoded = []
-        for p, t in zip(target, polarity):
+        for t, p in zip(target, polarity):
             if t == 1:                  # beginning target
                 if p == 1:              # positive  TODO double check 1=positive and 2=negative
                     encoded.append(1)
