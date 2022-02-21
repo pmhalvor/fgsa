@@ -319,14 +319,14 @@ class NorecTarget(NorecOneHot):
         polarity,
         target,
     ):
-    one_hot_label = []
-    for e, h, p, t in zip(expression, holder, polarity, target):
+        one_hot_label = []
+        for e, h, p, t in zip(expression, holder, polarity, target):
 
-        # only use data points where targets are present
-        if sum(t)>0: 
-            one_hot_label.append(
-                self.encode(e, h, p, t) 
-            )   
+            # only use data points where targets are present
+            if sum(t)>0: 
+                one_hot_label.append(
+                    self.encode(e, h, p, t) 
+                )   
             
         return one_hot_label
 
