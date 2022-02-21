@@ -25,13 +25,13 @@ train_dataset = NorecTarget(
     data_path=DATA_DIR + "train/", 
     ignore_id=-1,
     proportion=proportion,
-    )
+)
 dev_dataset = NorecTarget(
     data_path=DATA_DIR + "dev/", 
     ignore_id=-1,
-    proportion=0.05,
+    proportion=proportion,
     tokenizer=train_dataset.tokenizer,
-    )
+)
 
 
 # data loader
