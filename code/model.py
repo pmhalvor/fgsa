@@ -60,7 +60,14 @@ class BertSimple(torch.nn.Module):
         self.bert_dropout = self.bert_dropout.to(self.device)  # TODO is this needed?
 
         # loss function
-        self.loss = torch.nn.CrossEntropyLoss(ignore_index=ignore_id)
+        w = 1. + 2*(self.num_labels - 1)
+        weight = [1./w] + [
+            2./w for _ in range(self.num_labels)
+        ]  # want labels to be 2 as important as 0s
+        self.loss = torch.nn.CrossEntropyLoss(
+            ignore_index=ignore_id,
+            weight=weight,
+            )
 
         # optimizer in model for sklearn-style fit() training
         self.optimizer = torch.optim.Adam(
@@ -141,7 +148,7 @@ class BertSimple(torch.nn.Module):
         logging.info("Backward:")
         logging.info("outputs: shape={}  first={}".format(outputs.shape, outputs[0]))
         logging.info("targets: shape={}  first={}".format(targets.shape, targets[0]))
-        
+
         computed_loss = self.loss(
             input=outputs.to(torch.device(self.device)),
             target=targets.to(torch.device(self.device))  # FIXME where is this supposed to happen?
