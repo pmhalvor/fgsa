@@ -5,7 +5,7 @@
 # Project:
 #SBATCH --account=ec37
 # Wall time limit: --time=DD-HH:MM:SS
-#SBATCH --time=01:30:00
+#SBATCH --time=09:30:00
 # Memory requested:
 #SBATCH --mem-per-cpu=15G
 # Run on GPU

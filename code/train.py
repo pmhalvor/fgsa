@@ -19,7 +19,7 @@ learning_rate = 1e-6
 proportion = 0.55
 load_checkpoint = False
 
-name = 'full-{}p'.format(
+name = 'full-{percent}p'.format(
     percent=int(proportion*100)
 )
 if debug:
