@@ -47,12 +47,13 @@ class BertSimple(torch.nn.Module):
         self.lr_scheduler_factor = lr_scheduler_factor
         self.lr_scheduler_patience = lr_scheduler_patience
         self.output_dim = output_dim
+        self.num_labels = num_labels
         self.tokenizer = tokenizer
         self.targets_only = targets_only
 
         # initialize contextual embeddings
         self.bert = BertForTokenClassification.from_pretrained(
-            bert_path, num_labels=num_labels
+            bert_path, num_labels=self.num_labels
         )
         self.bert.requires_grad = self.finetune
         self.bert_dropout = torch.nn.Dropout(self.dropout)
@@ -62,9 +63,9 @@ class BertSimple(torch.nn.Module):
         self.bert_dropout = self.bert_dropout.to(self.device)  # TODO is this needed?
 
         # loss function
-        w = 1. + label_importance*(num_labels - 1)
+        w = 1. + label_importance*(self.num_labels - 1)
         weight = [1/w] + [
-            label_importance/w for _ in range(num_labels-1)
+            label_importance/w for _ in range(self.num_labels-1)
         ]  # want labels to be 2 as important as 0s
         self.loss = torch.nn.CrossEntropyLoss(
             ignore_index=ignore_id,
@@ -190,18 +191,19 @@ class BertSimple(torch.nn.Module):
 
             annotations = ['expression', 'holder', 'polarity', 'target']
 
-            f_target, acc_polarity, f_polarity, f_absa = score(
-                true_aspect = true_decoded["targets"], 
-                predict_aspect = predict_decoded["targets"], 
-                true_sentiment = true_decoded["polarities"], 
-                predict_sentiment = predict_decoded["polarities"], 
-                train_op = False
-            )
+            # f_target, acc_polarity, f_polarity, f_absa = score(
+            #     true_aspect = true_decoded["targets"], 
+            #     predict_aspect = predict_decoded["targets"], 
+            #     true_sentiment = true_decoded["polarities"], 
+            #     predict_sentiment = predict_decoded["polarities"], 
+            #     train_op = False
+            # )
 
+            print()
             print('predictions: ', predictions.shape, type(predictions))
             print('batch[2]: ', batch[2].shape, type(batch[2]))
 
-            ez = ez_score(batch[2], predictions)
+            ez = ez_score(batch[2], predictions, num_labels=self.num_labels)
 
             print("ez score: ", ez)
             quit()

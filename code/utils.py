@@ -413,5 +413,10 @@ def score(true_aspect, predict_aspect, true_sentiment, predict_sentiment, train_
     return f_aspect, acc_s, f_s, f_absa
 
 
-def ez_score(true_labels, predict_labels):
-    return f1_score(true_labels, predict_labels)
+def ez_score(true_labels, predict_labels, num_labels):
+    return f1_score(
+        true_labels, 
+        predict_labels, 
+        labels=[e for e in range(1, num_labels)],
+        average='micro',
+        )
