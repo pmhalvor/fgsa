@@ -107,10 +107,6 @@ class BertSimple(torch.nn.Module):
                 loss = self.backward(logits, targets)
 
                 if b%13==0:
-                    if False and b==0:
-                        logging.info("Backward:")
-                        logging.info("outputs: shape={}  first={}".format(logits.shape, logits[0]))
-                        logging.info("targets: shape={}  first={}".format(targets.shape, targets[0]))
                     logging.info("Epoch:{:3} Batch:{:3} Loss:{}".format(epoch, b, loss.item()))
         
             if dev_loader is not None:
@@ -180,7 +176,9 @@ class BertSimple(torch.nn.Module):
         :param loader: torch.utils.data.DataLoader object with
                             batch_size=1
         """
-        f_absa_overall = 0
+        easy_total_over_batches = 0
+        hard_total_over_batches = 0
+
 
         for b, batch in enumerate(loader):
             predictions = self.predict(batch)
@@ -191,54 +189,52 @@ class BertSimple(torch.nn.Module):
 
             annotations = ['expression', 'holder', 'polarity', 'target']
 
-            # f_target, acc_polarity, f_polarity, f_absa = score(
-            #     true_aspect = true_decoded["targets"], 
-            #     predict_aspect = predict_decoded["targets"], 
-            #     true_sentiment = true_decoded["polarities"], 
-            #     predict_sentiment = predict_decoded["polarities"], 
-            #     train_op = False
-            # )
-
-            print()
-            print('predictions: ', predictions.shape, type(predictions))
-            print('batch[2]: ', batch[2].shape, type(batch[2]))
+            f_target, acc_polarity, f_polarity, f_absa = score(
+                true_aspect = true_decoded["targets"], 
+                predict_aspect = predict_decoded["targets"], 
+                true_sentiment = true_decoded["polarities"], 
+                predict_sentiment = predict_decoded["polarities"], 
+                train_op = False
+            )
 
             ez = ez_score(batch[2], predictions, num_labels=self.num_labels)
-            logging.info("label f1: {}".format(ez))
+            logging.debug("label f1: {}".format(ez))
 
-            f_absa_overall = (f_absa_overall + ez)/2.
+            easy_total_over_batches += ez
+            hard_total_over_batches += f_absa
 
-            # if not self.targets_only:
+            if not self.targets_only:
                     
-            #     f_expression, _, _, _ = score(
-            #         true_aspect = true_decoded["expressions"], 
-            #         predict_aspect = predict_decoded["expressions"], 
-            #         true_sentiment = true_decoded["polarities"], 
-            #         predict_sentiment = predict_decoded["polarities"], 
-            #         train_op = True
-            #     )
+                f_expression, _, _, _ = score(
+                    true_aspect = true_decoded["expressions"], 
+                    predict_aspect = predict_decoded["expressions"], 
+                    true_sentiment = true_decoded["polarities"], 
+                    predict_sentiment = predict_decoded["polarities"], 
+                    train_op = True
+                )
 
-            #     f_holder, _, _, _ = score(
-            #         true_aspect = true_decoded["holders"], 
-            #         predict_aspect = predict_decoded["holders"], 
-            #         true_sentiment = true_decoded["polarities"], 
-            #         predict_sentiment = predict_decoded["polarities"], 
-            #         train_op = True
-            #     )
+                f_holder, _, _, _ = score(
+                    true_aspect = true_decoded["holders"], 
+                    predict_aspect = predict_decoded["holders"], 
+                    true_sentiment = true_decoded["polarities"], 
+                    predict_sentiment = predict_decoded["polarities"], 
+                    train_op = True
+                )
 
-            # if verbose:
-            #     logging.info("f_target: {}".format(f_target))
-            #     logging.info("f_expression: {}".format(f_expression)) if not self.targets_only else None
-            #     logging.info("f_holder: {}".format(f_holder)) if not self.targets_only else None
-            #     logging.info("acc_polarity: {}".format(acc_polarity))
-            #     logging.info("f_polarity: {}".format(f_polarity))
+            if verbose:
+                logging.info("f_target: {}".format(f_target))
+                logging.info("f_expression: {}".format(f_expression)) if not self.targets_only else None
+                logging.info("f_holder: {}".format(f_holder)) if not self.targets_only else None
+                logging.info("acc_polarity: {}".format(acc_polarity))
+                logging.info("f_polarity: {}".format(f_polarity))
 
-            # f_absa_overall = (f_absa + f_absa_overall)/2.
-            # logging.info("dev batch: {:3}   overall f1 absa: {}".format(b, f_absa_overall))
-            # logging.info("f_target: {}".format(f_target))
+        easy_overall = easy_total_over_batches/len(dev_loader)
+        hard_overall = hard_total_over_batches/len(dev_loader)
 
+        logging.info("Easy overall: {easy}".format(easy=easy_overall))
+        logging.info("Hard overall: {hard}".format(hard=hard_overall))
 
-        return f_absa_overall, None
+        return easy_overall, hard_overall
 
 
     def predict(self, batch):
