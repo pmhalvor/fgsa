@@ -63,7 +63,7 @@ class BertSimple(torch.nn.Module):
         # loss function
         w = 1. + label_importance*(num_labels - 1)
         weight = [1/w] + [
-            label_importance/w for _ in range(num_labels)
+            label_importance/w for _ in range(num_labels-1)
         ]  # want labels to be 2 as important as 0s
         self.loss = torch.nn.CrossEntropyLoss(
             ignore_index=ignore_id,
