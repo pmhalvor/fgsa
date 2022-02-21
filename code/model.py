@@ -28,6 +28,7 @@ class BertSimple(torch.nn.Module):
         lr=0.01,                    # TODO tune
         lr_scheduler_factor=0.1,    # TODO tune
         lr_scheduler_patience=2,    # TODO tune
+        label_importance = 2,       # TODO remove or tune
         output_dim=5,  # target, holder, expression, polarity, intensity
         tokenizer=None,
         targets_only = False
@@ -60,7 +61,14 @@ class BertSimple(torch.nn.Module):
         self.bert_dropout = self.bert_dropout.to(self.device)  # TODO is this needed?
 
         # loss function
-        self.loss = torch.nn.CrossEntropyLoss(ignore_index=ignore_id)
+        w = 1. + label_importance(self.num_labels - 1)
+        weight = [1/w] + [
+            label_importance/w for _ in range(self.num_labels)
+        ]  # want labels to be 2 as important as 0s
+        self.loss = torch.nn.CrossEntropyLoss(
+            ignore_index=ignore_id,
+            weight=torch.Tensor(weight),
+            )
 
         # optimizer in model for sklearn-style fit() training
         self.optimizer = torch.optim.Adam(
@@ -141,7 +149,7 @@ class BertSimple(torch.nn.Module):
         logging.info("Backward:")
         logging.info("outputs: shape={}  first={}".format(outputs.shape, outputs[0]))
         logging.info("targets: shape={}  first={}".format(targets.shape, targets[0]))
-        
+
         computed_loss = self.loss(
             input=outputs.to(torch.device(self.device)),
             target=targets.to(torch.device(self.device))  # FIXME where is this supposed to happen?
