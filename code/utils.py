@@ -414,9 +414,20 @@ def score(true_aspect, predict_aspect, true_sentiment, predict_sentiment, train_
 
 
 def ez_score(true_labels, predict_labels, num_labels):
-    return f1_score(
-        true_labels, 
-        predict_labels, 
-        labels=[e for e in range(1, num_labels)],
-        average='micro',
+    """
+    Parameters:
+        true_labels (torch.Tensor): batched true labels of size [batchsize, seq_len] 
+        predict_labels (torch.Tensor): batched predictions size [batchsize, seq_len]
+        num_labels (int): number of labels model is learning ot predict
+    """
+
+    total = 0
+    
+    for true, pred in zip(true_labels, predict_labels):
+        total += f1_score(
+            true, 
+            pred, 
+            labels=[e for e in range(1, num_labels)],
+            average='micro',
         )
+    return total/true_labels.shape[0].item()
