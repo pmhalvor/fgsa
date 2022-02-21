@@ -205,7 +205,7 @@ class BertSimple(torch.nn.Module):
 
             for true, pred in zip(batch[2], predictions):
                 ez = ez_score(true, pred, num_labels=self.num_labels)
-               print("ez score: ", ez)
+                print("ez score: ", ez)
             quit()
 
             if not self.targets_only:
