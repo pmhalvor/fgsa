@@ -430,4 +430,4 @@ def ez_score(true_labels, predict_labels, num_labels):
             labels=[e for e in range(1, num_labels)],
             average='micro',
         )
-    return total/true_labels.shape[0].item()
+    return total/true_labels.shape[0]
