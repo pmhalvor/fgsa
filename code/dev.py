@@ -12,12 +12,12 @@ from utils import pad
 
 ####################  config  ####################
 debug = True 
-epochs = 20
+epochs = 200
 label_importance = 10
 learning_rate = 1e-6
-proportion = 0.05
+proportion = 0.55
 
-name = 'BertSimple-targets'
+name = 'targets-55p'
 if proportion>0.05:
     name += "-large"
 if debug:
