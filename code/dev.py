@@ -13,6 +13,7 @@ from utils import pad
 ####################  config  ####################
 learning_rate = 1e-6
 proportion = 0.05
+label_importance = 10
 debug = True 
 name = 'BertSimple-targets'
 if proportion>0.05:
@@ -64,6 +65,7 @@ model = BertSimple(
     num_labels=5, 
     lr=learning_rate,
     tokenizer=train_dataset.tokenizer,
+    label_importance=label_importance,
 )
 
 logging.info('Fitting model...')
