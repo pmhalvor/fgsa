@@ -11,11 +11,17 @@ from utils import pad
 
 
 ####################  config  ####################
-log_train(name='BertSimple-targets')
-DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
-logging.info('Running on device {}'.format(DEVICE))
 learning_rate = 1e-6
 proportion = 0.05
+debug = True 
+name = 'BertSimple-targets'
+if proportion>0.05:
+    name += "-large"
+if debug:
+    name += "-debug"
+log_train(name=name)
+DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
+logging.info('Running on device {}'.format(DEVICE))
 ###################################################
 
 
