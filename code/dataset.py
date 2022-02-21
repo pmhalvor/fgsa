@@ -289,11 +289,12 @@ class NorecTarget(NorecOneHot):
         self.sentence = data[3]
         self.target = data[4]
 
-        self.label = self.one_hot_encode(
+        self.label, self.sentence = self.one_hot_encode(
             [0 for row in self.target for _ in row],  # for lazy inheritance
             [0 for row in self.target for _ in row],  # for lazy inheritance
             self.polarity, 
             self.target,
+            self.sentence,
         )
 
         if proportion is not None:
@@ -318,17 +319,20 @@ class NorecTarget(NorecOneHot):
         holder,
         polarity,
         target,
+        sentence
     ):
         one_hot_label = []
-        for e, h, p, t in zip(expression, holder, polarity, target):
+        used_sentence = []
+        for e, h, p, t, s in zip(expression, holder, polarity, target, sentence):
 
             # only use data points where targets are present
             if sum(t)>0: 
                 one_hot_label.append(
                     self.encode(e, h, p, t) 
                 )   
+                used_sentence.append(s)
             
-        return one_hot_label
+        return one_hot_label, used_sentence
 
 
 class Norec(Dataset):
