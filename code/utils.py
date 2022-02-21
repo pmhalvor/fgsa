@@ -294,7 +294,8 @@ def decode_batch(batch, mask=None, targets_only=False):
 
 def score(true_aspect, predict_aspect, true_sentiment, predict_sentiment, train_op):
     """
-    Takes batch of inputs as lists
+    Evaluation metric used in IMN and RACL. 
+    Takes batch of inputs as lists. 
 
     Parameters:
         true_aspect (list): not padded, built from same decoding as predicted
@@ -304,11 +305,11 @@ def score(true_aspect, predict_aspect, true_sentiment, predict_sentiment, train_
     """
     
     if train_op:
-        begin = [1, 3]  # pmhalvor: changed to match preprocessing
-        inside = [2, 4]  # pmhalvor: changed to match preprocessing
+        begin = 1
+        inside = 2
     else:
-        begin = [1, 3]  # pmhalvor: changed to match preprocessing
-        inside = [2, 4]  # pmhalvor: changed to match preprocessing
+        begin = 1
+        inside = 2
 
         # predicted sentiment distribution for aspect terms that are correctly extracted
         pred_count = {'pos':0, 'neg':0, 'neu':0}
@@ -332,18 +333,18 @@ def score(true_aspect, predict_aspect, true_sentiment, predict_sentiment, train_
         
         for num in range(len(true_seq)):
             # print('num', true_seq[num])
-            if true_seq[num] in begin:
+            if true_seq[num] == begin:
                 relevant += 1
                 if not train_op:
                     if true_sentiment[i][num]!=0:
                         total_count[polarity_map[true_sentiment[i][num]]]+=1
                      
-                if predict[num] in begin:
+                if predict[num] == begin:
                     match = True 
                     for j in range(num+1, len(true_seq)):
-                        if true_seq[j] in inside and predict[j] in inside:  # pmhalvor: changed to match preprocessing
+                        if true_seq[j] == inside and predict[j] == inside:
                             continue
-                        elif true_seq[j] not in inside and predict[j] not in inside:  # pmhalvor: changed to match preprocessing
+                        elif true_seq[j] != inside and predict[j] != inside:
                             break
                         else:
                             match = False  # this is incredibly strict
@@ -415,6 +416,8 @@ def score(true_aspect, predict_aspect, true_sentiment, predict_sentiment, train_
 
 def ez_score(true_labels, predict_labels, num_labels):
     """
+    F1-score for _any_ correctly guessed label. Much more lenient than score() from RACL (above).
+
     Parameters:
         true_labels (torch.Tensor): batched true labels of size [batchsize, seq_len] 
         predict_labels (torch.Tensor): batched predictions size [batchsize, seq_len]

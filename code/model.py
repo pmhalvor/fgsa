@@ -204,7 +204,7 @@ class BertSimple(torch.nn.Module):
             print('batch[2]: ', batch[2].shape, type(batch[2]))
 
             ez = ez_score(batch[2], predictions, num_labels=self.num_labels)
-            logging.info("label f1: ", ez)
+            logging.info("label f1: ".format(ez))
 
             f_absa_overall = (f_absa_overall + ez)/2.
 
