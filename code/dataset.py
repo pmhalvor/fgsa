@@ -24,7 +24,7 @@ class NorecOneHot(Dataset):
 
         """
         encoded = []
-        for e, h, p, t in zip(expression, holder, target, polarity):
+        for e, h, p, t in zip(expression, holder, polarity, target):
             if e == 1:                  # beginning expression
                 encoded.append(1)
             elif e == 2:                # inside expression
@@ -232,7 +232,7 @@ class NorecTarget(NorecOneHot):
 
         """
         encoded = []
-        for t, p in zip(target, polarity):
+        for p, t in zip(polarity, target):
             if t == 1:                  # beginning target
                 if p == 1:              # positive  TODO double check 1=positive and 2=negative
                     encoded.append(1)
