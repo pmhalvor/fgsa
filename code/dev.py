@@ -11,10 +11,11 @@ from utils import pad
 
 
 ####################  config  ####################
-log_train(name='BertSimple-targets-large')
+log_train(name='BertSimple-targets')
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 logging.info('Running on device {}'.format(DEVICE))
 learning_rate = 1e-6
+proportion = 0.05
 ###################################################
 
 
@@ -23,7 +24,7 @@ logging.info("Loading datasets..")
 train_dataset = NorecTarget(
     data_path=DATA_DIR + "train/", 
     ignore_id=-1,
-    proportion=0.15,
+    proportion=proportion,
     )
 dev_dataset = NorecTarget(
     data_path=DATA_DIR + "dev/", 
