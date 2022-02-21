@@ -4,7 +4,8 @@ old*
 .old
 log/*
 slurm*
-
+*.pt
+/checkpoints/*
 
 
 # Byte-compiled / optimized / DLL files
