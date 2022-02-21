@@ -138,6 +138,10 @@ class BertSimple(torch.nn.Module):
         """
         # self.check_weights()
 
+        logging.info("Backward:")
+        logging.info("outputs: shape={}  first={}".format(outputs.shape, outputs[0]))
+        logging.info("targets: shape={}  first={}".format(targets.shape, targets[0]))
+        
         computed_loss = self.loss(
             input=outputs.to(torch.device(self.device)),
             target=targets.to(torch.device(self.device))  # FIXME where is this supposed to happen?
