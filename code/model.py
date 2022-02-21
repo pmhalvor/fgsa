@@ -28,6 +28,7 @@ class BertSimple(torch.nn.Module):
         lr=0.01,                    # TODO tune
         lr_scheduler_factor=0.1,    # TODO tune
         lr_scheduler_patience=2,    # TODO tune
+        label_importance = 2,       # TODO remove or tune
         output_dim=5,  # target, holder, expression, polarity, intensity
         tokenizer=None,
         targets_only = False
@@ -60,13 +61,13 @@ class BertSimple(torch.nn.Module):
         self.bert_dropout = self.bert_dropout.to(self.device)  # TODO is this needed?
 
         # loss function
-        w = 1. + 2*(self.num_labels - 1)
-        weight = [1./w] + [
-            2./w for _ in range(self.num_labels)
+        w = 1. + label_importance(self.num_labels - 1)
+        weight = [1/w] + [
+            label_importance/w for _ in range(self.num_labels)
         ]  # want labels to be 2 as important as 0s
         self.loss = torch.nn.CrossEntropyLoss(
             ignore_index=ignore_id,
-            weight=weight,
+            weight=torch.Tensor(weight),
             )
 
         # optimizer in model for sklearn-style fit() training
