@@ -11,10 +11,12 @@ from utils import pad
 
 
 ####################  config  ####################
+debug = True 
+epochs = 20
+label_importance = 10
 learning_rate = 1e-6
 proportion = 0.05
-label_importance = 10
-debug = True 
+
 name = 'BertSimple-targets'
 if proportion>0.05:
     name += "-large"
@@ -69,7 +71,7 @@ model = BertSimple(
 )
 
 logging.info('Fitting model...')
-model.fit(train_loader=train_loader, dev_loader=train_loader, epochs=5)
+model.fit(train_loader=train_loader, dev_loader=train_loader, epochs=epochs)
 
 logging.info('Evaluating model...')
 binary_f1, proportion_f1 = model.evaluate(train_loader, verbose=True)

@@ -197,31 +197,34 @@ class BertSimple(torch.nn.Module):
                 train_op = False
             )
 
-            f_expression, _, _, _ = score(
-                true_aspect = true_decoded["expressions"], 
-                predict_aspect = predict_decoded["expressions"], 
-                true_sentiment = true_decoded["polarities"], 
-                predict_sentiment = predict_decoded["polarities"], 
-                train_op = True
-            )
+            if not self.targets_only:
+                    
+                f_expression, _, _, _ = score(
+                    true_aspect = true_decoded["expressions"], 
+                    predict_aspect = predict_decoded["expressions"], 
+                    true_sentiment = true_decoded["polarities"], 
+                    predict_sentiment = predict_decoded["polarities"], 
+                    train_op = True
+                )
 
-            f_holder, _, _, _ = score(
-                true_aspect = true_decoded["holders"], 
-                predict_aspect = predict_decoded["holders"], 
-                true_sentiment = true_decoded["polarities"], 
-                predict_sentiment = predict_decoded["polarities"], 
-                train_op = True
-            )
+                f_holder, _, _, _ = score(
+                    true_aspect = true_decoded["holders"], 
+                    predict_aspect = predict_decoded["holders"], 
+                    true_sentiment = true_decoded["polarities"], 
+                    predict_sentiment = predict_decoded["polarities"], 
+                    train_op = True
+                )
 
             if verbose:
                 logging.info("f_target: {}".format(f_target))
-                logging.info("f_expression: {}".format(f_expression))
-                logging.info("f_holder: {}".format(f_holder))
+                logging.info("f_expression: {}".format(f_expression)) if not self.targets_only else None
+                logging.info("f_holder: {}".format(f_holder)) if not self.targets_only else None
                 logging.info("acc_polarity: {}".format(acc_polarity))
                 logging.info("f_polarity: {}".format(f_polarity))
 
             f_absa_overall = (f_absa + f_absa_overall)/2.
             logging.info("dev batch: {:3}   overall f1 absa: {}".format(b, f_absa_overall))
+            logging.info("f_target: {}".format(f_target))
 
 
         return f_absa_overall, None
