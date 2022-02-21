@@ -18,7 +18,7 @@ learning_rate = 1e-6
 proportion = 0.55
 load_checkpoint = False
 
-name = 'targets-55p'
+name = 'targets-55p-save'
 if proportion>0.05:
     name += "-large"
 if debug:
