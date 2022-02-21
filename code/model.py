@@ -99,12 +99,15 @@ class BertSimple(torch.nn.Module):
                 outputs = self.forward(batch)
                 
                 targets = batch[2]
+                
                 # apply loss
-                loss = self.backward(outputs.logits.permute(0, 2, 1), targets)
+                logits = outputs.logits.permute(0, 2, 1)
+                loss = self.backward(logits, targets)
+
                 if b%13==0:
                     if b==0:
                         logging.info("Backward:")
-                        logging.info("outputs: shape={}  first={}".format(outputs.shape, outputs[0]))
+                        logging.info("outputs: shape={}  first={}".format(logits.shape, logits[0]))
                         logging.info("targets: shape={}  first={}".format(targets.shape, targets[0]))
                     logging.info("Epoch:{:3} Batch:{:3} Loss:{}".format(epoch, b, loss.item()))
         
