@@ -11,6 +11,7 @@ from transformers import BertModel  # TODO next step, Bert as head
 ## Local imports
 from utils import decode_batch
 from utils import score
+from utils import ez_score
 
 
 class BertSimple(torch.nn.Module):
@@ -196,6 +197,14 @@ class BertSimple(torch.nn.Module):
                 predict_sentiment = predict_decoded["polarities"], 
                 train_op = False
             )
+
+            print('predictions: ', predictions.shape, type(predictions))
+            print('batch[2]: ', batch[2].shape, type(batch[2]))
+
+            ez = ez_score(batch[2], predictions)
+
+            print("ez score: ", ez)
+            quit()
 
             if not self.targets_only:
                     
