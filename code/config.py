@@ -17,7 +17,7 @@ DATA_DIR = "/fp/homes01/u01/ec-pmhalvor/data/norec_fine/"  # TODO hide personal 
 
 
 def log_template(level=logging.INFO, name='', job='train'):
-    name = '-'+name if name is not '' else name
+    name = '-'+name if name != '' else name
 
     logging.basicConfig(
         filename='../log/{job}{name}.log'.format(job=job, name=name),

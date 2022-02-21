@@ -1,22 +1,21 @@
 from torch.utils.data import DataLoader
 import torch
 import logging
+import pytest
 
 ## LOCAL 
 from config import DATA_DIR
-# from config import log_test
 from dataset import NorecOneHot
 from model import BertSimple
 from utils import pad
 
-# log_test()
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 logging.info('Running on device {}'.format(DEVICE))
 
 strictness = [True, False]
 
-@pytest.mark.parameterize("strict", strictness)
-def test_BertSimple_fit():
+@pytest.mark.parametrize("strict", strictness)
+def test_BertSimple_fit(strict):
     train_dataset = NorecOneHot(
         data_path=DATA_DIR + "train/", 
         ignore_id=-1,
@@ -34,11 +33,10 @@ def test_BertSimple_fit():
         device=DEVICE,
         ignore_id=-1,
         num_labels=9, 
-        lr=1e-10,  # 0.00001
+        lr=0,
         tokenizer=train_dataset.tokenizer,
     )
 
-    
     model.fit(train_loader=train_loader, epochs=1)
 
     weights = model.check_weights()
