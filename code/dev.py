@@ -65,7 +65,19 @@ logging.info("Datasets loaded.")
 logging.info("Initializing model..")
 
 if load_checkpoint:
-    model = torch.load(name + '.pt', map_location=torch.device(DEVICE))
+    try:
+        model = torch.load("/checkpoints/" + name + '.pt', map_location=torch.device(DEVICE))
+        logging.info("... from checkpoint/{}.pt".format(name))
+    except FileNotFoundError:
+       model = BertSimple(
+            device=DEVICE,
+            ignore_id=-1,
+            num_labels=5, 
+            lr=learning_rate,
+            tokenizer=train_dataset.tokenizer,
+            label_importance=label_importance,
+        ) 
+        logging.info("... from new instance.")
 else:
     model = BertSimple(
         device=DEVICE,
@@ -75,6 +87,7 @@ else:
         tokenizer=train_dataset.tokenizer,
         label_importance=label_importance,
     )
+    logging.info("... from new instance.")
 
 logging.info('Fitting model...')
 model.fit(train_loader=train_loader, dev_loader=train_loader, epochs=epochs)
@@ -85,6 +98,6 @@ easy_f1, hard_f1 = model.evaluate(dev_loader, verbose=True)
 logging.info("Easy F1: {}".format(easy_f1))
 logging.info("Hard F1: {}".format(hard_f1))
 
-logging.info("Saving model to {}".format("/checkpoints/" + name + '.pt'))
+logging.info("Saving model to checkpoints/{}.pt".format(name))
 torch.save(model, "/checkpoints/" + name + '.pt')
 
