@@ -1,4 +1,8 @@
-# This file is adopted from IMN (https://github.com/ruidan/IMN-E2E-ABSA) by Ruidan He.
+"""
+DEPRECATED: never used 
+"""
+
+# This file is copied directly from RACL, where is was adopted from IMN (https://github.com/ruidan/IMN-E2E-ABSA) by Ruidan He.
 # We slightly modify the part for OE, because AE and OE are separate tasks in RACL.
 
 import numpy as np

@@ -129,7 +129,7 @@ def parse_data(data, interactive=False):
 def encode_target(text, tokens, opinion, target):
     """
     Encode labelled targets to BIO, where B=1, I=2, O=0.
-    Ensure the correct tokens in orginal text is being labelled.
+    Ensure the correct tokens in original text is being labelled.
     """
     bio_target = get_bio_target(opinion)
 
@@ -164,7 +164,7 @@ def encode_target(text, tokens, opinion, target):
 def encode_expression(text, tokens, opinion, expression):
     """
     Encode labelled polar expressions to BIO, where B=1, I=2, O=0.
-    Ensure the correct tokens in orginal text is being labelled.
+    Ensure the correct tokens in original text is being labelled.
     """
     bio_expression = get_bio_expression(opinion)
 
@@ -206,7 +206,7 @@ def encode_expression(text, tokens, opinion, expression):
 def encode_holder(text, tokens, opinion, holder):
     """
     Encode labelled polar expressions to BIO, where B=1, I=2, O=0.
-    Ensure the correct tokens in orginal text is being labelled.
+    Ensure the correct tokens in original text is being labelled.
     """
     bio_holder = get_bio_holder(opinion)
     # TODO check this is all i need

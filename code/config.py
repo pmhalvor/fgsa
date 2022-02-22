@@ -4,7 +4,7 @@ import datetime
 
 # TODO download from git automagically
 BERT_PATH = "ltgoslo/norbert"
-DATA_DIR = "/fp/homes01/u01/ec-pmhalvor/data/norec_fine/"  # TODO hide personal info
+DATA_DIR = "$HOME/data/norec_fine/"  # TODO hide personal info
 
 
 def log_template(level=logging.INFO, name='', job='train'):

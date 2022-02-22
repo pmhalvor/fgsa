@@ -1,5 +1,5 @@
 # User specificed 
-dev_*.ipynb
+*.ipynb
 old*
 .old
 log/*

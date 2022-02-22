@@ -78,15 +78,16 @@ if load_checkpoint:
         model = torch.load("/checkpoints/" + name + '.pt', map_location=torch.device(DEVICE))
         logging.info("... from checkpoint/{}.pt".format(name))
     except FileNotFoundError:
-       model = BertSimple(
+        model = BertSimple(
             device=DEVICE,
             ignore_id=-1,
             num_labels=5, 
             lr=learning_rate,
             tokenizer=train_dataset.tokenizer,
             label_importance=label_importance,
-        ) 
+        )
         logging.info("... from new instance.")
+
 else:
     model = BertSimple(
         device=DEVICE,

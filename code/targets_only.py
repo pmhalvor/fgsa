@@ -5,28 +5,25 @@ import torch
 ## LOCAL
 from config import DATA_DIR
 from config import log_template
-from dataset import Norec 
-from model import BertHead
+from dataset import NorecTarget 
+from model import BertSimple
 from utils import pad
 
 
 ####################  config  ####################
 debug = True 
-epochs = 2
+epochs = 200
 label_importance = 10
 learning_rate = 1e-6
-proportion = 0.05
+proportion = 0.55
 load_checkpoint = False
 
-name = 'head-{percent}p'.format(
+name = 'targets-{percent}p'.format(
     percent=int(100*proportion)
 )
 if debug:
     name += "-debug"
-    level = logging.DEBUG
-else:
-    level = logging.INFO
-log_template(level=level, job='dev', name=name)
+log_template(job='dev', name=name)
 
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 logging.info('Running on device {}'.format(DEVICE))
@@ -65,12 +62,13 @@ logging.info("Datasets loaded.")
 
 
 logging.info("Initializing model..")
+
 if load_checkpoint:
     try:
         model = torch.load("/checkpoints/" + name + '.pt', map_location=torch.device(DEVICE))
         logging.info("... from checkpoint/{}.pt".format(name))
     except FileNotFoundError:
-        model = BertHead(
+        model = BertSimple(
             device=DEVICE,
             ignore_id=-1,
             num_labels=5, 
@@ -80,7 +78,7 @@ if load_checkpoint:
         ) 
         logging.info("... from new instance.")
 else:
-    model = BertHead(
+    model = BertSimple(
         device=DEVICE,
         ignore_id=-1,
         num_labels=5, 
