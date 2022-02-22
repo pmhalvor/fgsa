@@ -35,12 +35,12 @@ logging.info('Running on device {}'.format(DEVICE))
 
 # load train/dev/test data so every build has complete result set
 logging.info("Loading datasets..")
-train_dataset = NorecTarget(
+train_dataset = Norec(
     data_path=DATA_DIR + "train/", 
     ignore_id=-1,
     proportion=proportion,
 )
-dev_dataset = NorecTarget(
+dev_dataset = Norec(
     data_path=DATA_DIR + "dev/", 
     ignore_id=-1,
     proportion=proportion,
