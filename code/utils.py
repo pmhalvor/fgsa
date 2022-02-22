@@ -1,5 +1,6 @@
 import torch
 import numpy as np
+from sklearn.metrics import f1_score
 
 
 def pad(batch):
@@ -112,6 +113,47 @@ def decode(labels, mask):
     return expressions, holders, polarity, targets
 
 
+def decode_target(labels, mask):
+    """  
+    Parameters:
+        labels (list): single row of data containing labels to decode
+        mask (None): parameter never used
+
+    Encodings
+
+        Value       Label
+        0           O                \n
+        1       B-Positive           \n
+        2       I-Positive           \n
+        3       B-Negative           \n
+        4       I-Negative           \n
+
+    """
+    def append_all(e, h, p, t):
+        expressions.append(e)
+        holders.append(h)
+        polarity.append(p)
+        targets.append(t)
+    
+    expressions, holders, polarity, targets = [], [], [], []
+    
+    for ele in labels:
+        if ele == 0:
+            append_all(0, 0, 0, 0)
+        elif ele == 1:
+            append_all(0, 0, 1, 1)  # polarity 1  target 1
+        elif ele == 2:
+            append_all(0, 0, 1, 2)  # polarity 1  target 2
+        elif ele == 3:
+            append_all(0, 0, 2, 1)  # polarity 2  target 1
+        elif ele == 4:
+            append_all(0, 0, 2, 2)  # polarity 2  target 2
+        else:
+            append_all(0, 0, 0, 0)
+
+    return expressions, holders, polarity, targets
+
+
 def decode_mask(labels, mask):
     """  
     Parameters:
@@ -167,7 +209,50 @@ def decode_mask(labels, mask):
     return expressions, holders, polarity, targets
 
 
-def decode_batch(batch, mask=None):
+def decode_mask_target(labels, mask):
+    """  
+    Parameters:
+        labels (list): single row of data containing labels to decode
+        ignore_id (int): defaults to 0, since 0 excluded from evaluation? TODO check this
+
+    Encodings
+
+        Value       Label
+        0           O                \n
+        5       B-Positive           \n
+        6       I-Positive           \n
+        7       B-Negative           \n
+        8       I-Negative           \n
+
+    """
+    def append_all(e, h, p, t):
+        expressions.append(e)
+        holders.append(h)
+        polarity.append(p)
+        targets.append(t)
+    
+    expressions, holders, polarity, targets = [], [], [], []
+    
+    for ele, m in zip(labels, mask):
+        if m == 0:
+            break
+        elif ele == 0:
+            append_all(0, 0, 0, 0)  # outside
+        elif ele == 1:
+            append_all(0, 0, 1, 1)  # polarity 1  target 1
+        elif ele == 2:
+            append_all(0, 0, 1, 2)  # polarity 1  target 2
+        elif ele == 3:
+            append_all(0, 0, 2, 1)  # polarity 2  target 1
+        elif ele == 4:
+            append_all(0, 0, 2, 2)  # polarity 2  target 2
+        else:
+            append_all(0, 0, 0, 0)
+
+    return expressions, holders, polarity, targets
+
+
+def decode_batch(batch, mask=None, targets_only=False):
     """
     Wrapper class for decoding.
 
@@ -180,12 +265,17 @@ def decode_batch(batch, mask=None):
 
     expressions, holders, polarities, targets = [], [], [], []
 
-    if mask is not None:
-        decoder = decode_mask
+    # decide decoder according what data we are looking at
+    if mask is not None and targets_only is True:
+        decoder = decode_mask_target  # FIXME clean this up
+    elif mask is not None:
+        decoder = decode_mask 
+    elif targets_only is True:
+        decoder = decoder_target
+        mask = batch
     else:
         decoder = decode
         mask = batch
-
 
     for tensor, m in zip(batch, mask):
         e, h, p, t = decoder(tensor.tolist(), mask=m.tolist())
@@ -204,7 +294,8 @@ def decode_batch(batch, mask=None):
 
 def score(true_aspect, predict_aspect, true_sentiment, predict_sentiment, train_op):
     """
-    Takes batch of inputs as lists
+    Evaluation metric used in IMN and RACL. 
+    Takes batch of inputs as lists. 
 
     Parameters:
         true_aspect (list): not padded, built from same decoding as predicted
@@ -253,17 +344,17 @@ def score(true_aspect, predict_aspect, true_sentiment, predict_sentiment, train_
                     for j in range(num+1, len(true_seq)):
                         if true_seq[j] == inside and predict[j] == inside:
                             continue
-                        elif true_seq[j] != inside  and predict[j] != inside:
+                        elif true_seq[j] != inside and predict[j] != inside:
                             break
                         else:
-                            match = False
+                            match = False  # this is incredibly strict
                             break
 
                     if match:
                         correct += 1
                         if not train_op:
                             # do not count conflict examples
-                            if true_sentiment[i][num]!=0:
+                            if True or true_sentiment[i][num]!=0:
                                 rel_count[polarity_map[true_sentiment[i][num]]]+=1
                                 pred_count[polarity_map[predict_sentiment[i][num]]]+=1
                                 if true_sentiment[i][num] == predict_sentiment[i][num]:
@@ -306,7 +397,7 @@ def score(true_aspect, predict_aspect, true_sentiment, predict_sentiment, train_
 
         # For calculating the F1 Score for SC, we have discussed with Ruidan at https://github.com/ruidan/IMN-E2E-ABSA/issues?q=is%3Aissue+is%3Aclosed.
         # We provide the correct formula as follow, but we still adopt the calculation in IMN to conduct a fair comparison.
-        # TODO implement the correct, keep link to dicussion
+        # TODO implement the correct, keep link to discussion
         # f_pos = 2*p_pos*r_pos /(p_pos+r_pos+1e-6)
         # f_neg = 2*p_neg*r_neg /(p_neg+r_neg+1e-6)
         # f_neu = 2*p_neu*r_neu /(p_neu+r_neu+1e-6)
@@ -323,4 +414,23 @@ def score(true_aspect, predict_aspect, true_sentiment, predict_sentiment, train_
     return f_aspect, acc_s, f_s, f_absa
 
 
+def ez_score(true_labels, predict_labels, num_labels):
+    """
+    F1-score for _any_ correctly guessed label. Much more lenient than score() from RACL (above).
 
+    Parameters:
+        true_labels (torch.Tensor): batched true labels of size [batchsize, seq_len] 
+        predict_labels (torch.Tensor): batched predictions size [batchsize, seq_len]
+        num_labels (int): number of labels model is learning ot predict
+    """
+
+    total = 0
+    
+    for true, pred in zip(true_labels, predict_labels):
+        total += f1_score(
+            true, 
+            pred, 
+            labels=[e for e in range(1, num_labels)],
+            average='micro',
+        )
+    return total/true_labels.shape[0]

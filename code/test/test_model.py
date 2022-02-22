@@ -5,12 +5,10 @@ import pytest
 
 ## LOCAL 
 from config import DATA_DIR
-from config import log_test
 from dataset import NorecOneHot
 from model import BertSimple
 from utils import pad
 
-log_test()
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 logging.info('Running on device {}'.format(DEVICE))
 
@@ -35,11 +33,10 @@ def test_BertSimple_fit(strict):
         device=DEVICE,
         ignore_id=-1,
         num_labels=9, 
-        lr=1e-10,  # 0.00001
+        lr=0,
         tokenizer=train_dataset.tokenizer,
     )
 
-    
     model.fit(train_loader=train_loader, epochs=0)  # don't train
 
     weights = model.check_weights()

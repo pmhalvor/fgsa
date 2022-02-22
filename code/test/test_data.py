@@ -9,8 +9,6 @@ from utils import compare
 import config
 
 DATA_DIR = config.DATA_DIR # TODO hide personal info
-LOGGER = logging.getLogger(__name__)
-config.log_test(level=logging.INFO, name="test dataset")
 
 
 def test_data_dir():
@@ -29,7 +27,6 @@ def test_data_dir():
 
     expected_heads = {
             'dev': {
-
                 'holder.txt',
                 'opinion.txt',
                 'sentence.txt',
@@ -37,7 +34,6 @@ def test_data_dir():
                 'target_polarity.txt',
                 },
             'test': {
-
                 'holder.txt',
                 'opinion.txt',
                 'sentence.txt',
@@ -45,7 +41,6 @@ def test_data_dir():
                 'target_polarity.txt',
                 },
             'train': {
-
                 'holder.txt',
                 'opinion.txt',
                 'sentence.txt',
@@ -63,10 +58,10 @@ def test_dataset_shape():
     train_dataset = NorecOneHot(data_path=DATA_DIR + "train/", proportion=0.05)
 
     for i in range(3):
-        LOGGER.debug(train_dataset.sentence[i])
-        LOGGER.debug(train_dataset[i][0].shape)
-        LOGGER.debug(train_dataset[i][1].shape)
-        LOGGER.debug(train_dataset[i][2].shape)
+        logging.debug(train_dataset.sentence[i])
+        logging.debug(train_dataset[i][0].shape)
+        logging.debug(train_dataset[i][1].shape)
+        logging.debug(train_dataset[i][2].shape)
 
         # check shapes
         assert train_dataset[i][0].shape == train_dataset[i][1].shape

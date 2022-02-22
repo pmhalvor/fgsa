@@ -24,7 +24,7 @@ class NorecOneHot(Dataset):
 
         """
         encoded = []
-        for e, h, p, t in zip(expression, holder, target, polarity):
+        for e, h, p, t in zip(expression, holder, polarity, target):
             if e == 1:                  # beginning expression
                 encoded.append(1)
             elif e == 2:                # inside expression
@@ -215,6 +215,124 @@ class NorecOneHot(Dataset):
     
     def __len__(self):
         return len(self.sentence)
+
+
+class NorecTarget(NorecOneHot):
+    @staticmethod
+    def encode(expression, holder, polarity, target) -> List:
+        """
+        Handmade one-hot encoder.
+
+          Value       Label
+            0           O                \n
+            1       B-Positive           \n
+            2       I-Positive           \n
+            3       B-Negative           \n
+            4       I-Negative           \n
+
+        """
+        encoded = []
+        for p, t in zip(polarity, target):
+            if t == 1:                  # beginning target
+                if p == 1:              # positive  TODO double check 1=positive and 2=negative
+                    encoded.append(1)
+                elif p == 2:            # negative
+                    encoded.append(3)
+                else:                   # neutral  NOTE norec_fine should not use this
+                    encoded.append(0)
+            elif t == 2:                # inside target
+                if p == 1:              # positive
+                    encoded.append(2)
+                elif p == 2:            # negative
+                    encoded.append(4)
+                else:                   # neutral 
+                    encoded.append(0)
+            else:                       # outside everything
+                encoded.append(0)
+
+        assert len(encoded) == len(target)
+
+        return encoded
+
+
+    def __init__(
+        self, 
+        bert_path="ltgoslo/norbert",
+        data_path="$HOME/data/norec_fine/train",
+        proportion=None, 
+        ignore_id=-1,
+        tokenizer=None,
+    ):
+        """
+        Dataset object that only gives targets and polarities. 
+        Built to isolate tasks, checking that model isn't too complex to learn. 
+
+        NOTE: Intensity is not checked here (yet)
+
+          Value       Label
+            0           O                \n
+            1       B-Positive           \n
+            2       I-Positive           \n
+            3       B-Negative           \n
+            4       I-Negative           \n
+
+        
+        """
+        if tokenizer is not None:
+            self.tokenizer = tokenizer
+        else:
+            self.tokenizer = BertTokenizer.from_pretrained(bert_path)
+        self.IGNORE_ID = ignore_id  # FIXME get form BertTokenizer
+
+        data = self.load_raw_data(data_path)
+        self.polarity = data[2]
+        self.sentence = data[3]
+        self.target = data[4]
+
+        self.label, self.sentence = self.one_hot_encode(
+            [0 for row in self.target for _ in row],  # for lazy inheritance
+            [0 for row in self.target for _ in row],  # for lazy inheritance
+            self.polarity, 
+            self.target,
+            self.sentence,
+        )
+
+        if proportion is not None:
+            count = int(len(self.sentence)*proportion)
+
+            self.label = self.label[:count]
+            self.sentence = self.sentence[:count]
+
+            # below not needed, but ok to have
+            self.polarity =  self.polarity[:count]
+            self.target = self.target[:count]
+
+        # check shapes
+        assert len(self.sentence) == len(self.label)
+        assert len(self.sentence[0]) == len(self.label[0])
+        assert len(self.sentence[-1]) == len(self.label[-1])
+
+
+    def one_hot_encode(
+        self,
+        expression, 
+        holder,
+        polarity,
+        target,
+        sentence
+    ):
+        one_hot_label = []
+        used_sentence = []
+        for e, h, p, t, s in zip(expression, holder, polarity, target, sentence):
+
+            # only use data points where targets are present
+            if sum(t)>0: 
+                one_hot_label.append(
+                    self.encode(e, h, p, t) 
+                )   
+                used_sentence.append(s)
+            
+        return one_hot_label, used_sentence
 
 
 class Norec(Dataset):
