@@ -355,7 +355,7 @@ class BertHead(torch.nn.Module):
         
         for i, (name, component) in enumerate(self.components.items()):
             opt = torch.optim.Adam(
-                    [self.bert, component.parameters()],
+                    [self.bert.parameters(), component.parameters()],
                     lr=self.learning_rate   # TODO task specific learning rates?
                 )                           # TODO test other optimizers?
             optimizers[name] = opt
