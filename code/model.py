@@ -228,8 +228,8 @@ class BertSimple(torch.nn.Module):
                 logging.info("acc_polarity: {}".format(acc_polarity))
                 logging.info("f_polarity: {}".format(f_polarity))
 
-        easy_overall = easy_total_over_batches/len(dev_loader)
-        hard_overall = hard_total_over_batches/len(dev_loader)
+        easy_overall = easy_total_over_batches/len(loader)
+        hard_overall = hard_total_over_batches/len(loader)
 
         logging.info("Easy overall: {easy}".format(easy=easy_overall))
         logging.info("Hard overall: {hard}".format(hard=hard_overall))
