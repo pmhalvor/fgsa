@@ -583,7 +583,22 @@ class BertHead(torch.nn.Module):
         loss: float
             How close the estimate was to the gold standard.
         """
-        self.losses = 
+
+        logging.info("In backward")
+        logging.info("len(logits): {}".format(len(logits)))
+        logging.info("logits[0].shape: {}".format(logits[0].shape))
+        logging.info("len(golden): {}".format(len(golden)))
+        logging.info("golden[0].shape: {}".format(golden[0].shape))
+        quit()
+
+        self.losses = [
+            self.loss(
+                input=out.to(torch.device(self.device)),
+                target=gold.to(torch.device(self.device))
+            )
+            for out, gold in zip(logits, golden)
+        ]
+
         computed_loss = self.loss(
             input=logits.to(torch.device(self.device)),  # TODO is this type casting redundant?
             target=golden.to(torch.device(self.device))  
