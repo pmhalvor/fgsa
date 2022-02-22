@@ -73,7 +73,6 @@ if load_checkpoint:
         model = BertHead(
             device=DEVICE,
             ignore_id=-1,
-            num_labels=5, 
             lr=learning_rate,
             tokenizer=train_dataset.tokenizer,
             label_importance=label_importance,
@@ -83,7 +82,6 @@ else:
     model = BertHead(
         device=DEVICE,
         ignore_id=-1,
-        num_labels=5, 
         lr=learning_rate,
         tokenizer=train_dataset.tokenizer,
         label_importance=label_importance,

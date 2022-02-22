@@ -294,7 +294,6 @@ class BertHead(torch.nn.Module):
         lr=1e-6,                    # TODO tune
         lr_scheduler_factor=0.1,    # TODO tune
         lr_scheduler_patience=2,    # TODO tune
-        num_labels=3,               # simple head only extracts target BIO tags
         subtasks = ["expression", "holder", "polarity", "target"], 
         tokenizer=None,             # need tokenizer used in preprocessing 
         
@@ -315,7 +314,6 @@ class BertHead(torch.nn.Module):
         self.learning_rate = lr
         self.lr_scheduler_factor = lr_scheduler_factor
         self.lr_scheduler_patience = lr_scheduler_patience
-        self.num_labels = num_labels
         self.subtasks = subtasks
         self.tokenizer = tokenizer
 
@@ -598,9 +596,6 @@ class BertHead(torch.nn.Module):
         self.optimizer.step()
 
         return computed_loss
-
-
-
 
 
 class BertLSTM(torch.nn.Module):
