@@ -18,8 +18,9 @@ learning_rate = 1e-6
 proportion = 0.55
 load_checkpoint = False
 
-name = 'targets-{percent}p'.format(
-    percent=int(100*proportion)
+name = 'targets-{percent}p-{epochs}e'.format(
+    percent=int(100*proportion),
+    epochs=epochs
 )
 if debug:
     name += "-debug"
