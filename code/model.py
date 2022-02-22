@@ -531,7 +531,7 @@ class BertHead(torch.nn.Module):
                 in_features=786,
                 out_features=3,  # 3 possible classifications for each task
             )
-            for task in subtask
+            for task in subtasks
         }
 
         return components
