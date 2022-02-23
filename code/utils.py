@@ -2,12 +2,11 @@ import torch
 import numpy as np
 from sklearn.metrics import f1_score
 
-
-def pad(batch):
+def pad(batch, ignore_id=-1):
     """
     Pad batches according to largest sentence.
 
-    A sentence in the batch has shape [3, sentence_length] and looks like:
+    A sentence in the batch has shape [6, sentence_length] and looks like:
         (
             tensor([  102,  3707, 29922,  1773,  4658, 13502,  1773,  3325,  3357, 19275,
                     3896,  3638,  3169, 10566,  8030, 30337,  2857,  3707,  4297, 24718,
@@ -15,17 +14,29 @@ def pad(batch):
                     26375, 20322, 26273,   103]), 
             tensor([1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
                     1, 1, 1, 1, 1, 1, 1, 1, 1, 1]), 
-            tensor([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,0])
+            tensor([0, 0, 1, 2, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,0])
+            tensor([0, 0, 0, 0, 0, 0, 0, 1, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,0])
+            tensor([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0,0])
+            tensor([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 2, 2, 2, 0, 0, 0, 0, 0, 0,0])
         )
     """
-    longest_sentence = max([ids.size(0) for ids, _, _ in batch])
-    padded_ids, padded_masks, padded_labels = [], [], []
+    longest_sentence = max([b[0].size(0) for b in batch])
+    padded_ids, padded_masks = [], []
+    padded_expression, padded_holder, padded_polarity, padded_target= [], [], [], []
 
-    for id, mask, label in batch:
+    for b in batch:
+        # this manual unpacking should not be necessary..
+        ids = b[0]
+        mask = b[1]
+        expression = b[2]
+        holder = b[3]
+        polarity = b[4]
+        target = b[5]
+        
         padded_ids.append(
             torch.nn.functional.pad(
-                id,
-                (0, longest_sentence - id.size(0)),
+                ids,
+                (0, longest_sentence - ids.size(0)),
                 value=0  # padding token can vary between Berts
             )
         )
@@ -33,22 +44,46 @@ def pad(batch):
             torch.nn.functional.pad(
                 mask,
                 (0, longest_sentence - mask.size(0)),
-                value=0  # 1 means item present, 0 means padding TODO check if needed 
+                value=0  # 1 means item present, 0 means padding
             )
         )
-        padded_labels.append(
+        padded_expression.append(
             torch.nn.functional.pad(
-                label,
-                (0, longest_sentence - label.size(0)),
-                value=-1  # NOTE cannot pad with 0 since thats used as label O FIXME make sure negative works
+                expression,
+                (0, longest_sentence - expression.size(0)),
+                value=ignore_id  # NOTE cannot pad with 0 since thats used as label O
+            )
+        )
+        padded_holder.append(
+            torch.nn.functional.pad(
+                holder,
+                (0, longest_sentence - holder.size(0)),
+                value=ignore_id  # NOTE cannot pad with 0 since thats used as label O
+            )
+        )
+        padded_polarity.append(
+            torch.nn.functional.pad(
+                polarity,
+                (0, longest_sentence - polarity.size(0)),
+                value=ignore_id  # NOTE cannot pad with 0 since thats used as label O
+            )
+        )
+        padded_target.append(
+            torch.nn.functional.pad(
+                target,
+                (0, longest_sentence - target.size(0)),
+                value=ignore_id  # NOTE cannot pad with 0 since thats used as label O
             )
         )
 
     ids = torch.stack(padded_ids).long()
     masks = torch.stack(padded_masks).long()
-    labels = torch.stack(padded_labels).long()
+    expression = torch.stack(padded_expression).long()
+    holder = torch.stack(padded_holder).long()
+    polarity = torch.stack(padded_polarity).long()
+    target = torch.stack(padded_target).long()
 
-    return ids, masks, labels
+    return ids, masks, expression, holder, polarity, target
 
 
 def compare(tensor_1, tensor_2):

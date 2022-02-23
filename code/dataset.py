@@ -48,24 +48,15 @@ class Norec(Dataset):
         tokenizer=None,
     ):
         self.tokenizer = self.get_tokenizer(bert_path, tokenizer)
-        self.IGNORE_ID = ignore_id  # FIXME get form BertTokenizer
+        self.IGNORE_ID = ignore_id  # FIXME get form BertTokenizer, idk if this is FIXME is needed
 
         # parse raw data
         data_path = os.path.join(data_dir, partition)
         data = self.load_raw_data(data_path)
-        self.expression = data[0]
-        self.holder = data[1]
-        self.polarity = data[2]
-        self.sentence = data[3]
-        self.target = data[4]
+        self.sentence = data[3]  # only data piece not used in build_labels()
 
         # build dataset specific labels
-        self.label = self.build_labels(
-            self.expression,
-            self.holder,
-            self.polarity,
-            self.target,
-        )
+        self.label = self.build_labels(data)
 
         # tokenize in init for faster get item
         self.tokens = self.tokenize(self.sentence, self.tokenizer)
@@ -74,10 +65,10 @@ class Norec(Dataset):
         self.shrink(p=proportion)
 
         # check shapes
-        assert len(self.sentence) == len(self.label)   # check number of sentences vs labels
-        assert len(self.sentence[0]) == len(self.label[0])  # check number of tokens in first sentence vs label
-        assert len(self.sentence[-1]) == len(self.label[-1])  # check number of tokens in last sentence vs label
-        assert len(self.label[0][0]) == 4   # check size of a single token 
+        assert len(self.sentence) == len(self.label["target"])   # check number of sentences vs targets
+        assert len(self.sentence[0]) == len(self.label["target"][0])  # check number of tokens in first sentence vs target
+        assert len(self.sentence[-1]) == len(self.label["target"][-1])  # check number of tokens in last sentence vs target
+        assert len(self.label.keys()) == 4   # check size of a single token 
 
     def load_raw_data(self, data_path) -> Tuple[List,List,List,List,List]:
         """
@@ -142,12 +133,9 @@ class Norec(Dataset):
         if p is not None:
             count = int(len(self.sentence)*p)
 
-            self.label = self.label[:count]
+            for key, value in self.label.items():
+                self.label[key] = value[:count]
             self.sentence = self.sentence[:count]
-
-            # below not needed, but ok to have
-            self.polarity =  self.polarity[:count]
-            self.target = self.target[:count]
 
         logging.info("Dataset shrunk by a scale of {p}. Now {c} rows.".format(p=p, c=count))
 
@@ -160,12 +148,15 @@ class Norec(Dataset):
 
     def __getitem__(self, index):
         """
-        Requires self.labels to be set.
+        Requires self.labels to be set as dict containing each subtask annotation
         """
         self.index = index
 
-        # label: e, h, p, t
-        self.current_label = self.label[index]
+        # self.label.keys() == [expression, holder, polarity, target]
+        self.current_expression = self.label["expression"][index]
+        self.current_holder = self.label["holder"][index]
+        self.current_polarity = self.label["polarity"][index]
+        self.current_target = self.label["target"][index]
 
         # ids for self.tokenizer mapping
         self.input_ids = self.tokens[index]
@@ -176,29 +167,55 @@ class Norec(Dataset):
         return (
             torch.LongTensor(self.input_ids),
             torch.LongTensor(self.attention_mask),
-            torch.LongTensor(self.current_label),
+            torch.LongTensor(self.current_expression),
+            torch.LongTensor(self.current_holder),
+            torch.LongTensor(self.current_polarity),
+            torch.LongTensor(self.current_target),
         )
 
     def __len__(self):
         return len(self.sentence)
 
     # dependent on dataset type
-    def build_labels(self, expression, holder, polarity, target):
-        label = []
+    def build_labels(self, data):
+        """
+        Using data loaded in load_raw_data(), this method builds a dictionary containing each annotation.
+        
+        NOTE: data[3] contains sentences of strings. Index [3] is not used in this method.
 
-        for r, row  in enumerate(target):  # get each row of data
-            encoded_row = []
+        Parameters:
+            data (list(list(int))): Should contain raw data returned from load_raw_data().
+
+        """
+        expression = []
+        holder = []
+        polarity = []
+        target = []
+
+        for r, row  in enumerate(data[0]):  # get each row of data
+            row_expression = []
+            row_holder = []
+            row_polarity = []
+            row_target = []
             for i, _ in enumerate(row):  # get each token in row
-                token = [
-                    expression[r][i],
-                    holder[r][i],
-                    polarity[r][i],
-                    target[r][i],
-                ]
-                encoded_row.append(token)
-            label.append(encoded_row)
+                row_expression.append(data[0][r][i])
+                row_holder.append(data[1][r][i])
+                row_polarity.append(data[2][r][i])
+                row_target.append(data[4][r][i])  # NOTE [4] for targets, not [3] which is sentences
+            
+            # add to full lists
+            expression.append(row_expression)
+            holder.append(row_holder)
+            polarity.append(row_polarity)
+            target.append(row_target)
 
-        return label
+        return {
+            "expression": expression,
+            "holder": holder,
+            "polarity": polarity,
+            "target": target,
+        }
+
 
 class NorecOneHot(Norec):
     @staticmethod

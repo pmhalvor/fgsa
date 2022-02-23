@@ -355,7 +355,7 @@ class BertHead(torch.nn.Module):
         }
         schedulers = {
             "bert": torch.optim.lr_scheduler.ReduceLROnPlateau(
-                optimizer=opt,
+                optimizer=optimizers["bert"],
                 mode='min',
                 factor=self.lr_scheduler_factor,
                 patience=self.lr_scheduler_patience
@@ -389,12 +389,10 @@ class BertHead(torch.nn.Module):
                 self.train()        # turn off eval mode
                 self.zero_grad()    # clear updates from prev epoch
 
-                logits = self.forward(batch)
-                
-                golden = batch[2]
+                predictions = self.forward(batch)
                 
                 # apply loss
-                loss = self.backward(logits, golden)
+                loss = self.backward(predictions, batch)
 
                 # log loss every 13th batch
                 if b%13==0:
@@ -579,7 +577,7 @@ class BertHead(torch.nn.Module):
         return output
 
 
-    def backward(self, logits, golden):
+    def backward(self, predictions, batch):
         """
         Performs a backpropagation step computing the loss.
         ______________________________________________________________
@@ -594,11 +592,17 @@ class BertHead(torch.nn.Module):
             How close the estimate was to the gold standard.
         """
 
+        true_expression = batch[2]
+        true_holder = batch[3]
+        true_polarity = batch[4]
+        true_target = batch[5]
+
         logging.info("In backward")
-        logging.info("len(logits): {}".format(len(logits)))
-        logging.info("logits[0].shape: {}".format(logits[0].shape))
-        logging.info("len(golden): {}".format(len(golden)))
-        logging.info("golden[0].shape: {}".format(golden[0].shape))
+        logging.info("predictions.shape: {}".format(predictions.shape))
+        logging.info("true_expression.shape: {}".format(true_expression.shape))
+        logging.info("true_holder.shape: {}".format(true_holder.shape))
+        logging.info("true_polarity.shape: {}".format(true_polarity.shape))
+        logging.info("true_target.shape: {}".format(true_target.shape))
         quit()
 
         # something probably needs to be permuted here
