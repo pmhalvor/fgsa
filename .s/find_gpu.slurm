@@ -24,5 +24,4 @@ module load PyTorch/1.9.0-fosscuda-2020b
 
 
 # Make cuda visible
-export CUDA_VISIBLE_DEVICES=1
 python -c "import torch; print(torch.cuda.is_available())"
