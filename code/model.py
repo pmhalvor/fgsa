@@ -408,11 +408,11 @@ class BertHead(torch.nn.Module):
 
     def evaluate(self, loader, verbose=False):
         """
-        Returns the binary and proportional F1 scores of the model on the
-        examples passed via loader.
+        Returns overall binary and proportional F1 scores for predictions on the
+        development data via loader, while logging task-wise scores along the way.
 
-        :param loader: torch.utils.data.DataLoader object with
-                            batch_size=1
+        Parameters:
+            loader (torch.DataLoader): 
         """
         easy_total_over_batches = 0
         hard_total_over_batches = 0
@@ -428,6 +428,7 @@ class BertHead(torch.nn.Module):
                 "target": batch[5],
             }
 
+            ### hard score
             f_target, acc_polarity, f_polarity, f_absa = score(
                 true_aspect = true["target"], 
                 predict_aspect = predictions["target"], 
@@ -435,13 +436,6 @@ class BertHead(torch.nn.Module):
                 predict_sentiment = predictions["polarity"], 
                 train_op = False
             )
-
-            for task in self.subtasks: 
-                ez = ez_score(true[task], predictions[task], num_labels=3)
-                logging.debug("{task:10} f1: {score}".format(task=task, score=ez))
-
-            easy_total_over_batches += ez
-            hard_total_over_batches += f_absa
 
             if "expression" in self.subtasks:
                 f_expression, _, _, _ = score(
@@ -451,7 +445,7 @@ class BertHead(torch.nn.Module):
                     predict_sentiment = predictions["polarity"], 
                     train_op = True
                 )
-                logging.info("f_expression: {}".format(f_expression)) if verbose else None
+                logging.info("{:10} hard: {}".format("expression", f_expression)) if verbose else None
 
             if "holder" in self.subtasks:
                 f_holder, _, _, _ = score(
@@ -461,12 +455,20 @@ class BertHead(torch.nn.Module):
                     predict_sentiment = predictions["polarity"], 
                     train_op = True
                 )
-                logging.info("f_holder: {}".format(f_holder)) if verbose else None
+                logging.info("{:10} hard: {}".format("holder", f_holder)) if verbose else None
 
             if verbose:
-                logging.info("f_target: {}".format(f_target))
-                logging.info("acc_polarity: {}".format(acc_polarity))
-                logging.info("f_polarity: {}".format(f_polarity))
+                logging.info("{:10} hard: {}".format("target", f_target))
+                logging.info("{:10} hard: {}".format("polarity", f_polarity))
+                logging.info("{:10} acc : {}".format("polarity", acc_polarity))
+
+            ### easy score
+            for task in self.subtasks: 
+                ez = ez_score(true[task], predictions[task], num_labels=3)
+                logging.debug("{task:10} easy: {score}".format(task=task, score=ez))
+
+            easy_total_over_batches += ez
+            hard_total_over_batches += f_absa
 
         easy_overall = easy_total_over_batches/len(loader)
         hard_overall = hard_total_over_batches/len(loader)

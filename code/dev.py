@@ -11,16 +11,18 @@ from utils import pad
 
 
 ####################  config  ####################
-debug = True 
-epochs = 2
+debug = False 
+epochs = 200
 label_importance = 10
 learning_rate = 1e-6
-proportion = 0.05
+proportion = 0.75
 load_checkpoint = False
 
-name = 'head-{percent}p'.format(
-    percent=int(100*proportion)
-)
+name = "head"
+if proportion<1:
+    name += '-{percent}p'.format(
+        percent=int(100*proportion)
+    )
 if debug:
     name += "-debug"
     level = logging.DEBUG
