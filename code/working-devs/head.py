@@ -2,23 +2,23 @@ from torch.utils.data import DataLoader
 import logging
 import torch
 
-### LOCAL
+## LOCAL
 from config import DATA_DIR
 from config import log_template
 from dataset import Norec 
-from model import FgsaLSTM
+from model import BertHead
 from utils import pad
 
 
 ####################  config  ####################
-debug = True 
-epochs = 2
+debug = False 
+epochs = 200
 label_importance = 10
 learning_rate = 1e-6
-proportion = 0.05
+proportion = 0.5
 load_checkpoint = False
 
-name = "lstm"
+name = "head"
 if proportion<1:
     name += '-{percent}p'.format(
         percent=int(100*proportion)
@@ -74,7 +74,7 @@ if load_checkpoint:
         model = torch.load("/checkpoints/" + name + '.pt', map_location=torch.device(DEVICE))
         logging.info("... from checkpoint/{}.pt".format(name))
     except FileNotFoundError:
-        model = FgsaLSTM(
+        model = BertHead(
             device=DEVICE,
             ignore_id=-1,
             lr=learning_rate,
@@ -83,7 +83,7 @@ if load_checkpoint:
         ) 
         logging.info("... from new instance.")
 else:
-    model = FgsaLSTM(
+    model = BertHead(
         device=DEVICE,
         ignore_id=-1,
         lr=learning_rate,

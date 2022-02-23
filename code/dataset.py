@@ -221,6 +221,9 @@ class Norec(Dataset):
 
 
 class NorecOneHot(Norec):
+    """
+    DEPRECATED: Used in early development to test joint multi-tasking with poor results.
+    """
     @staticmethod
     def encode(expression, holder, polarity, target) -> List:
         """

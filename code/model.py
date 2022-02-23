@@ -9,7 +9,6 @@ from transformers import BertForTokenClassification
 from transformers import BertModel  # TODO next step, Bert as head
 
 ## Local imports
-from utils import decode_batch
 from utils import score
 from utils import ez_score
 
