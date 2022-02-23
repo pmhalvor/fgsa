@@ -287,6 +287,7 @@ class BertHead(torch.nn.Module):
     def __init__(
         self, 
         bert_finetune=True,         # TODO tune
+        bert_lr=1e-6,               # TODO tune
         bert_path="ltgoslo/norbert",  
         device="cpu",
         dropout=0.1,                # TODO tune
@@ -349,13 +350,22 @@ class BertHead(torch.nn.Module):
         """
         Changes with task specific architectures to optimize uniquely per subtask.
         """
-        optimizers = {}
-        schedulers = {}
+        optimizers = {  # TODO create bert_lr
+            "bert": torch.optim.Adam(self.bert.parameters(), lr=self.learning_rate)
+        }
+        schedulers = {
+            "bert": torch.optim.lr_scheduler.ReduceLROnPlateau(
+                optimizer=opt,
+                mode='min',
+                factor=self.lr_scheduler_factor,
+                patience=self.lr_scheduler_patience
+            )
+        }
 
         
         for i, (name, component) in enumerate(self.components.items()):
             opt = torch.optim.Adam(
-                    [self.bert.parameters(), component.parameters()],
+                    component.parameters(),
                     lr=self.learning_rate   # TODO task specific learning rates?
                 )                           # TODO test other optimizers?
             optimizers[name] = opt
@@ -591,6 +601,8 @@ class BertHead(torch.nn.Module):
         logging.info("golden[0].shape: {}".format(golden[0].shape))
         quit()
 
+        # something probably needs to be permuted here
+
         self.losses = [
             self.loss(
                 input=out.to(torch.device(self.device)),
@@ -608,6 +620,9 @@ class BertHead(torch.nn.Module):
         computed_loss.backward()
 
         # updating weights from the model by calling optimizer.step()
+        
+        # NOTE bert optimizer alone, so needs to be updated for each task 
+        # in addition to task specific optimizers
         self.optimizer.step()
 
         return computed_loss
