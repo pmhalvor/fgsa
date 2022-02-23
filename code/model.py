@@ -396,7 +396,9 @@ class BertHead(torch.nn.Module):
 
                 # log loss every 13th batch
                 if b%13==0:
-                    logging.info("Epoch:{:3} Batch:{:3} Loss:{}".format(epoch, b, loss.item()))
+                    logging.info("Epoch:{:3} Batch:{:3}".format(epoch, b))
+                    for task in self.subtasks:
+                        logging.info("{} loss:{}".format(task, loss[task].item()))
         
             if dev_loader is not None:
                 self.evaluate(dev_loader)
@@ -419,52 +421,50 @@ class BertHead(torch.nn.Module):
         for b, batch in enumerate(loader):
             predictions = self.predict(batch)
 
-            # f_target, acc_polarity, f_polarity, f_absa = score(
-            #     true_aspect = true_decoded["targets"], 
-            #     predict_aspect = predict_decoded["targets"], 
-            #     true_sentiment = true_decoded["polarities"], 
-            #     predict_sentiment = predict_decoded["polarities"], 
-            #     train_op = False
-            # )
+            true = {
+                "expression": batch[2], 
+                "holder": batch[3],
+                "polarity": batch[4],
+                "target": batch[5],
+            }
 
-            easy_scores = []
+            f_target, acc_polarity, f_polarity, f_absa = score(
+                true_aspect = true["target"], 
+                predict_aspect = predictions["target"], 
+                true_sentiment = true["polarity"], 
+                predict_sentiment = predictions["polarity"], 
+                train_op = False
+            )
 
-            # batch[2].shape == [32, 4, seq]
-
-            logging.info("in eval: batch[2].shape = {}". format(batch[2].shape))
-            print("in eval: batch[2].shape = {}". format(batch[2].shape))
-            
-            quit()
-
-            for i, prediction in enumerate(predictions):  # [exp, hold, pol, target]
-                ez = ez_score(batch[2][i], prediction, num_labels=3)
-                logging.debug("label f1: {}".format(ez))
+            for task in self.subtasks: 
+                ez = ez_score(true[task], predictions[task], num_labels=3)
+                logging.debug("{task} f1: {score}".format(task=task, score=ez))
 
             easy_total_over_batches += ez
             hard_total_over_batches += f_absa
 
-            if not self.targets_only:
-                    
+            if "expression" in self.subtasks:
                 f_expression, _, _, _ = score(
-                    true_aspect = true_decoded["expressions"], 
-                    predict_aspect = predict_decoded["expressions"], 
-                    true_sentiment = true_decoded["polarities"], 
-                    predict_sentiment = predict_decoded["polarities"], 
+                    true_aspect = true["expression"], 
+                    predict_aspect = predictions["expression"], 
+                    true_sentiment = true["polarity"], 
+                    predict_sentiment = predictions["polarity"], 
                     train_op = True
                 )
+                logging.info("f_expression: {}".format(f_expression)) if verbose else None
 
+            if "holder" in self.subtasks:
                 f_holder, _, _, _ = score(
-                    true_aspect = true_decoded["holders"], 
-                    predict_aspect = predict_decoded["holders"], 
-                    true_sentiment = true_decoded["polarities"], 
-                    predict_sentiment = predict_decoded["polarities"], 
+                    true_aspect = true["holder"], 
+                    predict_aspect = predictions["holder"], 
+                    true_sentiment = true["polarity"], 
+                    predict_sentiment = predictions["polarity"], 
                     train_op = True
                 )
+                logging.info("f_holder: {}".format(f_holder)) if verbose else None
 
             if verbose:
                 logging.info("f_target: {}".format(f_target))
-                logging.info("f_expression: {}".format(f_expression)) if not self.targets_only else None
-                logging.info("f_holder: {}".format(f_holder)) if not self.targets_only else None
                 logging.info("acc_polarity: {}".format(acc_polarity))
                 logging.info("f_polarity: {}".format(f_polarity))
 
@@ -473,6 +473,8 @@ class BertHead(torch.nn.Module):
 
         logging.info("Easy overall: {easy}".format(easy=easy_overall))
         logging.info("Hard overall: {hard}".format(hard=hard_overall))
+        print("Easy overall: {easy}".format(easy=easy_overall))
+        print("Hard overall: {hard}".format(hard=hard_overall))
 
         return easy_overall, hard_overall
 
@@ -483,12 +485,12 @@ class BertHead(torch.nn.Module):
         """
         self.eval()
 
-        logits = self.forward(batch)
+        outputs = self.forward(batch)
 
-        self.predictions = [
-            output.logits.argmax(2)
-            for output in logits
-        ]
+        self.predictions = {
+            task: outputs[task].argmax(1)
+            for task in self.subtasks
+        }
 
         return self.predictions
         
@@ -536,7 +538,7 @@ class BertHead(torch.nn.Module):
 
         components = {
             task: torch.nn.Linear(
-                in_features=786,
+                in_features=768,
                 out_features=3,  # 3 possible classifications for each task
             )
             for task in subtasks
@@ -561,18 +563,17 @@ class BertHead(torch.nn.Module):
         ).last_hidden_state
 
         # task-specific forwards
-        output = [
-            self.components[task](hidden_state).permute(0, 2, 1)  # TODO double check permutation correct
+        output = {
+            task: self.components[task](hidden_state).permute(0, 2, 1)  # TODO double check permutation correct
             for task in self.subtasks
-        ]
+        }
 
         logging.info("In forward, check output shapes of {num_tasks} {output_type}s".format(
             num_tasks=len(self.subtasks),
-            output_type=type(output[0]))
+            output_type=type(output[self.subtasks[-1]]))
         )
         for i in range(len(self.subtasks)):
-            logging.info("shape {idx}: {shape}".format(idx=i, shape=output[0].shape))
-
+            logging.info("shape {idx}: {shape}".format(idx=i, shape=output[self.subtasks[-1]].shape))
 
         return output
 
@@ -592,44 +593,42 @@ class BertHead(torch.nn.Module):
             How close the estimate was to the gold standard.
         """
 
-        true_expression = batch[2]
-        true_holder = batch[3]
-        true_polarity = batch[4]
-        true_target = batch[5]
+        true = {
+            "expression": batch[2], 
+            "holder": batch[3],
+            "polarity": batch[4],
+            "target": batch[5],
+        }
 
-        logging.info("In backward")
-        logging.info("predictions.shape: {}".format(predictions.shape))
-        logging.info("true_expression.shape: {}".format(true_expression.shape))
-        logging.info("true_holder.shape: {}".format(true_holder.shape))
-        logging.info("true_polarity.shape: {}".format(true_polarity.shape))
-        logging.info("true_target.shape: {}".format(true_target.shape))
-        quit()
+        print("In backward")
+        for task in self.subtasks:
+            print(f"predictions[{task}].shape: {predictions[task].shape}")
+            print(f"true[{task}].shape: {true[task].shape}")
 
-        # something probably needs to be permuted here
-
-        self.losses = [
-            self.loss(
-                input=out.to(torch.device(self.device)),
-                target=gold.to(torch.device(self.device))
+        # calcaulate losses per task
+        self.losses = {
+            task: self.loss(
+                input=predictions[task].to(torch.device(self.device)),
+                target=true[task].to(torch.device(self.device))
             )
-            for out, gold in zip(logits, golden)
-        ]
+            for task in self.subtasks
+        }
 
-        computed_loss = self.loss(
-            input=logits.to(torch.device(self.device)),  # TODO is this type casting redundant?
-            target=golden.to(torch.device(self.device))  
-            )
+        # calculate gradients for parameters used per task
+        for task in self.subtasks:
+            self.losses[task].backward(retain_graph=True)  # retain_graph needed to update bert for all tasks
 
-        # calculating gradients
-        computed_loss.backward()
-
-        # updating weights from the model by calling optimizer.step()
-        
         # NOTE bert optimizer alone, so needs to be updated for each task 
         # in addition to task specific optimizers
-        self.optimizer.step()
 
-        return computed_loss
+        # make step for bert model
+        self.optimizers["bert"].step()
+        
+        # update weights from the model by calling optimizer.step()
+        for task in self.subtasks:
+            self.optimizers[task].step()
+
+        return self.losses
 
 
 class BertLSTM(torch.nn.Module):
@@ -676,14 +675,14 @@ class BertLSTM(torch.nn.Module):
         # initialize contextual embeddings
         self.bert = BertModel.from_pretrained(bert_path)
         self.lstm = torch.nn.LSTM(
-            input_size=786,  # output from BertModel is 786
-            hidden_size=786, # internal hidden states can be same as input for now
+            input_size=768,  # output from BertModel is 768
+            hidden_size=768, # internal hidden states can be same as input for now
             num_layers = self.num_layers,
             dropout=self.dropout,  # same dropout as Bert for simplicity
             bidirectional=bidirectional,
         )
         self.output = torch.nn.Linear(
-            in_features= 786*2 if self.bidirectional else 786,
+            in_features= 768*2 if self.bidirectional else 768,
             out_features=num_labels 
         )
         self.bert.requires_grad = self.finetune

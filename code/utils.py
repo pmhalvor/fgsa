@@ -371,8 +371,9 @@ def score(true_aspect, predict_aspect, true_sentiment, predict_sentiment, train_
             if true_seq[num] == begin:
                 relevant += 1
                 if not train_op:
-                    if true_sentiment[i][num]!=0:
-                        total_count[polarity_map[true_sentiment[i][num]]]+=1
+                    # NOTE change by pmhalvor: typecast to int for pytorch batches
+                    if int(true_sentiment[i][num])!=0:
+                        total_count[polarity_map[int(true_sentiment[i][num])]]+=1
                      
                 if predict[num] == begin:
                     match = True 
@@ -389,11 +390,14 @@ def score(true_aspect, predict_aspect, true_sentiment, predict_sentiment, train_
                         correct += 1
                         if not train_op:
                             # do not count conflict examples
-                            if True or true_sentiment[i][num]!=0:
-                                rel_count[polarity_map[true_sentiment[i][num]]]+=1
-                                pred_count[polarity_map[predict_sentiment[i][num]]]+=1
-                                if true_sentiment[i][num] == predict_sentiment[i][num]:
-                                    correct_count[polarity_map[true_sentiment[i][num]]]+=1
+                            # NOTE change by pmhalvor: typecast to ints for pytorch batches
+                            if int(true_sentiment[i][num])!=0:
+                                rel_count[polarity_map[int(true_sentiment[i][num])]]+=1
+                                # NOTE change by pmhalvor: do not assume predictions!=0 for all true labels
+                                if int(predict_sentiment[i][num])!=0:
+                                    pred_count[polarity_map[int(predict_sentiment[i][num])]]+=1
+                                    if int(true_sentiment[i][num]) == int(predict_sentiment[i][num]):
+                                        correct_count[polarity_map[int(true_sentiment[i][num])]]+=1
 
                             else:
                                 predicted_conf += 1
@@ -467,5 +471,6 @@ def ez_score(true_labels, predict_labels, num_labels):
             pred, 
             labels=[e for e in range(1, num_labels)],
             average='micro',
+            zero_division=1,  # set score to 1 when all labels and predictions are 0
         )
     return total/true_labels.shape[0]
