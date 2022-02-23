@@ -568,13 +568,6 @@ class BertHead(torch.nn.Module):
             for task in self.subtasks
         }
 
-        logging.info("In forward, check output shapes of {num_tasks} {output_type}s".format(
-            num_tasks=len(self.subtasks),
-            output_type=type(output[self.subtasks[-1]]))
-        )
-        for i in range(len(self.subtasks)):
-            logging.info("shape {idx}: {shape}".format(idx=i, shape=output[self.subtasks[-1]].shape))
-
         return output
 
 
@@ -599,11 +592,6 @@ class BertHead(torch.nn.Module):
             "polarity": batch[4],
             "target": batch[5],
         }
-
-        print("In backward")
-        for task in self.subtasks:
-            print(f"predictions[{task}].shape: {predictions[task].shape}")
-            print(f"true[{task}].shape: {true[task].shape}")
 
         # calcaulate losses per task
         self.losses = {
