@@ -49,6 +49,7 @@ class Norec(Dataset):
     ):
         self.tokenizer = self.get_tokenizer(bert_path, tokenizer)
         self.IGNORE_ID = ignore_id  # FIXME get form BertTokenizer, idk if this is FIXME is needed
+        self.partition = partition
 
         # parse raw data
         data_path = os.path.join(data_dir, partition)
@@ -137,7 +138,9 @@ class Norec(Dataset):
                 self.label[key] = value[:count]
             self.sentence = self.sentence[:count]
 
-        logging.info("Dataset shrunk by a scale of {p}. Now {c} rows.".format(p=p, c=count))
+        logging.info("Dataset {part} shrunk by a scale of {p}. Now {c} rows.".format(
+            part=self.partition, p=p, c=count)
+        )
 
     def get_tokenizer(self, bert_path=None, tokenizer=None):
         if bert_path is not None:
