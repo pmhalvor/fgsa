@@ -555,14 +555,14 @@ class BertHead(torch.nn.Module):
         input_ids = batch[0].to(torch.device(self.device))
         attention_mask = batch[1].to(torch.device(self.device))
 
-        hidden_states = self.bert(
+        hidden_state = self.bert(
             input_ids = input_ids,
             attention_mask = attention_mask,
-        )
+        ).last_hidden_state
 
         # task-specific forwards
         output = [
-            self.components[task](hidden_states).permute(0, 2, 1)  # TODO double check permutation correct
+            self.components[task](hidden_state).permute(0, 2, 1)  # TODO double check permutation correct
             for task in self.subtasks
         ]
 
