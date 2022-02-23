@@ -398,7 +398,7 @@ class BertHead(torch.nn.Module):
                 if b%13==0:
                     logging.info("Epoch:{:3} Batch:{:3}".format(epoch, b))
                     for task in self.subtasks:
-                        logging.info("{} loss:{}".format(task, loss[task].item()))
+                        logging.info("{:10} loss:{}".format(task, loss[task].item()))
         
             if dev_loader is not None:
                 self.evaluate(dev_loader)
@@ -438,7 +438,7 @@ class BertHead(torch.nn.Module):
 
             for task in self.subtasks: 
                 ez = ez_score(true[task], predictions[task], num_labels=3)
-                logging.debug("{task} f1: {score}".format(task=task, score=ez))
+                logging.debug("{task:10} f1: {score}".format(task=task, score=ez))
 
             easy_total_over_batches += ez
             hard_total_over_batches += f_absa
