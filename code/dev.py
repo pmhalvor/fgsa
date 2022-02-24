@@ -74,12 +74,15 @@ if load_checkpoint and os.path.exists("/checkpoints/" + name + '.pt'):
     model = torch.load("/checkpoints/" + name + '.pt', map_location=torch.device(DEVICE))
     logging.info("... from checkpoint/{}.pt".format(name))
 else:
-    model = BertHead(
+    model = FgsaLSTM(
         device=DEVICE,
         ignore_id=-1,
         lr=learning_rate,
         tokenizer=train_dataset.tokenizer,
         label_importance=label_importance,
+        expression_lr=1e-8,
+        polarity_lr=1e-7,
+        target_lr=1e-7,
     )
     logging.info("... from new instance.")
 
