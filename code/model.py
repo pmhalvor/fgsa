@@ -297,10 +297,8 @@ class BertHead(torch.nn.Module):
         subtasks = ["expression", "holder", "polarity", "target"], 
         tokenizer=None,             # need tokenizer used in preprocessing 
         
-        # can be **kwargs
+        # rest of args
         **kwargs
-        # bidirectional=False,        # TODO tune
-        # num_layers=2,               # TODO tune
     ):
         """
         Set up model specific architectures. 
@@ -345,6 +343,10 @@ class BertHead(torch.nn.Module):
             setattr(self, key, value)
 
 
+    def find(self, arg):
+        return self.__dict__.get(arg)
+
+
     def init_optimizer(self):
         """
         Changes with task specific architectures to optimize uniquely per subtask.
@@ -361,16 +363,23 @@ class BertHead(torch.nn.Module):
             )
         }
 
+        # check if task specific learning rates are provided
+        task_lrs = {
+            task: self.find(task+"_learning_rate") 
+            if self.find(task+"_lr") is None else self.find(task+"_lr")
+            for task in self.subtasks
+        }
         
-        for i, (name, component) in enumerate(self.components.items()):
+        for i, (task, component) in enumerate(self.components.items()):
+            lr = task_lrs[task] if task_lrs[task] is not None else self.learning_rate
             opt = torch.optim.Adam(
                     component.parameters(),
-                    lr=self.learning_rate   # TODO task specific learning rates?
-                )                           # TODO test other optimizers?
-            optimizers[name] = opt
+                    lr=lr
+            ) # TODO test other optimizers?
+            optimizers[task] = opt
 
             # learning rate scheduler to mitigate overfitting
-            schedulers[name] = torch.optim.lr_scheduler.ReduceLROnPlateau(
+            schedulers[task] = torch.optim.lr_scheduler.ReduceLROnPlateau(
                 optimizer=opt,
                 mode='min',
                 factor=self.lr_scheduler_factor,

@@ -24,4 +24,5 @@ module load PyTorch/1.7.1-foss-2020b
 
 ## Do some work:
 cd $HOME/nlp/msc/fgsa/code
-python dev.py
+# python dev.py
+python working-devs/head.py

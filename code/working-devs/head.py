@@ -1,6 +1,7 @@
 from torch.utils.data import DataLoader
 import logging
 import torch
+import os
 
 ## LOCAL
 from config import DATA_DIR
@@ -12,13 +13,13 @@ from utils import pad
 
 ####################  config  ####################
 debug = False 
-epochs = 200
+epochs = 30
 label_importance = 10
 learning_rate = 1e-6
 proportion = 0.5
 load_checkpoint = False
 
-name = "head"
+name = "head-task-lrs"
 if proportion<1:
     name += '-{percent}p'.format(
         percent=int(100*proportion)
@@ -69,19 +70,9 @@ logging.info("Datasets loaded.")
 
 
 logging.info("Initializing model..")
-if load_checkpoint:
-    try:
-        model = torch.load("/checkpoints/" + name + '.pt', map_location=torch.device(DEVICE))
-        logging.info("... from checkpoint/{}.pt".format(name))
-    except FileNotFoundError:
-        model = BertHead(
-            device=DEVICE,
-            ignore_id=-1,
-            lr=learning_rate,
-            tokenizer=train_dataset.tokenizer,
-            label_importance=label_importance,
-        ) 
-        logging.info("... from new instance.")
+if load_checkpoint and os.path.exists("/checkpoints/" + name + '.pt'):
+    model = torch.load("/checkpoints/" + name + '.pt', map_location=torch.device(DEVICE))
+    logging.info("... from checkpoint/{}.pt".format(name))
 else:
     model = BertHead(
         device=DEVICE,
@@ -92,14 +83,17 @@ else:
     )
     logging.info("... from new instance.")
 
+
 logging.info('Fitting model...')
 model.fit(train_loader=train_loader, dev_loader=train_loader, epochs=epochs)
+
 
 logging.info('Evaluating model...')
 easy_f1, hard_f1 = model.evaluate(dev_loader, verbose=True)
 
 logging.info("Easy F1: {}".format(easy_f1))
 logging.info("Hard F1: {}".format(hard_f1))
+
 
 logging.info("Saving model to checkpoints/{}.pt".format(name))
 torch.save(model, "/checkpoints/" + name + '.pt')
