@@ -9,8 +9,8 @@
 # Memory requested:
 #SBATCH --mem-per-cpu=15G
 # Run on GPU
-#SBATCH --partition=accel
-#SBATCH --gpus=1
+#--ATCH --partition=accel
+#--ATCH --gpus=1
 
 ## Set up job environment:
 set -o errexit  # Exit the script on any error
@@ -24,5 +24,4 @@ module load PyTorch/1.7.1-foss-2020b
 
 ## Do some work:
 cd $HOME/nlp/msc/fgsa/code
-# python dev.py
-python working-devs/head.py
+python dev.py
