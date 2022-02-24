@@ -347,49 +347,6 @@ class BertHead(torch.nn.Module):
         return self.__dict__.get(arg)
 
 
-    def init_optimizer(self):
-        """
-        Changes with task specific architectures to optimize uniquely per subtask.
-        """
-        optimizers = {  # TODO create bert_lr
-            "bert": torch.optim.Adam(self.bert.parameters(), lr=self.learning_rate)
-        }
-        schedulers = {
-            "bert": torch.optim.lr_scheduler.ReduceLROnPlateau(
-                optimizer=optimizers["bert"],
-                mode='min',
-                factor=self.lr_scheduler_factor,
-                patience=self.lr_scheduler_patience
-            )
-        }
-
-        # check if task specific learning rates are provided
-        task_lrs = {
-            task: self.find(task+"_learning_rate") 
-            if self.find(task+"_lr") is None else self.find(task+"_lr")
-            for task in self.subtasks
-        }
-        
-        for i, (task, component) in enumerate(self.components.items()):
-            lr = task_lrs[task] if task_lrs[task] is not None else self.learning_rate
-            opt = torch.optim.Adam(
-                    component.parameters(),
-                    lr=lr
-            ) # TODO test other optimizers?
-            optimizers[task] = opt
-
-            # learning rate scheduler to mitigate overfitting
-            schedulers[task] = torch.optim.lr_scheduler.ReduceLROnPlateau(
-                optimizer=opt,
-                mode='min',
-                factor=self.lr_scheduler_factor,
-                patience=self.lr_scheduler_patience,
-                verbose=True,
-                eps=1e-10,
-            )
-        return optimizers, schedulers
-
-
     def fit(self, train_loader, dev_loader=None, epochs=10):
         for epoch in range(epochs):
             self.train()
@@ -415,6 +372,52 @@ class BertHead(torch.nn.Module):
 
         logging.info("Fit complete.")
 
+    def backward(self, output, batch):
+        """
+        Performs a backpropagation step computing the loss.
+        ______________________________________________________________
+        Parameters:
+        output:
+            The output after forward with shape (batch_size, num_classes).
+        target:
+            The real targets.
+        ______________________________________________________________
+        Returns:
+        loss: float
+            How close the estimate was to the gold standard.
+        """
+
+        true = {
+            "expression": batch[2], 
+            "holder": batch[3],
+            "polarity": batch[4],
+            "target": batch[5],
+        }
+
+        # calcaulate losses per task
+        self.losses = {
+            task: self.loss(
+                input=output[task].to(torch.device(self.device)),
+                target=true[task].to(torch.device(self.device))
+            )
+            for task in self.subtasks
+        }
+
+        # calculate gradients for parameters used per task
+        for task in self.subtasks:
+            self.losses[task].backward(retain_graph=True)  # retain_graph needed to update bert for all tasks
+
+        # NOTE bert optimizer alone, so needs to be updated for each task 
+        # in addition to task specific optimizers
+
+        # make step for bert model
+        # self.optimizers["bert"].step()
+        
+        # update weights from the model by calling optimizer.step()
+        for task in self.subtasks:
+            self.optimizers[task].step()
+
+        return self.losses
 
     def evaluate(self, loader, verbose=False):
         """
@@ -490,7 +493,6 @@ class BertHead(torch.nn.Module):
 
         return easy_overall, hard_overall
 
-
     def predict(self, batch):
         """
         :param batch: tensor containing batch of dev/test data 
@@ -506,7 +508,6 @@ class BertHead(torch.nn.Module):
 
         return self.predictions
         
-
     def check_weights(self):
         """
         Helper method used for testing to check that weights get updated after loss step
@@ -535,7 +536,6 @@ class BertHead(torch.nn.Module):
                         break
         return single_weight
 
-
     ########### Architecture specific methods ###########
     def init_components(self, subtasks):
         """
@@ -547,86 +547,86 @@ class BertHead(torch.nn.Module):
         """
 
         components = {
-            task: torch.nn.Linear(
-                in_features=768,
-                out_features=3,  # 3 possible classifications for each task
-            )
+            task: {
+                "linear": torch.nn.Linear(
+                    in_features=768,
+                    out_features=3,  # 3 possible classifications for each task
+                )
+            }
             for task in subtasks
         }
 
         return components
 
+    def init_optimizer(self):
+        """
+        Changes with task specific architectures to optimize uniquely per subtask.
+        """
+        optimizers = {  # TODO create bert_lr
+            # "bert": torch.optim.Adam(self.bert.parameters(), lr=self.learning_rate)
+        }
+        schedulers = {
+        #     "bert": torch.optim.lr_scheduler.ReduceLROnPlateau(
+        #         optimizer=optimizers["bert"],
+        #         mode='min',
+        #         factor=self.lr_scheduler_factor,
+        #         patience=self.lr_scheduler_patience
+        #     )
+        }
+
+        # check if task specific learning rates are provided
+        task_lrs = {
+            task: self.find(task+"_learning_rate") 
+            if self.find(task+"_lr") is None else self.find(task+"_lr")
+            for task in self.subtasks
+        }
+        
+        for task in self.subtasks:
+            lr = task_lrs[task] if task_lrs[task] is not None else self.learning_rate
+            opt = torch.optim.Adam(
+                    self.bert.parameters(),
+                    lr=lr
+            ) # TODO test other optimizers?
+            optimizers[task] = opt
+
+            for layer in self.components[task]:
+                optimizers[task].add_param_group(
+                    {"params": self.components[task][layer].parameters()}
+                )
+
+            # learning rate scheduler to mitigate overfitting
+            schedulers[task] = torch.optim.lr_scheduler.ReduceLROnPlateau(
+                optimizer=opt,
+                mode='min',
+                factor=self.lr_scheduler_factor,
+                patience=self.lr_scheduler_patience,
+                verbose=True,
+                eps=1e-10,
+            )
+        return optimizers, schedulers
 
     def forward(self, batch):
         """
         One forward step of training for our model.
 
         Parameters:
-            x: token ids for a batch
+            batch: entire batch object for cleaner self.fit()
         """
         input_ids = batch[0].to(torch.device(self.device))
         attention_mask = batch[1].to(torch.device(self.device))
 
-        hidden_state = self.bert(
+        embeddings = self.bert(
             input_ids = input_ids,
             attention_mask = attention_mask,
         ).last_hidden_state
 
         # task-specific forwards
         output = {
-            task: self.components[task](hidden_state).permute(0, 2, 1)  # TODO double check permutation correct
+            task: self.components[task](embeddings).permute(0, 2, 1)
             for task in self.subtasks
         }
 
         return output
-
-
-    def backward(self, output, batch):
-        """
-        Performs a backpropagation step computing the loss.
-        ______________________________________________________________
-        Parameters:
-        output:
-            The output after forward with shape (batch_size, num_classes).
-        target:
-            The real targets.
-        ______________________________________________________________
-        Returns:
-        loss: float
-            How close the estimate was to the gold standard.
-        """
-
-        true = {
-            "expression": batch[2], 
-            "holder": batch[3],
-            "polarity": batch[4],
-            "target": batch[5],
-        }
-
-        # calcaulate losses per task
-        self.losses = {
-            task: self.loss(
-                input=output[task].to(torch.device(self.device)),
-                target=true[task].to(torch.device(self.device))
-            )
-            for task in self.subtasks
-        }
-
-        # calculate gradients for parameters used per task
-        for task in self.subtasks:
-            self.losses[task].backward(retain_graph=True)  # retain_graph needed to update bert for all tasks
-
-        # NOTE bert optimizer alone, so needs to be updated for each task 
-        # in addition to task specific optimizers
-
-        # make step for bert model
-        self.optimizers["bert"].step()
-        
-        # update weights from the model by calling optimizer.step()
-        for task in self.subtasks:
-            self.optimizers[task].step()
-
-        return self.losses
 
 
 class FgsaLSTM(BertHead):
@@ -639,23 +639,49 @@ class FgsaLSTM(BertHead):
         Returns:
             components (dict): output layers used for the model indexed by task name
         """
+        bidirectional = self.find("bidirectional") if self.find("bidirectional") is not None else False
 
         components = {
-            task: torch.nn.Sequential(
-                torch.nn.LSTM(
+            task: {
+                # cannot use nn.Sequential since LSTM outputs a tuple of last hidden layer and final cell states
+                "lstm": torch.nn.LSTM(
                     input_size=768,
-                    hidden_size=100,  # TODO Tune?
+                    hidden_size=768,  # Following BERT paper
                     num_layers=2,
                     batch_first=True,
                     dropout=self.dropout,
-                    bidirectional=False, 
+                    bidirectional=bidirectional, 
                 ),
-                torch.nn.Linear(
-                    in_features=100,
-                    out_features=3
+                "linear": torch.nn.Linear(
+                    in_features=768*2 if bidirectional else 768,
+                    out_features=3,
                 )
-            )
+            }
             for task in subtasks
         }
 
         return components
+    
+    def forward(self, batch):
+        """
+        One forward step of training for our model.
+        NOTE: torch.nn.LSTMs output a tuple, where only the first element is needed for classification
+
+        Parameters:
+            batch: entire batch object for cleaner self.fit()
+        """
+        input_ids = batch[0].to(torch.device(self.device))
+        attention_mask = batch[1].to(torch.device(self.device))
+
+        embeddings = self.bert(
+            input_ids = input_ids,
+            attention_mask = attention_mask,
+        ).last_hidden_state
+
+        # task-specific forwards
+        output = {}
+        for task in self.subtasks:
+            hidden, _ = self.components[task]["lstm"](embeddings)
+            output[task] = self.components[task]["linear"](hidden).permute(0, 2, 1)
+
+        return output
