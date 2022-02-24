@@ -383,9 +383,10 @@ class BertHead(torch.nn.Module):
                 optimizer=opt,
                 mode='min',
                 factor=self.lr_scheduler_factor,
-                patience=self.lr_scheduler_patience
-            ) # TODO turn on scheduler
-
+                patience=self.lr_scheduler_patience,
+                verbose=True,
+                eps=1e-10,
+            )
         return optimizers, schedulers
 
 
