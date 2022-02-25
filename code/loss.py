@@ -15,8 +15,8 @@ def compute_per_channel_dice(input, target, epsilon=1e-6, weight=None):
     # input and target shapes must match
     assert input.size() == target.size(), "'input' and 'target' must have the same shape"
 
-    input = flatten(input)
-    target = flatten(target)
+    input = torch.flatten(input)
+    target = torch.flatten(target)
     target = target.float()
 
     # compute per channel Dice Coefficient
@@ -68,7 +68,9 @@ class _AbstractDiceLoss(nn.Module):
         per_channel_dice = self.dice(input, target, weight=self.weight)
 
         # average Dice score across all channels/classes
-        return 1. - torch.mean(per_channel_dice)
+        average = 1. - torch.mean(per_channel_dice)
+        average.requires_grad = True
+        return average
 
 
 class DiceLoss(_AbstractDiceLoss):
