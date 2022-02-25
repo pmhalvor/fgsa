@@ -13,8 +13,8 @@ from utils import pad
 
 ####################  config  ####################
 debug = False 
-epochs = 20
-proportion = 0.5
+epochs = 2
+proportion = 0.15
 load_checkpoint = False
 subtasks = [
     "expression",
@@ -31,7 +31,9 @@ lrs = {
     "target": 1e-6,
 }
 
-name = "lstm"
+loss_function = "dice"
+
+name = "lstm-dice"
 if proportion<1:
     name += '-{percent}p'.format(
         percent=int(100*proportion)
@@ -89,6 +91,7 @@ else:
     model = FgsaLSTM(
         device=DEVICE,
         ignore_id=-1,
+        loss_function=loss_function,
         lr=learning_rate,
         tokenizer=train_dataset.tokenizer,
         subtasks=subtasks,

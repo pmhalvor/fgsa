@@ -9,6 +9,7 @@ from transformers import BertForTokenClassification
 from transformers import BertModel  # TODO next step, Bert as head
 
 ## Local imports
+from loss import DiceLoss
 from utils import score
 from utils import ez_score
 
@@ -291,6 +292,7 @@ class BertHead(torch.nn.Module):
         device="cpu",
         dropout=0.1,                # TODO tune
         ignore_id=-1,
+        loss_function="cross-entropy",  # cross-entropy, dice, mse, or iou 
         lr=1e-6,                    # TODO tune
         lr_scheduler_factor=0.1,    # TODO tune
         lr_scheduler_patience=2,    # TODO tune
@@ -332,7 +334,7 @@ class BertHead(torch.nn.Module):
         self.components = self.init_components(self.subtasks)  # returns dict of task-specific output layers
 
         # loss function
-        self.loss = torch.nn.CrossEntropyLoss(ignore_index=ignore_id)
+        self.loss = self.get_loss(loss_function)
 
         # optimizers
         self.optimizers, self.schedulers = self.init_optimizer()  # creates same number of optimizers as output layers
@@ -349,6 +351,33 @@ class BertHead(torch.nn.Module):
 
     def find(self, arg):
         return self.__dict__.get(arg)
+
+    def get_loss(self, loss_function):
+        """
+        Parameters:
+            loss_function (str): must be either cross-entropy, mse, or iou. Otherwise returns None
+
+        Returns:
+            loss (torch.SomeLoss or None): either CrossEntropyLoss, MSELoss, or home-made IoULoss
+        """
+        loss = None
+        
+        if loss_function is None:
+            loss = torch.nn.CrossEntropyLoss(ignore_index=ignore_id)
+
+        elif "cross" in loss_function.lower():
+            loss = torch.nn.CrossEntropyLoss(ignore_index=ignore_id)
+        
+        elif "dice" in loss_function.lower():
+            loss = DiceLoss(normalization="softmax")
+        
+        elif "mse" in loss_function.lower():
+            loss = torch.nn.MSELoss()
+        
+        elif "iou" in loss_function.lower():
+            raise NotImplementedError()
+        
+        return loss
 
     def fit(self, train_loader, dev_loader=None, epochs=10):
         for epoch in range(epochs):
