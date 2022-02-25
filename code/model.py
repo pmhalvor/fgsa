@@ -340,15 +340,12 @@ class BertHead(torch.nn.Module):
         # log model 
         logging.info(self)
 
-
     def store_kwargs(self, kwargs):
         for key, value in kwargs.items():
             setattr(self, key, value)
 
-
     def find(self, arg):
         return self.__dict__.get(arg)
-
 
     def fit(self, train_loader, dev_loader=None, epochs=10):
         for epoch in range(epochs):
@@ -430,8 +427,9 @@ class BertHead(torch.nn.Module):
         Parameters:
             loader (torch.DataLoader): 
         """
-        easy_total_over_batches = 0
-        hard_total_over_batches = 0
+        absa_total_over_batches = 0  # f_absa from score() used in RACL experiment across batches
+        easy_total_over_batches = 0  # avg of easy task-wise f1-scores across batches
+        hard_total_over_batches = 0  # avg of hard task-wise f1-scores across batches
 
 
         for b, batch in enumerate(loader):
@@ -445,13 +443,24 @@ class BertHead(torch.nn.Module):
             }
 
             ### hard score
-            f_target, acc_polarity, f_polarity, f_absa = score(
-                true_aspect = true["target"], 
-                predict_aspect = predictions["target"], 
-                true_sentiment = true["polarity"], 
-                predict_sentiment = predictions["polarity"], 
-                train_op = False
-            )
+            hard = {}
+            if "target" in self.subtasks and "polarity" in self.subtasks:
+                f_target, acc_polarity, f_polarity, f_absa = score(
+                    true_aspect = true["target"], 
+                    predict_aspect = predictions["target"], 
+                    true_sentiment = true["polarity"], 
+                    predict_sentiment = predictions["polarity"], 
+                    train_op = False
+                ) 
+
+                hard["target"] = f_target
+                hard["polarity"] = f_polarity
+
+                logging.debug("{:10} hard: {}".format("target", f_target))
+                logging.debug("{:10} hard: {}".format("polarity", f_polarity))
+                logging.debug("{:10} acc : {}".format("polarity", acc_polarity))
+            else:
+                f_absa = 0
 
             if "expression" in self.subtasks:
                 f_expression, _, _, _ = score(
@@ -461,7 +470,10 @@ class BertHead(torch.nn.Module):
                     predict_sentiment = predictions["polarity"], 
                     train_op = True
                 )
-                logging.info("{:10} hard: {}".format("expression", f_expression)) if verbose else None
+
+                hard["expression"] = f_expression
+
+                logging.debug("{:10} hard: {}".format("expression", f_expression))
 
             if "holder" in self.subtasks:
                 f_holder, _, _, _ = score(
@@ -471,30 +483,36 @@ class BertHead(torch.nn.Module):
                     predict_sentiment = predictions["polarity"], 
                     train_op = True
                 )
-                logging.info("{:10} hard: {}".format("holder", f_holder)) if verbose else None
 
-            if verbose:
-                logging.info("{:10} hard: {}".format("target", f_target))
-                logging.info("{:10} hard: {}".format("polarity", f_polarity))
-                logging.info("{:10} acc : {}".format("polarity", acc_polarity))
+                hard["holder"] = f_holder
+
+                logging.debug("{:10} hard: {}".format("holder", f_holder))
 
             ### easy score
+            easy = {}
             for task in self.subtasks: 
                 ez = ez_score(true[task], predictions[task], num_labels=3)
+                easy[task] = ez
                 logging.debug("{task:10} easy: {score}".format(task=task, score=ez))
 
-            easy_total_over_batches += ez
-            hard_total_over_batches += f_absa
+            # to find average f1 over entire dev set
+            absa_total_over_batches += f_absa
+            easy_total_over_batches += (sum([easy[task] for task in self.subtasks])/len(self.subtasks))
+            hard_total_over_batches += (sum([hard[task] for task in self.subtasks])/len(self.subtasks))
 
+        absa_overall = absa_total_over_batches/len(loader)
         easy_overall = easy_total_over_batches/len(loader)
         hard_overall = hard_total_over_batches/len(loader)
 
+        logging.info("ABSA overall: {absa}".format(absa=absa_overall))
         logging.info("Easy overall: {easy}".format(easy=easy_overall))
         logging.info("Hard overall: {hard}".format(hard=hard_overall))
+        
+        print("ABSA overall: {ABSA}".format(ABSA=ABSA_overall))
         print("Easy overall: {easy}".format(easy=easy_overall))
         print("Hard overall: {hard}".format(hard=hard_overall))
 
-        return easy_overall, hard_overall
+        return absa_overall, easy_overall, hard_overall
 
     def predict(self, batch):
         """
