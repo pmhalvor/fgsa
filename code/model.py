@@ -540,7 +540,7 @@ class BertHead(torch.nn.Module):
         logging.info("Easy overall: {easy}".format(easy=easy_overall))
         logging.info("Hard overall: {hard}".format(hard=hard_overall))
         
-        print("ABSA overall: {ABSA}".format(ABSA=ABSA_overall))
+        print("ABSA overall: {absa}".format(absa=absa_overall))
         print("Easy overall: {easy}".format(easy=easy_overall))
         print("Hard overall: {hard}".format(hard=hard_overall))
 
