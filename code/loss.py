@@ -57,6 +57,9 @@ class _AbstractDiceLoss(nn.Module):
         raise NotImplementedError
 
     def forward(self, input, target):
+        # NOTE: change by pmhalvor: added argmax to get same shape
+        input = torch.argmax(input, dim=1)
+
         # get probabilities from logits
         input = self.normalization(input)
 
