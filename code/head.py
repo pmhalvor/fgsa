@@ -3,35 +3,23 @@ import logging
 import torch
 import os
 
-### LOCAL
+## LOCAL
 from config import DATA_DIR
 from config import log_template
 from dataset import Norec 
-from model import FgsaLSTM
+from model import BertHead
 from utils import pad
 
 
 ####################  config  ####################
 debug = False 
-epochs = 20
+epochs = 30
+label_importance = 10
+learning_rate = 1e-6
 proportion = 0.5
 load_checkpoint = False
-subtasks = [
-    "expression",
-    "holder",
-    "polarity",
-    "target", 
-]
 
-learning_rate = 1e-6
-lrs = {
-    "expression": 1e-7,
-    "holder": 1e-6,
-    "polarity": 1e-6,
-    "target": 1e-6,
-}
-
-name = "lstm"
+name = "head-task-lrs"
 if proportion<1:
     name += '-{percent}p'.format(
         percent=int(100*proportion)
@@ -86,16 +74,12 @@ if load_checkpoint and os.path.exists("/checkpoints/" + name + '.pt'):
     model = torch.load("/checkpoints/" + name + '.pt', map_location=torch.device(DEVICE))
     logging.info("... from checkpoint/{}.pt".format(name))
 else:
-    model = FgsaLSTM(
+    model = BertHead(
         device=DEVICE,
         ignore_id=-1,
         lr=learning_rate,
         tokenizer=train_dataset.tokenizer,
-        subtasks=subtasks,
-        expression_lr=lrs.get("expression"),  # dict.get() defaults to None
-        holder_lr=lrs.get("holder"),
-        polarity_lr=lrs.get("polarity"),
-        target_lr=lrs.get("target"),
+        label_importance=label_importance,
     )
     logging.info("... from new instance.")
 
@@ -105,9 +89,8 @@ model.fit(train_loader=train_loader, dev_loader=train_loader, epochs=epochs)
 
 
 logging.info('Evaluating model...')
-absa_f1, easy_f1, hard_f1 = model.evaluate(dev_loader, verbose=True)
+easy_f1, hard_f1 = model.evaluate(dev_loader, verbose=True)
 
-logging.info("ABSA F1: {}".format(absa_f1))
 logging.info("Easy F1: {}".format(easy_f1))
 logging.info("Hard F1: {}".format(hard_f1))
 

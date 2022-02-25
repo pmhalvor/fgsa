@@ -9,8 +9,8 @@
 # Memory requested:
 #SBATCH --mem-per-cpu=15G
 # Run on GPU
-#--ATCH --partition=accel
-#--ATCH --gpus=1
+#SBATCH --partition=accel
+#SBATCH --gpus=1
 
 ## Set up job environment:
 set -o errexit  # Exit the script on any error
