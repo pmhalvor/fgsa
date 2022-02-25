@@ -338,7 +338,10 @@ class BertHead(torch.nn.Module):
         self.optimizers, self.schedulers = self.init_optimizer()  # creates same number of optimizers as output layers
 
         # log model 
-        logging.info(self)
+        logging.info("Subtasks: {}".format(self.subtasks))
+        logging.info("Components: {}".format(self.components))
+        logging.info("Optimizers: {}".format(self.optimizers))
+        logging.info("Loss: {}".format(self.loss))
 
     def store_kwargs(self, kwargs):
         for key, value in kwargs.items():
