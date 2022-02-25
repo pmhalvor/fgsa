@@ -36,17 +36,22 @@ def parse_batchwise_loss(data):
     return epochs
 
 
-def show_taskwise_loss(name):
+def show_taskwise_loss(name, get_epochs=True):
+    def show_epochs(epochs):
+        for x in epochs:
+            plt.axvline(x, c="k", ls="-.")
+        
 
     with open(name) as f:
         data = f.readlines()
 
-    loss = parse_taskwise_loss(data)
+    loss, epochs = parse_taskwise_loss(data, get_epochs)
 
     df = pd.DataFrame.from_dict(loss)
-    df.plot(title=name)
+    plt = df.plot(title=name)
+    show_epochs(epochs) if get_epochs else None
     
-    return df
+    return df.T  # show table horizontally
 
 
 def show_batchwise_loss(name):
