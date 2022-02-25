@@ -81,12 +81,12 @@ class DiceLoss(_AbstractDiceLoss):
 
     def __init__(self, weight=None, normalization='sigmoid', ignore_id=-1):
         super().__init__(weight, normalization)
-        self.ignore_id
+        self.ignore_id = ignore_id
 
     def dice(self, input, target, weight):
         input[target == self.ignore_id] = 0
         target[target == self.ignore_id] = 0 
-        
+
         return compute_per_channel_dice(input, target, weight=self.weight)
 
 
