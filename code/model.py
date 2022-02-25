@@ -337,6 +337,9 @@ class BertHead(torch.nn.Module):
         # optimizers
         self.optimizers, self.schedulers = self.init_optimizer()  # creates same number of optimizers as output layers
 
+        # log model 
+        logging.info(self)
+
 
     def store_kwargs(self, kwargs):
         for key, value in kwargs.items():
@@ -562,17 +565,8 @@ class BertHead(torch.nn.Module):
         """
         Changes with task specific architectures to optimize uniquely per subtask.
         """
-        optimizers = {  # TODO create bert_lr
-            # "bert": torch.optim.Adam(self.bert.parameters(), lr=self.learning_rate)
-        }
-        schedulers = {
-        #     "bert": torch.optim.lr_scheduler.ReduceLROnPlateau(
-        #         optimizer=optimizers["bert"],
-        #         mode='min',
-        #         factor=self.lr_scheduler_factor,
-        #         patience=self.lr_scheduler_patience
-        #     )
-        }
+        optimizers = {}
+        schedulers = {}
 
         # check if task specific learning rates are provided
         task_lrs = {
