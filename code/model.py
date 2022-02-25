@@ -10,6 +10,7 @@ from transformers import BertModel  # TODO next step, Bert as head
 
 ## Local imports
 from loss import DiceLoss
+from loss import f1_loss
 from utils import score
 from utils import ez_score
 
@@ -374,6 +375,9 @@ class BertHead(torch.nn.Module):
         elif "mse" in loss_function.lower():
             loss = torch.nn.MSELoss()
         
+        elif "f1_loss" in loss_function.lower():
+            loss = f1_loss
+
         elif "iou" in loss_function.lower():
             raise NotImplementedError()
         
@@ -729,3 +733,4 @@ class FgsaLSTM(BertHead):
             output[task] = self.components[task]["linear"](hidden).permute(0, 2, 1)
 
         return output
+
