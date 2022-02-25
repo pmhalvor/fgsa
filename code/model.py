@@ -600,13 +600,13 @@ class BertHead(torch.nn.Module):
             lr = task_lrs[task] if task_lrs[task] is not None else self.learning_rate
             opt = torch.optim.Adam(
                     self.bert.parameters(),
-                    lr=lr
+                    lr=self.learning_rate  # use main learning rate for bert training
             ) # TODO test other optimizers?
             optimizers[task] = opt
 
             for layer in self.components[task]:
                 optimizers[task].add_param_group(
-                    {"params": self.components[task][layer].parameters()}
+                    {"params": self.components[task][layer].parameters(), "lr":lr}
                 )
 
             # learning rate scheduler to mitigate overfitting
