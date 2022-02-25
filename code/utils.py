@@ -124,7 +124,8 @@ def score(true_aspect, predict_aspect, true_sentiment, predict_sentiment, train_
         # sentiment distribution in original data
         total_count = {'pos':0, 'neg':0, 'neu':0}
 
-        polarity_map = {1: 'pos', 2: 'neg', 3: 'neu'}
+        # polarity_map = {1: 'pos', 2: 'neg', 3: 'neu'}
+        polarity_map = {1: 'pos', 2: 'neg', 0: 'neu'}
 
         # count of predicted conflict aspect term
         predicted_conf = 0
@@ -200,25 +201,23 @@ def score(true_aspect, predict_aspect, true_sentiment, predict_sentiment, train_
         p_neu = correct_count['neu'] / (pred_count['neu']+1e-6)
         r_neu= correct_count['neu'] / (rel_count['neu']+1e-6)
 
-        pr_s = (p_pos+p_neg+p_neu)/3.0
-        re_s = (r_pos+r_neg+r_neu)/3.0
+        # For calculating the F1 Score for SC, RACL developers discussed w/ Ruidan at https://github.com/ruidan/IMN-E2E-ABSA/issues?q=is%3Aissue+is%3Aclosed.
+        f_pos = 2*p_pos*r_pos /(p_pos+r_pos+1e-6)
+        f_neg = 2*p_neg*r_neg /(p_neg+r_neg+1e-6)
+        f_neu = 2*p_neu*r_neu /(p_neu+r_neu+1e-6)
+        f_s = (f_pos+f_neg+f_neu)/3.0
 
-        # For calculating the F1 Score for SC, we have discussed with Ruidan at https://github.com/ruidan/IMN-E2E-ABSA/issues?q=is%3Aissue+is%3Aclosed.
-        # We provide the correct formula as follow, but we still adopt the calculation in IMN to conduct a fair comparison.
-        # TODO implement the correct, keep link to discussion
-        # f_pos = 2*p_pos*r_pos /(p_pos+r_pos+1e-6)
-        # f_neg = 2*p_neg*r_neg /(p_neg+r_neg+1e-6)
-        # f_neu = 2*p_neu*r_neu /(p_neu+r_neu+1e-6)
-        # f_s = (f_pos+f_neg+f_neu)/3.0
-
-        # F1 score for SC only (in IMN)
-        f_s = 2*pr_s*re_s/(pr_s+re_s+1e-6)
+        # # F1 score for SC only (in IMN)
+        # pr_s = (p_pos+p_neg+p_neu)/3.0
+        # re_s = (r_pos+r_neg+r_neu)/3.0
+        # f_s = 2*pr_s*re_s/(pr_s+re_s+1e-6)
 
         precision_absa = num_correct_overall/(predicted+1e-6 - predicted_conf)
         recall_absa = num_correct_overall/(num_total+1e-6)
         # F1 score of the end-to-end task
         f_absa = 2*precision_absa*recall_absa/(precision_absa+recall_absa+1e-6)
 
+        #the only score im really caring about here is the overall f_absa
     return f_aspect, acc_s, f_s, f_absa
 
 
