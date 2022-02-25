@@ -14,7 +14,6 @@ from utils import pad
 ####################  config  ####################
 debug = False 
 epochs = 30
-label_importance = 10
 learning_rate = 1e-6
 proportion = 0.5
 load_checkpoint = False
@@ -79,7 +78,6 @@ else:
         ignore_id=-1,
         lr=learning_rate,
         tokenizer=train_dataset.tokenizer,
-        label_importance=label_importance,
     )
     logging.info("... from new instance.")
 
@@ -89,8 +87,9 @@ model.fit(train_loader=train_loader, dev_loader=train_loader, epochs=epochs)
 
 
 logging.info('Evaluating model...')
-easy_f1, hard_f1 = model.evaluate(dev_loader, verbose=True)
+absa_f1, easy_f1, hard_f1 = model.evaluate(dev_loader, verbose=True)
 
+logging.info("ABSA F1: {}".format(absa_f1))
 logging.info("Easy F1: {}".format(easy_f1))
 logging.info("Hard F1: {}".format(hard_f1))
 
