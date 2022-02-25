@@ -12,12 +12,19 @@ from utils import pad
 
 
 ####################  config  ####################
-debug = True 
-epochs = 2
-label_importance = 10
-learning_rate = 1e-6
-proportion = 0.05
+debug = False 
+epochs = 20
+proportion = 0.5
 load_checkpoint = False
+subtasks = ["target", "polarity"]
+
+learning_rate = 1e-6
+lrs = {
+    "expression": 1e-8,
+    "holder": 1e-6,
+    "polarity": 1e-6,
+    "target": 1e-6,
+}
 
 name = "lstm"
 if proportion<1:
@@ -79,10 +86,11 @@ else:
         ignore_id=-1,
         lr=learning_rate,
         tokenizer=train_dataset.tokenizer,
-        label_importance=label_importance,
-        expression_lr=1e-8,
-        polarity_lr=1e-7,
-        target_lr=1e-7,
+        subtasks=subtasks,
+        expression_lr=lrs.get("expression"),  # dict.get() defaults to None
+        holder_lr=lrs.get("holder"),
+        polarity_lr=lrs.get("polarity"),
+        target_lr=lrs.get("target"),
     )
     logging.info("... from new instance.")
 
@@ -92,8 +100,9 @@ model.fit(train_loader=train_loader, dev_loader=train_loader, epochs=epochs)
 
 
 logging.info('Evaluating model...')
-easy_f1, hard_f1 = model.evaluate(dev_loader, verbose=True)
+absa_f1, easy_f1, hard_f1 = model.evaluate(dev_loader, verbose=True)
 
+logging.info("ABSA F1: {}".format(absa_f1))
 logging.info("Easy F1: {}".format(easy_f1))
 logging.info("Hard F1: {}".format(hard_f1))
 
