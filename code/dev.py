@@ -116,5 +116,11 @@ logging.info("Hard F1: {}".format(hard_f1))
 
 
 logging.info("Saving model to checkpoints/{}.pt".format(name))
-torch.save(model, "/checkpoints/" + name + '.pt')
+try:
+    torch.save(model, "checkpoints/" + name + '.pt')
+except Exception as e:
+    # see https://discuss.pytorch.org/t/torch-save-filenotfounderror-errno-2-no-such-file-or-directory/89683
+    logging.info("Exception when saving!")
+    logging.debug(e)
+    torch.save(model, name + '.pt')
 
