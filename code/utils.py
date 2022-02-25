@@ -147,7 +147,7 @@ def score(true_aspect, predict_aspect, true_sentiment, predict_sentiment, train_
                      
                 if predict[num] == begin:
                     match = True 
-                    for j in range(num+1, len(true_seq)):
+                    for j in range(num+1, len(true_seq)):  # finds match
                         if true_seq[j] == inside and predict[j] == inside:
                             continue
                         elif true_seq[j] != inside and predict[j] != inside:
@@ -157,17 +157,16 @@ def score(true_aspect, predict_aspect, true_sentiment, predict_sentiment, train_
                             break
 
                     if match:
-                        correct += 1
+                        correct += 1  # count correct target overlap
                         if not train_op:
-                            # do not count conflict examples
+                            # do not count conflict sentiments
                             # NOTE change by pmhalvor: typecast to ints for pytorch batches
-                            if int(true_sentiment[i][num])!=0:
+                            if int(true_sentiment[i][num])!=0:  
                                 rel_count[polarity_map[int(true_sentiment[i][num])]]+=1
-                                # NOTE change by pmhalvor: do not assume predictions!=0 for all true labels
-                                if int(predict_sentiment[i][num])!=0:
-                                    pred_count[polarity_map[int(predict_sentiment[i][num])]]+=1
-                                    if int(true_sentiment[i][num]) == int(predict_sentiment[i][num]):
-                                        correct_count[polarity_map[int(true_sentiment[i][num])]]+=1
+                                pred_count[polarity_map[int(predict_sentiment[i][num])]]+=1
+                                if int(true_sentiment[i][num]) == int(predict_sentiment[i][num]):
+                                    # count correct sentiment prediction
+                                    correct_count[polarity_map[int(true_sentiment[i][num])]]+=1
 
                             else:
                                 predicted_conf += 1
