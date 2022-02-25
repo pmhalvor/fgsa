@@ -31,7 +31,7 @@ lrs = {
     "target": 1e-6,
 }
 
-loss_function = "dice"
+loss_function = "f1"
 
 name = "lstm-dice"
 if proportion<1:

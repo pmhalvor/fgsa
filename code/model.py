@@ -375,7 +375,7 @@ class BertHead(torch.nn.Module):
         elif "mse" in loss_function.lower():
             loss = torch.nn.MSELoss()
         
-        elif "f1_loss" in loss_function.lower():
+        elif "f1" in loss_function.lower():
             loss = f1_loss
 
         elif "iou" in loss_function.lower():
