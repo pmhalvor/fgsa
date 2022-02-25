@@ -58,10 +58,11 @@ class _AbstractDiceLoss(nn.Module):
 
     def forward(self, input, target):
         # NOTE: change by pmhalvor: added argmax to get same shape
-        input = torch.argmax(input, dim=1)
+        input = torch.argmax(input, dim=1).float()
 
+        # BUG: No need to normalize since multiclass..?
         # get probabilities from logits
-        input = self.normalization(input)
+        # input = self.normalization(input)
 
         # compute per channel Dice coefficient
         per_channel_dice = self.dice(input, target, weight=self.weight)
