@@ -293,6 +293,7 @@ class BertHead(torch.nn.Module):
         dropout=0.1,                # TODO tune
         ignore_id=-1,
         loss_function="cross-entropy",  # cross-entropy, dice, mse, or iou 
+        loss_weight=1,              # TODO tune
         lr=1e-6,                    # TODO tune
         lr_scheduler_factor=0.1,    # TODO tune
         lr_scheduler_patience=2,    # TODO tune
@@ -334,7 +335,7 @@ class BertHead(torch.nn.Module):
         self.components = self.init_components(self.subtasks)  # returns dict of task-specific output layers
 
         # loss function
-        self.loss = self.get_loss(loss_function)
+        self.loss = self.get_loss(loss_function, loss_weight)
 
         # optimizers
         self.optimizers, self.schedulers = self.init_optimizer()  # creates same number of optimizers as output layers
@@ -352,7 +353,7 @@ class BertHead(torch.nn.Module):
     def find(self, arg):
         return self.__dict__.get(arg)
 
-    def get_loss(self, loss_function):
+    def get_loss(self, loss_function, loss_weight=None):
         """
         Parameters:
             loss_function (str): must be either cross-entropy, mse, or iou. Otherwise returns None
@@ -363,7 +364,8 @@ class BertHead(torch.nn.Module):
         loss = None
         
         if loss_function is None:
-            loss = torch.nn.CrossEntropyLoss(ignore_index=ignore_id)
+            weight = torch.tensor[1, loss_weight, loss_weight]
+            loss = torch.nn.CrossEntropyLoss(ignore_index=ignore_id, weight=weight)
 
         elif "cross" in loss_function.lower():
             loss = torch.nn.CrossEntropyLoss(ignore_index=ignore_id)

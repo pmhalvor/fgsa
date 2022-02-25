@@ -31,9 +31,10 @@ lrs = {
     "target": 1e-6,
 }
 
-loss_function = "dice"
+loss_function = "cross-entropy"
+loss_weight = 3
 
-name = "lstm-dice"
+name = "lstm-loss-weight"
 if proportion<1:
     name += '-{percent}p'.format(
         percent=int(100*proportion)
@@ -92,6 +93,7 @@ else:
         device=DEVICE,
         ignore_id=-1,
         loss_function=loss_function,
+        loss_weight=loss_weight,
         lr=learning_rate,
         tokenizer=train_dataset.tokenizer,
         subtasks=subtasks,
