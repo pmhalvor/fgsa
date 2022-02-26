@@ -10,6 +10,7 @@ from transformers import BertModel  # TODO next step, Bert as head
 
 ## Local imports
 from loss import DiceLoss
+from loss import F1_Loss
 from loss import f1_loss
 from utils import score
 from utils import ez_score
@@ -376,7 +377,7 @@ class BertHead(torch.nn.Module):
             loss = torch.nn.MSELoss()
         
         elif "f1" in loss_function.lower():
-            loss = f1_loss
+            loss = F1_Loss(epsilon=self.learning_rate**2)  # make sure epsilon stays small # FIXME exploding decimal point
 
         elif "iou" in loss_function.lower():
             raise NotImplementedError()
@@ -386,6 +387,7 @@ class BertHead(torch.nn.Module):
     def fit(self, train_loader, dev_loader=None, epochs=10):
         for epoch in range(epochs):
             self.train()
+            self.loss.train() if isinstance(self.loss, F1_Loss) else None
 
             for b, batch in enumerate(train_loader):
                 self.train()        # turn off eval mode
@@ -555,6 +557,7 @@ class BertHead(torch.nn.Module):
         :param batch: tensor containing batch of dev/test data 
         """
         self.eval()
+        self.loss.eval() if isinstance(self.loss, F1_Loss) else None
 
         outputs = self.forward(batch)
 
