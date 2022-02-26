@@ -239,7 +239,7 @@ class MIULoss(torch.nn.Module):
         """
         Expects input as logits from multiclass model w/ labels at self.label_dim (default 1)
         """
-        return iou(prediction=input, target=target, ignore_id=self.ignore_id, label_dim=self.label_dim)
+        return self.iou(prediction=input, target=target, ignore_id=self.ignore_id, label_dim=self.label_dim)
 
     @staticmethod
     def iou(self, prediction, target, ignore_id=-1, label_dim=1):
