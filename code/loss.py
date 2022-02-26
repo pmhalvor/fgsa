@@ -244,9 +244,10 @@ class MIULoss(torch.nn.Module):
     def iou(self, prediction, target):
         # ignore indexes
         best_guess = prediction.max(dim=self.label_dim)  # reduce to single best label estimate
-        argmax_pred = best_guess.indices  # only need label index for comparisions
+        argmax_pred = best_guess.indices.detach().clone()  # only need label index for comparisions
         argmax_pred[target == self.ignore_id] = 0  # remove ignore ids
-        target[target == self.ignore_id] = 0  # remove ignore ids
+        golden = target.detach().clone()  # need to detach from output
+        golden[target == self.ignore_id] = 0  # remove ignore ids
 
         # bool tensor for intersecting prediction-target
         overlap = target == argmax_pred
