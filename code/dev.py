@@ -33,7 +33,7 @@ lrs = {
 
 loss_function = "f1"
 
-name = "lstm-dice"
+name = "lstm-f1"
 if proportion<1:
     name += '-{percent}p'.format(
         percent=int(100*proportion)

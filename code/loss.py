@@ -32,7 +32,7 @@ def compute_per_channel_dice(input, target, epsilon=1e-6, weight=None):
     return 2 * (intersect / union.clamp(min=epsilon))
 
 
-def f1_loss(target:torch.Tensor, input:torch.Tensor, is_training=False) -> torch.Tensor:
+def f1_loss(target:torch.Tensor, input:torch.Tensor, is_training=True) -> torch.Tensor:
     '''Calculate F1 score. Can work with gpu tensors
     
     The original implmentation is written by Michal Haltuf on Kaggle.
