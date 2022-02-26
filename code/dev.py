@@ -13,8 +13,8 @@ from utils import pad
 
 ####################  config  ####################
 debug = False 
-epochs = 2
-proportion = 0.15
+epochs = 10
+proportion = 0.30
 load_checkpoint = False
 subtasks = [
     "expression",
@@ -31,9 +31,9 @@ lrs = {
     "target": 1e-6,
 }
 
-loss_function = "f1"
+loss_function = "iou"
 
-name = "lstm-f1"
+name = "lstm-iou"
 if proportion<1:
     name += '-{percent}p'.format(
         percent=int(100*proportion)

@@ -52,6 +52,8 @@ def f1_loss(target:torch.Tensor, input:torch.Tensor, is_training=True) -> torch.
     y_pred = input.argmax(dim=1)
     y_true = target
     
+    raise NotImplementedError   # BUG: Does not consider ignore_id
+
     tp = (y_true * y_pred).sum(-1).to(torch.float32)
     tn = ((1 - y_true) * (1 - y_pred)).sum().to(torch.float32)
     fp = ((1 - y_true) * y_pred).sum().to(torch.float32)
@@ -67,7 +69,7 @@ def f1_loss(target:torch.Tensor, input:torch.Tensor, is_training=True) -> torch.
     return f1
 
 
-class _AbstractDiceLoss(nn.Module):
+class _AbstractDiceLoss(torch.nn.Module):
     """
     Base class for different implementations of Dice loss.
 
@@ -163,7 +165,7 @@ class GeneralizedDiceLoss(_AbstractDiceLoss):
         return 2 * (intersect.sum() / denominator.sum())
 
 
-class F1_Loss(nn.Module):
+class F1_Loss(torch.nn.Module):
     '''Calculate F1 score. Can work with gpu tensors
     
     The original implmentation is written by Michal Haltuf on Kaggle.
@@ -199,6 +201,7 @@ class RaclF1Loss(torch.nn.Module):
     """ 
     In order to build this as close to f1_score used in RACL, you need to 'warm up' the loss.
 
+    NOTE 
     Basically, feed with polarity beforehand, meaning needs custom backward...
 
     Skipping for now.
@@ -206,25 +209,67 @@ class RaclF1Loss(torch.nn.Module):
     def __init__(self, epsilon=1e-7):
         super().__init__()
         self.epsilon = epsilon
+        self.train_op = False
         
     def forward(self, input, target):
-        raise NotImplementedError
+        raise NotImplementedError  # needs custom backward
 
-        target = F.one_hot(target, 2).to(torch.float32)
-        input = F.softmax(input, dim=1)
+        true_sentiment = self.batch_polarity
+        predict_sentiment = self.output_polarity
+        train_op = self.train_op
+
+        return score(true_aspect, predict_aspect, true_sentiment, predict_sentiment, train_op)
+
+    def set_train_op(b=True):
+        self.train_op = b
+
+
+class MIULoss(torch.nn.Module):    
+    """ 
+    Multiclass Intersection over Union Loss for batched 1D tensors w/ multiple classes per label
+    """
+    def __init__(self, smooth=1e-7, ignore_id=-1, label_dim=1):
+        super().__init__()
+        self.smooth = smooth
+        self.sigmoid = torch.nn.Sigmoid()
+        self.ignore_id = ignore_id
+        self.label_dim = label_dim
+
+    def forward(self, input, target):
+        """
+        Expects input as logits from multiclass model w/ labels at self.label_dim (default 1)
+        """
+        return iou(prediction=input, target=target, ignore_id=self.ignore_id, label_dim=self.label_dim)
+
+    @staticmethod
+    def iou(self, prediction, target, ignore_id=-1, label_dim=1):
+        # ignore indexes
+        best_guess = certainty.max(dim=label_dim)  # reduce to single best label estimate
+        argmax_pred = best_guess.indices  # only need label index for comparisions
+        argmax_pred[target == ignore_id] = 0  # remove ignore ids
+        target[target == ignore_id] = 0  # remove ignore ids
+
+        # bool tensor for intersecting prediction-target
+        overlap = target == argmax_pred
+
+        # get estimate for prediction certainty 
+        certainty = self.sigmoid(best_guess.values)
+
+        # intersecting correct labels w/ estimated certainty
+        intersect = (certainty * (overlap).float()).flatten().sum(-1)  # sum instead of area for 1D
         
-        tp = (target * input).sum(dim=0).to(torch.float32)
-        tn = ((1 - target) * (1 - input)).sum(dim=0).to(torch.float32)
-        fp = ((1 - target) * input).sum(dim=0).to(torch.float32)
-        fn = (target * (1 - input)).sum(dim=0).to(torch.float32)
+        # count all labels expected
+        expected = (target > 0).float().flatten().sum(-1)  # sum instead of area for 1D
 
-        precision = tp / (tp + fp + self.epsilon)
-        recall = tp / (tp + fn + self.epsilon)
+        # count all labels predicted
+        predicted = torch.flatten(certainty).sum(-1)  # sum instead of area for 1D
 
-        f1 = 2* (precision*recall) / (precision + recall + self.epsilon)
-        f1 = f1.clamp(min=self.epsilon, max=1-self.epsilon)
-        return 1 - f1.mean()
+        # area of two spaces, minus the intersecting parts (counted double)
+        union = expected + predicted - intersect
+        
+        # get intersection over union w/ smoothing
+        iou = (intersection + self.smooth)/(union + self.smooth)
 
+        return 1. - iou  # difference from 1 since using as loss metric
 
-
-
+    

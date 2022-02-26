@@ -11,7 +11,7 @@ from transformers import BertModel  # TODO next step, Bert as head
 ## Local imports
 from loss import DiceLoss
 from loss import F1_Loss
-from loss import f1_loss
+from loss import MIULoss
 from utils import score
 from utils import ez_score
 
@@ -380,7 +380,10 @@ class BertHead(torch.nn.Module):
             loss = F1_Loss(epsilon=self.learning_rate**2)  # make sure epsilon stays small # FIXME exploding decimal point
 
         elif "iou" in loss_function.lower():
-            raise NotImplementedError()
+            loss = MIULoss(smooth=self.learning_rate**2, ignore_id=self.ignore_id, label_dim=1)  # FIXME exploding decimal point
+        
+        elif "miu" in loss_function.lower():
+            loss = MIULoss(smooth=self.learning_rate**2, ignore_id=self.ignore_id, label_dim=1)  # FIXME exploding decimal point
         
         return loss
 
