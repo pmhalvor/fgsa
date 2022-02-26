@@ -244,7 +244,7 @@ class MIULoss(torch.nn.Module):
     @staticmethod
     def iou(prediction, target, ignore_id=-1, label_dim=1):
         # ignore indexes
-        best_guess = certainty.max(dim=label_dim)  # reduce to single best label estimate
+        best_guess = prediction.max(dim=label_dim)  # reduce to single best label estimate
         argmax_pred = best_guess.indices  # only need label index for comparisions
         argmax_pred[target == ignore_id] = 0  # remove ignore ids
         target[target == ignore_id] = 0  # remove ignore ids
