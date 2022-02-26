@@ -231,7 +231,7 @@ class MIULoss(torch.nn.Module):
     def __init__(self, smooth=1e-7, ignore_id=-1, label_dim=1):
         super().__init__()
         self.smooth = smooth
-        self.sigmoid = torch.nn.Sigmoid()
+        self.sigmoid = torch.nn.Sigmoid()  # TODO check with softmax
         self.ignore_id = ignore_id
         self.label_dim = label_dim
 
@@ -239,15 +239,14 @@ class MIULoss(torch.nn.Module):
         """
         Expects input as logits from multiclass model w/ labels at self.label_dim (default 1)
         """
-        return self.iou(prediction=input, target=target, ignore_id=self.ignore_id, label_dim=self.label_dim)
+        return self.iou(prediction=input, target=target)
 
-    @staticmethod
-    def iou(prediction, target, ignore_id=-1, label_dim=1):
+    def iou(self, prediction, target):
         # ignore indexes
-        best_guess = prediction.max(dim=label_dim)  # reduce to single best label estimate
+        best_guess = prediction.max(dim=self.label_dim)  # reduce to single best label estimate
         argmax_pred = best_guess.indices  # only need label index for comparisions
-        argmax_pred[target == ignore_id] = 0  # remove ignore ids
-        target[target == ignore_id] = 0  # remove ignore ids
+        argmax_pred[target == self.ignore_id] = 0  # remove ignore ids
+        target[target == self.ignore_id] = 0  # remove ignore ids
 
         # bool tensor for intersecting prediction-target
         overlap = target == argmax_pred
@@ -268,7 +267,7 @@ class MIULoss(torch.nn.Module):
         union = expected + predicted - intersect
         
         # get intersection over union w/ smoothing
-        iou = (intersection + self.smooth)/(union + self.smooth)
+        iou = (intersect + self.smooth)/(union + self.smooth)
 
         return 1. - iou  # difference from 1 since using as loss metric
 
