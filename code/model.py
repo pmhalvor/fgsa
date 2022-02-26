@@ -313,6 +313,7 @@ class BertHead(torch.nn.Module):
         self.device = device
         self.dropout = dropout  # TODO potentially refactor name?
         self.finetune = bert_finetune
+        self.ignore_id = ignore_id
         self.learning_rate = lr
         self.lr_scheduler_factor = lr_scheduler_factor
         self.lr_scheduler_patience = lr_scheduler_patience
@@ -365,10 +366,10 @@ class BertHead(torch.nn.Module):
         loss = None
         
         if loss_function is None:
-            loss = torch.nn.CrossEntropyLoss(ignore_index=ignore_id)
+            loss = torch.nn.CrossEntropyLoss(ignore_index=self.ignore_id)
 
         elif "cross" in loss_function.lower():
-            loss = torch.nn.CrossEntropyLoss(ignore_index=ignore_id)
+            loss = torch.nn.CrossEntropyLoss(ignore_index=self.ignore_id)
         
         elif "dice" in loss_function.lower():
             loss = DiceLoss(normalization="softmax")
