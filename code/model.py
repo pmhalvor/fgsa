@@ -351,8 +351,9 @@ class BertHead(torch.nn.Module):
         for key, value in kwargs.items():
             setattr(self, key, value)
 
-    def find(self, arg):
-        return self.__dict__.get(arg)
+    def find(self, arg, default=None):
+        value = self.__dict__.get(arg)
+        return value if value is not None else default
 
     def get_loss(self, loss_function, loss_weight=None):
         """
@@ -628,8 +629,7 @@ class BertHead(torch.nn.Module):
 
         # check if task specific learning rates are provided
         task_lrs = {
-            task: self.find(task+"_learning_rate") 
-            if self.find(task+"_lr") is None else self.find(task+"_lr")
+            task: self.find(task+"_learning_rate", default=self.find(task+"_lr")) 
             for task in self.subtasks
         }
         
@@ -695,7 +695,9 @@ class FgsaLSTM(BertHead):
         Returns:
             components (dict): output layers used for the model indexed by task name
         """
-        bidirectional = self.find("bidirectional") if self.find("bidirectional") is not None else False
+        bidirectional = self.find("bidirectional", default=False)
+        num_layers = self.find("num_layers", default=3)
+        dropout = self.find("dropout", default=0.1)
 
         components = {
             task: {
@@ -703,9 +705,9 @@ class FgsaLSTM(BertHead):
                 "lstm": torch.nn.LSTM(
                     input_size=768,
                     hidden_size=768,  # Following BERT paper
-                    num_layers=2,
+                    num_layers=num_layers,
                     batch_first=True,
-                    dropout=self.dropout,
+                    dropout=dropout,
                     bidirectional=bidirectional, 
                 ),
                 "linear": torch.nn.Linear(
