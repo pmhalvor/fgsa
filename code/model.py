@@ -368,9 +368,9 @@ class BertHead(torch.nn.Module):
             weight = torch.tensor[1, loss_weight, loss_weight]
             loss = torch.nn.CrossEntropyLoss(ignore_index=self.ignore_id)
 
-        elif weight is not None:
-            loss = torch.nn.CrossEntropyLoss(ignore_index=self.ignore_id, weight=weight)
-        
+        elif loss_weight is not None:
+            loss = torch.nn.CrossEntropyLoss(ignore_index=self.ignore_id, weight=loss_weight)
+            
         elif "cross" in loss_function.lower():
             loss = torch.nn.CrossEntropyLoss(ignore_index=self.ignore_id)
         
