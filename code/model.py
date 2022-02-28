@@ -363,14 +363,16 @@ class BertHead(torch.nn.Module):
             loss (torch.SomeLoss or None): either CrossEntropyLoss, MSELoss, or home-made IoULoss
         """
         loss = None
+        weight = torch.tensor(loss_weight)
         
         if loss_function is None:
             weight = torch.tensor[1, loss_weight, loss_weight]
             loss = torch.nn.CrossEntropyLoss(ignore_index=self.ignore_id)
 
-        elif loss_weight is not None:
-            loss = torch.nn.CrossEntropyLoss(ignore_index=self.ignore_id, weight=loss_weight)
-            
+        elif False and weight is not None:
+            # BUG: on weight tensor size, not needed for now
+            loss = torch.nn.CrossEntropyLoss(ignore_index=self.ignore_id, weight=weight)
+
         elif "cross" in loss_function.lower():
             loss = torch.nn.CrossEntropyLoss(ignore_index=self.ignore_id)
         
@@ -671,10 +673,14 @@ class BertHead(torch.nn.Module):
         ).last_hidden_state
 
         # task-specific forwards
-        output = {
-            task: self.components[task](embeddings).permute(0, 2, 1)
-            for task in self.subtasks
-        }
+        output = {}
+        for task in self.subtasks:
+            # iterate over layers of task-specific components
+            hidden_task_states = embeddings
+            for name in self.components[task]:
+                layer = self.components[task][name]
+                hidden_task_states = layer(hidden_task_states).permute(0, 2, 1)
+            output[task] = hidden_task_states
 
         return output
 
