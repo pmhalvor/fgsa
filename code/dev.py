@@ -10,11 +10,12 @@ from dataset import Norec
 from model import FgsaLSTM
 from utils import pad
 
+torch.autograd.set_detect_anomaly(True)
 
 ####################  config  ####################
 debug = False 
 epochs = 10
-proportion = 0.30
+proportion = 0.1
 load_checkpoint = False
 subtasks = [
     "expression",
