@@ -317,6 +317,7 @@ class BertHead(torch.nn.Module):
         self.lr_scheduler_patience = lr_scheduler_patience
         self.subtasks = subtasks
         self.tokenizer = tokenizer
+        self.ignore_id = ignore_id
 
         # kwargs
         self.params = self.__dict__
@@ -365,10 +366,13 @@ class BertHead(torch.nn.Module):
         
         if loss_function is None:
             weight = torch.tensor[1, loss_weight, loss_weight]
-            loss = torch.nn.CrossEntropyLoss(ignore_index=ignore_id, weight=weight)
+            loss = torch.nn.CrossEntropyLoss(ignore_index=self.ignore_id)
 
+        elif weight is not None:
+            loss = torch.nn.CrossEntropyLoss(ignore_index=self.ignore_id, weight=weight)
+        
         elif "cross" in loss_function.lower():
-            loss = torch.nn.CrossEntropyLoss(ignore_index=ignore_id)
+            loss = torch.nn.CrossEntropyLoss(ignore_index=self.ignore_id)
         
         elif "dice" in loss_function.lower():
             loss = DiceLoss(normalization="softmax")
