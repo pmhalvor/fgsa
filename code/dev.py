@@ -13,12 +13,13 @@ from utils import pad
 
 ####################  config  ####################
 debug = False 
-epochs = 2
-proportion = 0.15
+epochs = 30
+proportion = 0.75
 load_checkpoint = False
+bert_finetune=False
 subtasks = [
-    "expression",
-    "holder",
+#    "expression",
+#    "holder",
     "polarity",
     "target", 
 ]
@@ -27,14 +28,14 @@ learning_rate = 1e-6
 lrs = {
     "expression": 1e-7,
     "holder": 1e-6,
-    "polarity": 1e-6,
-    "target": 1e-6,
+    "polarity": 5e-6,
+    "target": 5e-6,
 }
 
 loss_function = "cross-entropy"
 loss_weight = 3
 
-name = "lstm-loss-weight"
+name = "lstm-frostbert-target-polarity"
 if proportion<1:
     name += '-{percent}p'.format(
         percent=int(100*proportion)
@@ -91,6 +92,7 @@ if load_checkpoint and os.path.exists("/checkpoints/" + name + '.pt'):
 else:
     model = FgsaLSTM(
         device=DEVICE,
+        bert_finetune=bert_finetune,
         ignore_id=-1,
         loss_function=loss_function,
         loss_weight=loss_weight,
