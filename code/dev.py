@@ -35,7 +35,7 @@ lrs = {
 loss_function = "cross-entropy"
 loss_weight = 3
 
-name = "lstm-frostbert-target-polarity-full"
+name = "gpu-frostbert-full"
 if proportion<1:
     name += '-{percent}p'.format(
         percent=int(100*proportion)

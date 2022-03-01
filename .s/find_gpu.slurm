@@ -19,9 +19,8 @@ set -o nounset  # Treat any unset variables as an error
 
 # modules
 module --quiet purge  # Reset the modules to the system default
-module load Miniconda3/4.9.2
-module load PyTorch/1.9.0-fosscuda-2020b
-
+module use -a /fp/projects01/ec30/software/easybuild/modules/all/
+module load nlpl-pytorch/1.7.1-foss-2019b-cuda-11.1.1-Python-3.7.4
 
 # Make cuda visible
 python -c "import torch; print(torch.cuda.is_available())"
