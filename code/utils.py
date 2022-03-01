@@ -222,6 +222,7 @@ def score(true_aspect, predict_aspect, true_sentiment, predict_sentiment, train_
 
 def ez_score(true_labels, predict_labels, num_labels):
     """
+    DEPRECATED: use proportional instead
     F1-score for _any_ correctly guessed label. Much more lenient than score() from RACL (above).
 
     Parameters:
@@ -241,3 +242,106 @@ def ez_score(true_labels, predict_labels, num_labels):
             zero_division=1,  # set score to 1 when all labels and predictions are 0
         )
     return total/true_labels.shape[0]
+
+
+def proportional_f1(true_labels, predict_labels, num_labels):
+    """
+    F1-score for _any_ correctly guessed label. Much more lenient than score() from RACL (above).
+
+    Parameters:
+        true_labels (torch.Tensor): batched true labels of size [batchsize, seq_len] 
+        predict_labels (torch.Tensor): batched predictions size [batchsize, seq_len]
+        num_labels (int): number of labels model is learning ot predict
+    """
+
+    total = 0
+    
+    for true, pred in zip(true_labels, predict_labels):
+        total += f1_score(
+            true, 
+            pred, 
+            labels=[e for e in range(1, num_labels)],
+            average='micro',
+            zero_division=1,  # set score to 1 when all labels and predictions are 0
+        )
+    return total/true_labels.shape[0]
+
+
+def binary_f1(golds, preds, eps=1e-7):
+    prec = binary_precision(golds, preds)
+    rec = binary_recall(golds, preds)
+    return 2 * ((prec * rec) / (prec + rec + eps))
+
+
+def binary_precision(golds, preds):
+    tps = 0
+    fps = 0
+    for i, (gold, pred) in zip(golds, preds):
+        tps += binary_tp(gold, pred)
+        fps += binary_fp(gold, pred)
+    return tps / (tps + fps + 10**-10)
+
+
+def binary_recall(golds, preds):
+    tps = 0
+    fns = 0
+    for i, (gold, pred) in zip(golds, preds):
+        tps += binary_tp(gold, pred)
+        fns += binary_fn(gold, pred)
+    return tps / (tps + fns + 10**-10)
+
+
+def binary_tp(gold, pred):
+    """
+    for each member in pred, if it overlaps with any member of gold,
+    return 1
+    else
+    return 0
+    """
+    tps = 0
+    for p in pred:
+        tp = False
+        for word in p:
+            for span in gold:
+                if word in span:
+                    tp = True
+        if tp is True:
+            tps += 1
+    return tps
+
+
+def binary_fn(gold, pred):
+    """
+    if there is any member of gold that overlaps with no member of pred,
+    return 1
+    else
+    return 0
+    """
+    fns = 0
+    for p in gold:
+        fn = True
+        for word in p:
+            for span in pred:
+                if word in span:
+                    fn = False
+        if fn is True:
+            fns += 1
+    return fns
+
+
+def binary_fp(gold, pred):
+    """
+    if there is any member of pred that overlaps with
+    no member of gold, return 1
+    else return 0
+    """
+    fps = 0
+    for p in pred:
+        fp = True
+        for word in p:
+            for span in gold:
+                if word in span:
+                    fp = False
+        if fp is True:
+            fps += 1
+    return fps
