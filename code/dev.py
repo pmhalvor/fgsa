@@ -13,10 +13,11 @@ from utils import pad
 
 ####################  config  ####################
 debug = False 
-epochs = 50
-proportion = 1.
+epochs = 60
+proportion = 0.75
 load_checkpoint = False
 bert_finetune=False  # bert frosty
+num_layers = 7
 subtasks = [
 #    "expression",
 #    "holder",
@@ -35,7 +36,7 @@ lrs = {
 loss_function = "cross-entropy"
 loss_weight = 3
 
-name = "gpu-frostbert-full"
+name = "lstm-10layers-gpu"
 if proportion<1:
     name += '-{percent}p'.format(
         percent=int(100*proportion)
@@ -103,6 +104,7 @@ else:
         holder_lr=lrs.get("holder"),
         polarity_lr=lrs.get("polarity"),
         target_lr=lrs.get("target"),
+        num_layers=num_layers,
     )
     logging.info("... from new instance.")
 
