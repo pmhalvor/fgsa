@@ -5,12 +5,12 @@
 # Project:
 #SBATCH --account=ec37
 # Wall time limit: --time=DD-HH:MM:SS
-#SBATCH --time=19:30:00
+#SBATCH --time=60:30:00
 # Memory requested:
-#SBATCH --mem-per-cpu=25G
+#SBATCH --mem-per-cpu=30G
 # Run on GPU
-#SBATCH --partition=accel
-#SBATCH --gpus=1
+#--ATCH --partition=accel
+#--ATCH --gpus=1
 
 ## Set up job environment:
 set -o errexit  # Exit the script on any error

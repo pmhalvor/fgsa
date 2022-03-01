@@ -13,14 +13,14 @@ from utils import pad
 
 ####################  config  ####################
 debug = False 
-epochs = 30
-proportion = 0.75
+epochs = 50
+proportion = 1.
 load_checkpoint = False
-bert_finetune=False
+bert_finetune=False  # bert frosty
 subtasks = [
 #    "expression",
 #    "holder",
-    "polarity",
+    "polarity",      # polarity and target only gave results after 10 epochs
     "target", 
 ]
 
@@ -28,14 +28,14 @@ learning_rate = 1e-6
 lrs = {
     "expression": 1e-7,
     "holder": 1e-6,
-    "polarity": 5e-6,
-    "target": 5e-6,
+    "polarity": 5e-7,
+    "target": 5e-7,
 }
 
 loss_function = "cross-entropy"
 loss_weight = 3
 
-name = "lstm-frostbert-target-polarity"
+name = "lstm-frostbert-target-polarity-full"
 if proportion<1:
     name += '-{percent}p'.format(
         percent=int(100*proportion)
