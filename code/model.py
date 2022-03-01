@@ -475,12 +475,13 @@ class BertHead(torch.nn.Module):
 
         for b, batch in enumerate(loader):
             predictions = self.predict(batch)
+            predictions = {task: predictions[task].cpu() for task in self.subtasks}
 
             true = {
-                "expression": batch[2], 
-                "holder": batch[3],
-                "polarity": batch[4],
-                "target": batch[5],
+                "expression": batch[2].cpu(), 
+                "holder": batch[3].cpu(),
+                "polarity": batch[4].cpu(),
+                "target": batch[5].cpu(),
             }
 
             ### hard score
@@ -613,7 +614,7 @@ class BertHead(torch.nn.Module):
                 "linear": torch.nn.Linear(
                     in_features=768,
                     out_features=3,  # 3 possible classifications for each task
-                )
+                ).to(torch.device(self.device))
             }
             for task in subtasks
         }
@@ -709,11 +710,11 @@ class FgsaLSTM(BertHead):
                     batch_first=True,
                     dropout=dropout,
                     bidirectional=bidirectional, 
-                ),
+                ).to(torch.device(self.device)),
                 "linear": torch.nn.Linear(
                     in_features=768*2 if bidirectional else 768,
                     out_features=3,
-                )
+                ).to(torch.device(self.device))
             }
             for task in subtasks
         }
