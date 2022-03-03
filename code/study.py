@@ -13,115 +13,233 @@ from model import FgsaLSTM
 from utils import pad
 
 
-class Study(): 
-    def __init__(self, **kwargs):
-        ####################  config  ####################
-        debug = False 
-        epochs = 50
-        proportion = 1.
-        load_checkpoint = False
-        bert_finetune=False  # bert frosty
-        subtasks = [
-        #    "expression",
-        #    "holder",
-            "polarity",      # polarity and target only gave results after 10 epochs
-            "target", 
-        ]
+class Study():
+    """
+    Expects DATA_DIR to be defined in config.py as the path to IMN-style data.
 
-        learning_rate = 1e-6
+    Note: only pass model specific parameters as kwargs.
+    """ 
+    def __init__(
+        self, 
+        name="base",
+
+        bert_finetune=False,
+        batch_size=32, 
+        data_dir=DATA_DIR,
+        debug = False, 
+        epochs = 50,
+        ignore_id = -1,
+        load_checkpoint = False,
+
+        learning_rate = 1e-6,
         lrs = {
             "expression": 1e-7,
             "holder": 1e-6,
             "polarity": 5e-7,
             "target": 5e-7,
-        }
+        },
 
-        set_metric_level = set_metric_level
+        metric = "easy",
 
-        loss_function = "cross-entropy"
-        loss_weight = 3
+        model_name = "FgsaLSTM",
+        model_path = None,
+        proportion = .01,  # small for easier local dev
+        shuffle = True,
+        subtasks = [
+           "expression",
+           "holder",
+            "polarity",
+            "target", 
+        ],
 
-        name = "lstm-frostbert-target-polarity-full"
-        if proportion<1:
-            name += '-{percent}p'.format(
-                percent=int(100*proportion)
-            )
-        if debug:
-            name += "-debug"
-            level = logging.DEBUG
-        else:
-            level = logging.INFO
-        log_template(level=level, job='dev', name=name)
+        loss_function = "cross-entropy",
+        loss_weight = 3,
+        **kwargs
+    ):
+        self.bert_finetune = bert_finetune
+        self.batch_size = batch_size
+        self.data_dir = data_dir
+        self.debug = debug
+        self.epochs = epochs
+        self.ignore_id = ignore_id
+        self.kwargs = kwargs
+        self.load_checkpoint = load_checkpoint
+        
+        self.learning_rate = learning_rate
+        self.lrs = lrs
 
-        DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
-        logging.info('Running on device {}'.format(DEVICE))
-        ###################################################
+        self.loss_function = loss_function
+
+        self.metric = metric
+
+        self.model_name = model_name
+        self.model_path = model_path  # TODO refactor into model
+
+        self.proportion = proportion
+        self.shuffle = shuffle
+        self.subtasks = subtasks
+
+        self.name = name
+        self.build_name()
+
+        self.device = "cuda" if torch.cuda.is_available() else "cpu"
+        self.logger = self.build_logger()
+        self.logger.info('Running on device {}'.format(self.device))
+
+        ###### load data ######
+        self.load_datasets()
+        self.load_dataloaders()
+
+        ###### init model #####
+        self.init_model(model_path=model_path)
+        self.logger.info("Ready to fit!")
+
 
     def store_kwargs(self, kwargs):
         for arg in kwargs:
             self.__dict__[arg] = kwargs[args]
 
+    def find(self, arg):
+        return self.__dict__.get(arg)
+
+    def build_name(self, *args):
+        if args:
+            for arg in args:
+                self.name += "-" + arg
+        else:
+            if self.proportion<1:
+                self.name += '-{percent}p'.format(
+                    percent=int(100*self.proportion)
+                )
+            if self.debug:
+                self.name += "-debug"
+        
+    def build_logger(self):
+        if self.debug:
+            self.level = logging.DEBUG
+        else:
+            self.level = logging.INFO
+        return log_template(level=self.level, job='dev', name=self.name)
+
     def load_datasets(self):
+        """
+        Adds attributes self.train_dataset, self.test_dataset, self.dev_dataset
+        to this object 
+        """
         # load train/dev/test data so every build has complete result set
-        logging.info("Loading datasets..")
-        train_dataset = Norec(
-            data_dir=DATA_DIR,
+        self.logger.info("Loading datasets..")
+        self.train_dataset = Norec(
+            data_dir=self.data_dir,
             partition="train/", 
-            ignore_id=-1,
-            proportion=proportion,
+            ignore_id=self.ignore_id,
+            proportion=self.proportion,
         )
-        dev_dataset = Norec(
-            data_dir=DATA_DIR,
+        self.test_dataset = Norec(
+            data_dir=self.data_dir,
+            partition="test/", 
+            ignore_id=self.ignore_id,
+            proportion=self.proportion,
+            tokenizer=self.train_dataset.tokenizer,
+        )
+        self.dev_dataset = Norec(
+            data_dir=self.data_dir,
             partition="dev/", 
-            ignore_id=-1,
-            proportion=proportion,
-            tokenizer=train_dataset.tokenizer,
+            ignore_id=self.ignore_id,
+            proportion=self.proportion,
+            tokenizer=self.train_dataset.tokenizer,
         )
 
     def load_dataloaders(self):
-        # data loader
-        train_loader = DataLoader(
-            dataset = train_dataset,
-            batch_size = 32,
-            shuffle=False,
-            collate_fn=lambda batch: pad(batch)
-        )
-        dev_loader = DataLoader(
-            dataset = dev_dataset,
-            batch_size = 32,  
-            shuffle=False,
-            collate_fn=lambda batch: pad(batch)
-        )
-        logging.info("Datasets loaded.")
+        """ 
+        Adds attributes train_loader, test_loader, dev_loader to this object
+        """
+        if self.find("train_dataset") is None:
+            self.load_datasets()
 
-    def init_model(self, load_from=None):
-        logging.info("Initializing model..")
-        if load_checkpoint and os.path.exists("/checkpoints/" + name + '.pt'):
-            model = torch.load("/checkpoints/" + name + '.pt', map_location=torch.device(DEVICE))
-            logging.info("... from checkpoint/{}.pt".format(name))
+        # data loader
+        self.train_loader = DataLoader(
+            dataset = self.train_dataset,
+            batch_size = self.batch_size,
+            shuffle=self.shuffle,
+            collate_fn=lambda batch: pad(batch)
+        )
+        self.test_loader = DataLoader(
+            dataset = self.test_dataset,
+            batch_size = self.batch_size,
+            shuffle=self.shuffle,
+            collate_fn=lambda batch: pad(batch)
+        )
+        self.dev_loader = DataLoader(
+            dataset = self.dev_dataset,
+            batch_size = self.batch_size,
+            shuffle=self.shuffle,
+            collate_fn=lambda batch: pad(batch)
+        )
+        self.logger.info("Datasets loaded.")
+
+    def init_model(self, model_path=None):
+        """
+        Create a model attribute for this object
+        """
+        self.logger.info("Initializing model..")
+        if self.load_checkpoint and os.path.exists("/checkpoints/{}.pt".format(self.name)):
+            self.model = torch.load("/checkpoints/" + self.name + '.pt', map_location=torch.device(self.device))
+            self.logger.info("... from checkpoint/{}.pt".format(self.name))
+        elif model_path is not None and os.path.exists(model_path):
+            self.model = torch.load(model_path, map_location=torch.device(self.device))
+            self.logger.info("... from {}".format(model_path))
+        if self.model_path is not None and os.path.exists(self.model_path):
+            self.model = torch.load(self.model_path, map_location=torch.device(self.device))
+            self.logging.info("... from {}".format(self.model_path))
         else:
-            model = FgsaLSTM(
-                device=DEVICE,
-                bert_finetune=bert_finetune,
-                ignore_id=-1,
-                loss_function=loss_function,
-                loss_weight=loss_weight,
-                lr=learning_rate,
-                tokenizer=train_dataset.tokenizer,
-                subtasks=subtasks,
-                expression_lr=lrs.get("expression"),  # dict.get() defaults to None
-                holder_lr=lrs.get("holder"),
-                polarity_lr=lrs.get("polarity"),
-                target_lr=lrs.get("target"),
-            )
-            logging.info("... from new instance.")
+            model_class = self.get_model_class(self.model_name)
+            self.model = model_class(**self.params())
+            self.logger.info("... from new {} object.".format(self.model_name))
+
+    def get_model_class(self, model_name=None):
+        model = None
+        
+        if model_name.lower() == "fgsalstm":
+            model = FgsaLSTM
+        elif model_name.lower() == "berthead":
+            model = BertHead
+        # elif if model_name.lower() == "next":
+        #   model = Next
+
+        return model
+
+    def params(self):
+        params = {
+            "bert_finetune": self.bert_finetune,
+            "debug": self.debug,
+            "device": self.device,
+            "epochs": self.epochs,
+            "ignore_id": self.ignore_id, 
+            "learning_rate": self.learning_rate,
+            "loss_function": self.loss_function,
+            "subtasks": self.subtasks,
+            "tokenizer": self.train_dataset.tokenizer,
+        }
+        params.update(self.lrs)
+        params.update(self.kwargs)
+
+        print("Current params: {}".format(params))
+        self.logger.info("Current params: {}".format(params))
+
+        return params
 
     def fit(self):
         """ 
-        scikit-learn like fit() call for use in pipelines and gridsearches
+        scikit-learn like fit() call for use in pipelines and gridsearches.
+
+        TODO learn if you need to feed data in through grid search.
         """  
-        logging.info('Fitting model...')
-        model.fit(train_loader=train_loader, dev_loader=train_loader, epochs=epochs)
+        self.logger.info('Fitting model...')
+        self.model.fit(
+            train_loader=self.train_loader, 
+            dev_loader=self.dev_loader, 
+            epochs=epochs
+        )
 
     def score(self, metric="easy"):
         """
@@ -131,81 +249,44 @@ class Study():
             metric (str): ["easy", "hard", "strict", "binary", "proportional"]
         """
         logging.info('Evaluating model...')
-        absa_f1, easy_f1, hard_f1 = model.evaluate(dev_loader, verbose=True)
+        absa_f1, easy_f1, hard_f1 = self.model.evaluate(self.dev_loader, verbose=True)
 
         logging.info("ABSA F1: {}".format(absa_f1))
         logging.info("Easy F1: {}".format(easy_f1))
         logging.info("Hard F1: {}".format(hard_f1))
 
-        final = None
+        self.final = None
         if metric == "easy":
-            final = easy_f1
+            self.final = easy_f1
         elif metric == "hard":
-            final = hard_f1
+            self.final = hard_f1
         elif metric == "strict":
-            final = absa_f1
+            self.final = absa_f1
         elif metric == "binary":
             raise NotImplementedError
             binary = None
-            final = binary
+            self.final = binary
         elif metric == "proportional":
             raise NotImplementedError
             proportional = None
-            final = proportional
+            self.final = proportional
 
-        return final
+        return self.final
 
     def save_model(self):
         logging.info("Saving model to checkpoints/{}.pt".format(name))
         torch.save(model, "/checkpoints/" + name + '.pt')
 
 
-if __name__ == "__main__":
-    hyperparameters = {
-        "debug": False,
-        "epochs": 50,
-        "proportion": 1.,
-        "load_checkpoint": False,
-        "bert_finetune": False,  # bert frosty
-        "subtasks": [
-        #    "expression",
-        #    "holder",
-            "polarity",      # polarity and target only gave results after 10 epochs
-            "target", 
-        ],
+# if __name__ == "__main__":
 
-        "learning_rate": 1e-6,
-        "lrs": {
-            "expression": 1e-7,
-            "holder": 1e-6,
-            "polarity": 5e-7,
-            "target": 5e-7,
-        },
+    # parser = argparse.ArgumentParser()
+    # parser.add_argument("-e", "--epochs", dest="epoch", type=int, default=0, help="Interactive if overwrite necessary")
+    # parser.add_argument("-o", "--overwrite", dest="overwrite", type=int, default=1, help="Force overwrite (if not interactive)")
+    # args = parser.parse_args()
 
-        "metric": "hard",  # probably something easier for hyperparameter tuning?
+    # study = Study(**args)
+    # run(**vars(args))
 
-        "loss_function": "cross-entropy",
-        "loss_weight": 3,
-        "device": "cuda" if torch.cuda.is_available() else "cpu",
-    }
-
-    name =  "lstm-frostbert-target-polarity-full",
-    if proportion<1:
-        name += '-{percent}p'.format(
-            percent=int(100*proportion)
-        )
-    if debug:
-        name += "-debug"
-        level = logging.DEBUG
-    else:
-        level = logging.INFO
-
-    parser = argparse.ArgumentParser()
-    parser.add_argument("-e", "--epochs", dest="epoch", type=int, default=0, help="Interactive if overwrite necessary")
-    parser.add_argument("-o", "--overwrite", dest="overwrite", type=int, default=1, help="Force overwrite (if not interactive)")
-    args = parser.parse_args()
-
-    run(**vars(args))
-
-    print("complete")
+    # print("complete")
     

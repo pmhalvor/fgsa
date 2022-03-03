@@ -6,6 +6,7 @@ log/*
 slurm*
 *.pt
 /checkpoints/*
+*.code-workspace
 
 
 # Byte-compiled / optimized / DLL files

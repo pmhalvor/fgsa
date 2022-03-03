@@ -323,6 +323,9 @@ class BertHead(torch.nn.Module):
         self.params = self.__dict__
         self.store_kwargs(kwargs)
 
+        # init after kwargs stored
+        self.unpack_lrs()
+
         # initialize bert head
         self.bert = BertModel.from_pretrained(bert_path)
         self.bert.requires_grad = self.finetune
@@ -388,6 +391,14 @@ class BertHead(torch.nn.Module):
         
         return loss
 
+    def unpack_lrs(self):
+        if self.find("lrs") is not None:
+            for task in self.lrs:
+                setattr(self, task+"_lr", self.lrs[task])
+            return True
+        return False
+
+    ########### Model training ###########
     def fit(self, train_loader, dev_loader=None, epochs=10):
         for epoch in range(epochs):
             self.train()
