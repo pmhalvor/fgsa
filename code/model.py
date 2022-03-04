@@ -589,7 +589,6 @@ class BertHead(torch.nn.Module):
         s = hard if y == "hard" else None
         return s
 
-
     def check_weights(self):
         """
         Helper method used for testing to check that weights get updated after loss step
