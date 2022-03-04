@@ -238,7 +238,7 @@ class Study():
         self.model.fit(
             train_loader=self.train_loader, 
             dev_loader=self.dev_loader, 
-            epochs=epochs
+            epochs=self.epochs
         )
 
     def score(self, metric="easy"):
@@ -278,15 +278,25 @@ class Study():
         torch.save(model, "/checkpoints/" + name + '.pt')
 
 
-# if __name__ == "__main__":
+if __name__ == "__main__":
+    import json
+    import sys
 
-    # parser = argparse.ArgumentParser()
-    # parser.add_argument("-e", "--epochs", dest="epoch", type=int, default=0, help="Interactive if overwrite necessary")
-    # parser.add_argument("-o", "--overwrite", dest="overwrite", type=int, default=1, help="Force overwrite (if not interactive)")
-    # args = parser.parse_args()
+    if len(sys.argv) > 0:
+        filename = sys.argv[1]
+        with open(filename, 'r') as f:
+            data = json.load(f)
 
-    # study = Study(**args)
-    # run(**vars(args))
+        params = data.copy()
+        for param in data:
+            if isinstance(data[param], list) and param != "subtasks":
+                for hyper in data[param]:
+                    params.pop(param)
+                    params[param] = hyper
+                    study = Study(**params)
+                    study.fit()
+                    results = study.score()
+                    print("Results for {p}={h}: {r}".format(p=param, h=hyper, r=results))
 
-    # print("complete")
+
     

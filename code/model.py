@@ -582,6 +582,14 @@ class BertHead(torch.nn.Module):
 
         return self.predictions
         
+    def score(self, X, y):
+        absa, easy, hard = self.evaluate(X)
+        s = absa if y == "absa" else None
+        s = easy if y == "easy" else None
+        s = hard if y == "hard" else None
+        return s
+
+
     def check_weights(self):
         """
         Helper method used for testing to check that weights get updated after loss step
