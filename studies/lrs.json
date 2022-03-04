@@ -1,37 +1,31 @@
 {
     "name": "study-lrs",
-    "expression_lr": [
-        5e-6,
-        1e-6,
-        5e-7,
-        1e-7,
-        5e-8,
-        1e-8
-    ],
-    "holder_lr": [
-        5e-6,
-        1e-6,
-        5e-7,
-        1e-7,
-        5e-8,
-        1e-8
-    ],
-    "polarity_lr": [
-        5e-6,
-        1e-6,
-        5e-7,
-        1e-7,
-        5e-8,
-        1e-8
-    ],
-    "target_lr": [
-        5e-6,
-        1e-6,
-        5e-7,
-        1e-7,
-        5e-8,
-        1e-8
-    ],
+    "lrs":{ 
+        "expression": [
+            1e-6,
+            1e-7,
+            1e-8,
+            1e-9
+        ],
+        "holder": [
+            1e-6,
+            1e-7,
+            1e-8,
+            1e-9
+        ],
+        "polarity": [
+            1e-6,
+            1e-7,
+            1e-8,
+            1e-9
+        ],
+        "target": [
+            1e-6,
+            1e-7,
+            1e-8,
+            1e-9
+        ]
+    },
 
     "metric": "easy"
 }
