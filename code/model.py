@@ -413,8 +413,8 @@ class BertHead(torch.nn.Module):
                 # apply loss
                 loss = self.backward(output, batch)
 
-                # log loss every 13th batch
-                if b%13==0:
+                # log loss every 17th batch, on every 7th epoch
+                if epoch%7==0 and b%17==0:
                     logging.info("Epoch:{:3} Batch:{:3}".format(epoch, b))
                     for task in self.subtasks:
                         logging.info("{:10} loss:{}".format(task, loss[task].item()))
