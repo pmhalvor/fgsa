@@ -53,7 +53,8 @@ class Study():
         ],
 
         loss_function = "cross-entropy",
-        loss_weight = 3,
+
+        verbose = False,
         **kwargs
     ):
         self.bert_finetune = bert_finetune
@@ -85,6 +86,7 @@ class Study():
         self.device = "cuda" if torch.cuda.is_available() else "cpu"
         self.logger = self.build_logger()
         self.logger.info('Running on device {}'.format(self.device))
+        self.verbose = verbose
 
         ###### load data ######
         self.load_datasets()
@@ -93,7 +95,6 @@ class Study():
         ###### init model #####
         self.init_model(model_path=model_path)
         self.logger.info("Ready to fit!")
-
 
     def store_kwargs(self, kwargs):
         for arg in kwargs:
@@ -249,7 +250,7 @@ class Study():
             metric (str): ["easy", "hard", "strict", "binary", "proportional"]
         """
         logging.info('Evaluating model...')
-        absa_f1, easy_f1, hard_f1 = self.model.evaluate(self.dev_loader)
+        absa_f1, easy_f1, hard_f1 = self.model.evaluate(self.dev_loader, verbose=self.verbose)
 
         logging.info("ABSA F1: {}".format(absa_f1))
         logging.info("Easy F1: {}".format(easy_f1))
