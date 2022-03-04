@@ -8,6 +8,5 @@
         1e-8
     ],
 
-    "metric": "hard",
-    "data_dir": "E:/pmhalvor/nlp/msc/racl/data/norec_fine/"
+    "metric": "hard"
 }

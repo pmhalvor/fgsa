@@ -284,7 +284,7 @@ if __name__ == "__main__":
 
     if len(sys.argv) > 0:
         filename = sys.argv[1]
-        with open(filename, 'r') as f:
+        with open('../studies/'+filename, 'r') as f:  # find sutdy configs in studies/ dir
             data = json.load(f)
 
         params = data.copy()
