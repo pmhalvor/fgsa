@@ -291,7 +291,10 @@ if __name__ == "__main__":
         with open('../studies/'+filename, 'r') as f:  # find sutdy configs in studies/ dir
             data = json.load(f)
 
-        params = {k : data[k][0] if isinstance(k, list) else data[k] for k in data}
+        params = {k : data[k][0] if isinstance(data[k], list) else data[k] for k in data}
+        if data.get("subtasks"):
+            params["subtasks"] = data["subtasks"].copy()
+
         best_score = -1.
         best_hyper = None
         for param in data:
