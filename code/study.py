@@ -296,6 +296,7 @@ if __name__ == "__main__":
         best_hyper = None
         for param in data:
             if isinstance(data[param], list) and param != "subtasks":
+                print("Looking into {}".format(param))
                 for hyper in data[param]:
                     params.pop(param)
                     params[param] = hyper
