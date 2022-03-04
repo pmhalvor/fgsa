@@ -288,6 +288,8 @@ if __name__ == "__main__":
             data = json.load(f)
 
         params = data.copy()
+        best_score = -1.
+        best_hyper = None
         for param in data:
             if isinstance(data[param], list) and param != "subtasks":
                 for hyper in data[param]:
@@ -298,5 +300,8 @@ if __name__ == "__main__":
                     results = study.score()
                     print("Results for {p}={h}: {r}".format(p=param, h=hyper, r=results))
 
-
-    
+                    if results > best_score:
+                        best_hyper = hyper
+                
+                params[param] = best_hyper
+                print("Best {p}={h}".format(p=param, h=best_hyper))
