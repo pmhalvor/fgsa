@@ -32,12 +32,7 @@ class Study():
         load_checkpoint = False,
 
         learning_rate = 1e-6,
-        lrs = {
-            "expression": 1e-7,
-            "holder": 1e-6,
-            "polarity": 5e-7,
-            "target": 5e-7,
-        },
+        lrs = None,
 
         metric = "easy",
 
@@ -217,11 +212,11 @@ class Study():
             "epochs": self.epochs,
             "ignore_id": self.ignore_id, 
             "learning_rate": self.learning_rate,
+            "lrs": self.lrs,
             "loss_function": self.loss_function,
             "subtasks": self.subtasks,
             "tokenizer": self.train_dataset.tokenizer,
         }
-        params.update(self.lrs)
         params.update(self.kwargs)
 
         print("Current params: {}".format(params))
