@@ -1,6 +1,6 @@
 {
     "name": "study-lrs",
-    "expression": [
+    "expression_lr": [
         5e-6,
         1e-6,
         5e-7,
@@ -8,7 +8,7 @@
         5e-8,
         1e-8
     ],
-    "holder": [
+    "holder_lr": [
         5e-6,
         1e-6,
         5e-7,
@@ -16,7 +16,7 @@
         5e-8,
         1e-8
     ],
-    "polarity": [
+    "polarity_lr": [
         5e-6,
         1e-6,
         5e-7,
@@ -24,7 +24,7 @@
         5e-8,
         1e-8
     ],
-    "target": [
+    "target_lr": [
         5e-6,
         1e-6,
         5e-7,
