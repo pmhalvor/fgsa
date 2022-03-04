@@ -43,7 +43,7 @@ class Study():
 
         model_name = "FgsaLSTM",
         model_path = None,
-        proportion = .01,  # small for easier local dev
+        proportion = 1.,
         shuffle = True,
         subtasks = [
            "expression",
@@ -241,7 +241,7 @@ class Study():
             epochs=self.epochs
         )
 
-    def score(self, metric="easy"):
+    def score(self, metric=None):
         """
         scikit-learn like score() to  use in GridSearchCV
 
@@ -255,6 +255,8 @@ class Study():
         logging.info("Easy F1: {}".format(easy_f1))
         logging.info("Hard F1: {}".format(hard_f1))
 
+        if metric is None:
+            metric = self.metric 
         self.final = None
         if metric == "easy":
             self.final = easy_f1
@@ -279,6 +281,7 @@ class Study():
 
 
 if __name__ == "__main__":
+    import logging
     import json
     import sys
 
