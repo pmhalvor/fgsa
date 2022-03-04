@@ -249,7 +249,7 @@ class Study():
             metric (str): ["easy", "hard", "strict", "binary", "proportional"]
         """
         logging.info('Evaluating model...')
-        absa_f1, easy_f1, hard_f1 = self.model.evaluate(self.dev_loader, verbose=True)
+        absa_f1, easy_f1, hard_f1 = self.model.evaluate(self.dev_loader)
 
         logging.info("ABSA F1: {}".format(absa_f1))
         logging.info("Easy F1: {}".format(easy_f1))
