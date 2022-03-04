@@ -249,12 +249,12 @@ class Study():
         Parameters:
             metric (str): ["easy", "hard", "strict", "binary", "proportional"]
         """
-        logging.info('Evaluating model...')
+        self.logger.info('Scoring model...')
         absa_f1, easy_f1, hard_f1 = self.model.evaluate(self.dev_loader, verbose=self.verbose)
 
-        logging.info("ABSA F1: {}".format(absa_f1))
-        logging.info("Easy F1: {}".format(easy_f1))
-        logging.info("Hard F1: {}".format(hard_f1))
+        self.logger.info("ABSA F1: {}".format(absa_f1))
+        self.logger.info("Easy F1: {}".format(easy_f1))
+        self.logger.info("Hard F1: {}".format(hard_f1))
 
         if metric is None:
             metric = self.metric 
