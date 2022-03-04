@@ -1,4 +1,5 @@
 {
+    "name": "study-learning_rate",
     "learning_rate": [
         5e-6,
         1e-6,
