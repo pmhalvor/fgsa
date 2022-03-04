@@ -347,7 +347,7 @@ class BertHead(torch.nn.Module):
         # log model 
         logging.info("Subtasks: {}".format(self.subtasks))
         logging.info("Components: {}".format(self.components))
-        logging.info("Optimizers: {}".format(self.optimizers))
+        logging.debug("Optimizers: {}".format(self.optimizers))
         logging.info("Loss: {}".format(self.loss))
 
     def store_kwargs(self, kwargs):
