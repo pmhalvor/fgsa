@@ -291,11 +291,15 @@ if __name__ == "__main__":
         if data.get("subtasks"):
             params["subtasks"] = data["subtasks"].copy()
 
-        best_score = -1.
-        best_hyper = None
         for param in data:
             if isinstance(data[param], list) and param != "subtasks":
                 print("Looking into {}".format(param))
+
+                # null best values
+                best_hyper = None
+                best_score = -1. 
+
+                # hyperparameter search
                 for hyper in data[param]:
                     params.pop(param)
                     params[param] = hyper
