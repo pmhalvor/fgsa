@@ -294,7 +294,7 @@ class BertHead(torch.nn.Module):
         ignore_id=-1,
         loss_function="cross-entropy",  # cross-entropy, dice, mse, or iou 
         loss_weight=1,              # TODO tune
-        lr=1e-6,                    # TODO tune
+        lr=1e-7,                    # TODO tune
         lr_scheduler_factor=0.1,    # TODO tune
         lr_scheduler_patience=2,    # TODO tune
         subtasks = ["expression", "holder", "polarity", "target"], 
@@ -690,6 +690,7 @@ class BertHead(torch.nn.Module):
             input_ids = input_ids,
             attention_mask = attention_mask,
         ).last_hidden_state
+        embeddings = self.bert_dropout(embeddings)
 
         # task-specific forwards
         output = {}
@@ -754,6 +755,7 @@ class FgsaLSTM(BertHead):
             input_ids = input_ids,
             attention_mask = attention_mask,
         ).last_hidden_state
+        embeddings = self.bert_dropout(embeddings)
 
         # task-specific forwards
         output = {}

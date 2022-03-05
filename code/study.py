@@ -31,7 +31,7 @@ class Study():
         ignore_id = -1,
         load_checkpoint = False,
 
-        learning_rate = 1e-6,
+        learning_rate = 1e-7,
         lrs = None,
 
         metric = "easy",
@@ -307,4 +307,4 @@ if __name__ == "__main__":
                         best_hyper = hyper
                 
                 params[param] = best_hyper
-                print("Best {p}={h}".format(p=param, h=best_hyper))
+                print("Best results for {m} metric: {p}={h}".format(m=study.metric, p=param, h=best_hyper))
