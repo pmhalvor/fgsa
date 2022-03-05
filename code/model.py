@@ -772,6 +772,7 @@ class IMN(BertHead):
     """
     def init_components(self, subtasks):
         """
+        Every component 
         Parameters:
             subtasks (list(str)): subtasks the model with train for
         
@@ -779,24 +780,21 @@ class IMN(BertHead):
             components (dict): output layers used for the model indexed by task name
         """
 
-        components = {
-            "target": {
-                # aspect extraction: cnn -> cat -> dropout -> linear
-                "cnn-3k": torch.nn.Conv1d(
-                    in_channels = 1,
-                    out_channels = 1, 
-                    kernel_size = 3,
-                ),
+        expression_layers = self.find("expression_layers", default=2)
+        polarity_layers = self.find("polarity_layers", default=2)
+        shared_layers = self.find("shared_layers", default=2)
+        target_layers = self.find("target_layers", default=2)
 
-                # shit i need help with cnns in pytorch
-                "cnn-5k": torch.nn.Conv1d(
-                    in_channels = 1,
-                    out_channels = 1, 
-                    kernel_size = 5,
-                )
+        components = {
+            "shared": {
+                # shared convolutions over embeddings
+            },
+            "target": {
+                # aspect extraction: dropout -> cnn -> cat -> dropout -> cnn -> cat -> dropout -> linear
             },
             "expression":{
-                # opinion extraction: not sure..?
+                # opinion extraction: dropout -> cnn -> cat -> dropout -> cnn -> cat -> dropout -> linear
+                # this is really done jointly w/ target, but separate here for more flexibility
             },
             "polarity":{
                 # polarity classification: cnn -> attention -> cat -> dropout -> linear
@@ -804,10 +802,119 @@ class IMN(BertHead):
             # doc-level skipped for now
         }
 
+        ######### CNN Layers ##########
+        for layer in range(shared_layers):
+            layer = {
+                f"shared_dropout": torch.nn.Dropout(self.dropout).to(torch.device(self.device)),
+
+                f"shared_cnn_{i}_5": torch.nn.Conv1d(
+                    in_channels = 768,
+                    out_channels = 768, 
+                    kernel_size = 5,
+                ).to(torch.device(self.device))
+            }
+            if i == 0:
+                layer[f"shared_cnn_{i}_3"] = torch.nn.Conv1d(
+                    in_channels = 768,
+                    out_channels = 768, 
+                    kernel_size = 3,
+                ).to(torch.device(self.device))
+            components["shared"].update(layer)
+
+        for layer in range(target_layers):
+            layer = {
+                f"target_dropout": torch.nn.Dropout(self.dropout).to(torch.device(self.device)),
+
+                f"target_cnn_{i}": torch.nn.Conv1d(
+                    in_channels = 768,
+                    out_channels = 768, 
+                    kernel_size = 5,
+                ).to(torch.device(self.device))
+            }
+            components["target"].update(layer)
+
+        for layer in range(polarity_layers):
+            layer = {
+                f"polarity_dropout": torch.nn.Dropout(self.dropout).to(torch.device(self.device)),
+
+                f"polarity_cnn_{i}": torch.nn.Conv1d(
+                    in_channels = 768,
+                    out_channels = 768, 
+                    kernel_size = 5,
+                ).to(torch.device(self.device))
+            }
+            if i == 0:
+                layer[f"polarity_cnn_{i}_3"] = torch.nn.Conv1d(
+                    in_channels = 768,
+                    out_channels = 768, 
+                    kernel_size = 3,
+                ).to(torch.device(self.device)) 
+            components["polarity"].update(layer)
+
+        for layer in range(expression_layers):
+            layer = {
+                f"expression_dropout": torch.nn.Dropout(self.dropout).to(torch.device(self.device)),
+
+                f"expression_cnn_{i}": torch.nn.Conv1d(
+                    in_channels = 768,
+                    out_channels = 768, 
+                    kernel_size = 5,
+                ).to(torch.device(self.device))
+            }
+            if i == 0:
+                layer[f"expression_cnn_{i}_3"] = torch.nn.Conv1d(
+                    in_channels = 768,
+                    out_channels = 768, 
+                    kernel_size = 3,
+                ).to(torch.device(self.device)) 
+            components["expression"].update(layer)
+
+
+        ######## Linear Layers #######
+        components["expression"].update({
+            "expression_linear": torch.nn.Linear(
+                in_features=768, 
+                out_features=3
+            ).to(torch.device(self.device))
+        })
+
+        components["target"].update({
+            "target_linear": torch.nn.Linear(
+                in_features=768, 
+                out_features=3
+            ).to(torch.device(self.device))
+        })
+
+        # polarity had attention before linear
+        components["polarity"].update({
+            "polarity_attention": torch.nn.MultiheadAttention(768, num_heads=1)
+        })
+        components["polarity"].update({
+            "polarity_linear": torch.nn.Linear(
+                in_features=768, 
+                out_features=3
+            ).to(torch.device(self.device))
+        })
+
+
+
+
         return components
+
+
     def forward(self, batch):
         input_ids = batch[0].to(torch.device(self.device))
         attention_mask = batch[1].to(torch.device(self.device))
+
+        embeddings = self.bert(
+            input_ids = input_ids,
+            attention_mask = attention_mask,
+        ).last_hidden_state
+        embeddings = self.bert_dropout(embeddings)
+
+        # NOTE remember to permute so shape is [32, 768, 42]
+
+        #TODO good luck figuring out attention here.. 
 
         output = {}
         for task in self.subtasks:
@@ -833,6 +940,8 @@ class RACL(BertHead):
             input_ids = input_ids,
             attention_mask = attention_mask,
         ).last_hidden_state
+        embeddings = self.bert_dropout(embeddings)
+
 
         output = {}
         for task in self.subtasks:
