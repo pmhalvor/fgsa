@@ -419,8 +419,8 @@ class BertHead(torch.nn.Module):
                     for task in self.subtasks:
                         logging.info("{:10} loss:{}".format(task, loss[task].item()))
         
-            if dev_loader is not None:
-                self.evaluate(dev_loader)
+                    if dev_loader is not None:
+                        self.evaluate(dev_loader)
 
         logging.info("Fit complete.")
 
