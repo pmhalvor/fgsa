@@ -762,3 +762,79 @@ class FgsaLSTM(BertHead):
             output[task] = self.components[task]["linear"](hidden).permute(0, 2, 1)
 
         return output
+
+
+class IMN(BertHead):
+    """
+    Similar to the original IMN structure, just implemented in pytorch.
+    """
+    def init_components(self, subtasks):
+        """
+        Parameters:
+            subtasks (list(str)): subtasks the model with train for
+        
+        Returns:
+            components (dict): output layers used for the model indexed by task name
+        """
+
+        components = {
+            "target": {
+                # aspect extraction: cnn -> cat -> dropout -> linear
+                "cnn-3k": torch.nn.Conv1d(
+                    in_channels = 1,
+                    out_channels = 1, 
+                    kernel_size = 3,
+                ),
+
+                # shit i need help with cnns in pytorch
+                "cnn-5k": torch.nn.Conv1d(
+                    in_channels = 1,
+                    out_channels = 1, 
+                    kernel_size = 5,
+                )
+            },
+            "expression":{
+                # opinion extraction: not sure..?
+            },
+            "polarity":{
+                # polarity classification: cnn -> attention -> cat -> dropout -> linear
+            }
+            # doc-level skipped for now
+        }
+
+        return components
+    def forward(self, batch):
+        input_ids = batch[0].to(torch.device(self.device))
+        attention_mask = batch[1].to(torch.device(self.device))
+
+        output = {}
+        for task in self.subtasks:
+            pass 
+
+        return output
+
+
+class RACL(BertHead):
+
+    def init_components(self, subtasks):
+        components = {
+            # MultiheadAttention?
+        }
+
+        return components
+
+    def forward(self, batch):
+        input_ids = batch[0].to(torch.device(self.device))
+        attention_mask = batch[1].to(torch.device(self.device))
+
+        embeddings = self.bert(
+            input_ids = input_ids,
+            attention_mask = attention_mask,
+        ).last_hidden_state
+
+        output = {}
+        for task in self.subtasks:
+            pass 
+
+        return output
+
