@@ -215,13 +215,14 @@ class Study():
             "lrs": self.lrs,
             "loss_function": self.loss_function,
             "subtasks": self.subtasks,
-            "tokenizer": self.train_dataset.tokenizer,
         }
         params.update(self.kwargs)
 
         print("Current params: {}".format(params))
         self.logger.info("Current params: {}".format(params))
 
+        # to avoid messy logs
+        params["tokenizer"] = self.train_dataset.tokenizer
         return params
 
     def fit(self):
