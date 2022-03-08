@@ -954,8 +954,8 @@ class IMN(BertHead):
         #######################################
         # Task-specific layers
         #######################################
-        output = {}  # task-specific outputs stored along the way
-        softmax = torch.nn.Softmax()  # expecting labels to be 
+        self.output = {}  # task-specific outputs stored along the way
+        softmax = torch.nn.Softmax(dim=-1)  # expecting labels to be last dim
 
         for i in range(interactions+1):
             ### Subtask: target
@@ -965,7 +965,9 @@ class IMN(BertHead):
 
             target_output = torch.cat((word_embeddings, target_output), dim=-1)
             target_output = self.components["shared"]["dropout"](target_output)
-            output["target"] = self.components["target"]["linear"](target_output.permute(0, 2, 1))
+            target_output = target_output.permute(0, 2, 1)  # batch, sequence, embedding
+            target_output = self.components["target"]["linear"](target_output)
+            self.output["target"] = softmax(target_output)
             # TODO need a softmax here, right?
 
             ### Subtask: expression
@@ -974,7 +976,9 @@ class IMN(BertHead):
                 expression_output = self.components["expression"]["cnn_sequential"](expression_output)
             expression_output = torch.cat((word_embeddings, expression_output), dim=-1)
             expression_output = self.components["shared"]["dropout"](expression_output)
-            output["expression"] = self.components["expression"]["linear"](expression_output.permute(0, 2, 1))
+            expression_output = expression_output.permute(0, 2, 1)  # batch, sequence, embedding
+            expression_output = self.components["expression"]["linear"](expression_output)
+            self.output["expression"] = softmax(expression_output)
             # TODO need a softmax here, right?
 
             ### Subtask: polarity
@@ -983,13 +987,26 @@ class IMN(BertHead):
                 polarity_output = self.components["polarity"]["cnn_sequential"](polarity_output)
                 print("After cnn: {}".format(polarity_output.shape))
 
-            print("Before attention: tar {}".format(polarity_output.shape))
-            polarity_output = polarity_output.permute(2, 0, 1),  # sequence, batch, embedding
-            print("Before attention: per {}".format(polarity_output.shape))
+            # add information from previous subtasks
+            # target: batch, sequence, embedding
+            # express: batch, sequence, embedding
+            # polarity: batch, embedding, sequence
+            bi_probs = (self.output["target"][:,:,1:].sum(dim=-1) + self.output["expression"][:,:,1:].sum(dim=-1))/2.
+            bi_probs = bi_probs[:,:polarity_output.size(2)]
+            print("polarity: {}".format(polarity_output.shape))
+            print("bi_probs: {}".format(bi_probs.shape))
+            values =  torch.mul(
+                polarity_output.permute(1, 0, 2), 
+                bi_probs,
+            ).permute(2, 1, 0)  # sequence, batch, embedding
+
+            polarity_output = polarity_output.permute(2, 0, 1)  # sequence, batch, embedding
+            print("Before attention: polarity {}".format(polarity_output.shape))
+            print("Before attention: values {}".format(values.shape))
             polarity_output, _ = self.components["polarity"]["attention"](
                 polarity_output,  # query, i.e. polar cnn output w/ weights
                 polarity_output,  # keys, i.e. (polar cnn output).T for self attention
-                polarity_output,  # values should include probabilities for B and I tags
+                values,  # values should include probabilities for B and I tags
                 need_weights=False
             )
             print("After attention: {}".format(polarity_output.shape))
@@ -1002,14 +1019,21 @@ class IMN(BertHead):
             polarity_output = torch.cat((initial_shared_features, polarity_output), dim=-1)
             polarity_output = self.components["shared"]["dropout"](polarity_output)
             polarity_output = polarity_output.permute(0, 2, 1) 
-            output["polarity"] = self.components["polarity"]["linear"](polarity_output)
-            print("output[polarity]: {}".format(output["polarity"].shape))
+            self.output["polarity"] = self.components["polarity"]["linear"](polarity_output)
             # TODO need a softmax here, right?
 
 
+            print("output[polarity]: {}".format(self.output["polarity"].shape))  # torch.Size([32, 140, 3])
+            print("output[target]: {}".format(self.output["target"].shape))      # torch.Size([32, 260, 3])
+            print("sentence_output: {}".format(sentence_output.shape))           # torch.Size([32, 768, 74])
             # update sentence_output for next iteration
-            raise NotImplementedError
-            sentence_output = torch.cat()
+            sentence_output = torch.cat(
+                sentence_output, self.output["target"], self.output["polarity"]
+            )
+
+            sentence_output = torch.nn.Linear(in_features=sentence_output.size(-1), out_features=768)
+            print("Iteration complete: {}".format(polarity_output.shape))
+
 
         # TODO now we have to set it up so that message passing can be turned on or off via hyperparameter
         if self.interactions is not None:
