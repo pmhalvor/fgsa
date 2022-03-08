@@ -980,20 +980,20 @@ class IMN(BertHead):
             ### Subtask: polarity
             polarity_output = sentence_output
             if polarity_layers > 0:
-                print("Before cnn: {}".format(polarity_output.shape))
                 polarity_output = self.components["polarity"]["cnn_sequential"](polarity_output)
                 print("After cnn: {}".format(polarity_output.shape))
 
-            print("Before attention: emb {}".format(word_embeddings.shape))
-            print("Before concat: tar {}".format(polarity_output.shape))
+            print("Before attention: tar {}".format(polarity_output.shape))
+            polarity_output = polarity_output.permute(2, 0, 1),  # sequence, batch, embedding
+            print("Before attention: per {}".format(polarity_output.shape))
             polarity_output, _ = self.components["polarity"]["attention"](
-                polarity_output.permute(0, 2, 1),  # sequence, batch, embedding
-                polarity_output.permute(0, 2, 1),  # sequence, batch, embedding
-                polarity_output.permute(0, 2, 1),  # sequence, batch, embedding
+                polarity_output,  # query, i.e. polar cnn output w/ weights
+                polarity_output,  # keys, i.e. (polar cnn output).T for self attention
+                polarity_output,  # values should include probabilities for B and I tags
                 need_weights=False
             )
             print("After attention: {}".format(polarity_output.shape))
-            polarity_output = polarity_output.permute(0, 2, 1)  # permute back to expected cnn shape
+            polarity_output = polarity_output.permute(1, 2, 0)  # batch, embedding, sequence
             print("After permute: {}".format(polarity_output.shape))
 
             print("Before concat: shared feat {}".format(initial_shared_features.shape))
@@ -1001,12 +1001,15 @@ class IMN(BertHead):
             # NOTE: concat w/ initial_shared_features not word_embeddings like in target
             polarity_output = torch.cat((initial_shared_features, polarity_output), dim=-1)
             polarity_output = self.components["shared"]["dropout"](polarity_output)
-            output["polarity"] = self.components["polarity"]["linear"](polarity_output.permute(0, 2, 1))
+            polarity_output = polarity_output.permute(0, 2, 1) 
+            output["polarity"] = self.components["polarity"]["linear"](polarity_output)
             print("output[polarity]: {}".format(output["polarity"].shape))
             # TODO need a softmax here, right?
 
+
             # update sentence_output for next iteration
-            sentence_output = torch.cat
+            raise NotImplementedError
+            sentence_output = torch.cat()
 
         # TODO now we have to set it up so that message passing can be turned on or off via hyperparameter
         if self.interactions is not None:
