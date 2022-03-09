@@ -849,43 +849,43 @@ class IMN(BertHead):
         layers = []
         for layer in range(target_layers):
             # every layer gets a dropout, cnn, and relu activation
-            layers.append(torch.nn.Dropout(self.dropout).to(torch.device(self.device)))
+            layers.append(torch.nn.Dropout(self.dropout))
             layers.append(torch.nn.Conv1d(
                     in_channels = cnn_dim,
                     out_channels = cnn_dim, 
                     kernel_size = 5,
                     padding=2,
-                ).to(torch.device(self.device)))
+                ))
             layers.append(torch.nn.ReLU())
-        target_sequential = torch.nn.Sequential(*layers)
+        target_sequential = torch.nn.Sequential(*layers).to(torch.device(self.device))
         components["target"].update({"cnn_sequential": target_sequential})
 
         layers = []
         for layer in range(polarity_layers):
             # every layer gets a dropout, cnn, and relu activation
-            layers.append(torch.nn.Dropout(self.dropout).to(torch.device(self.device)))
+            layers.append(torch.nn.Dropout(self.dropout))
             layers.append(torch.nn.Conv1d(
                     in_channels = cnn_dim,
                     out_channels = cnn_dim, 
                     kernel_size = 5,
                     padding=2,
-                ).to(torch.device(self.device)))
+                ))
             layers.append(torch.nn.ReLU())
-        polarity_sequential = torch.nn.Sequential(*layers)
+        polarity_sequential = torch.nn.Sequential(*layers).to(torch.device(self.device))
         components["polarity"].update({"cnn_sequential": polarity_sequential})
         
         layers = []
         for layer in range(expression_layers):
             # every layer gets a dropout, cnn, and relu activation
-            layers.append(torch.nn.Dropout(self.dropout).to(torch.device(self.device)))
+            layers.append(torch.nn.Dropout(self.dropout))
             layers.append(torch.nn.Conv1d(
                     in_channels = cnn_dim,
                     out_channels = cnn_dim, 
                     kernel_size = 5,
                     padding=2,
-                ).to(torch.device(self.device)))
+                ))
             layers.append(torch.nn.ReLU())
-        expression_sequential = torch.nn.Sequential(*layers)
+        expression_sequential = torch.nn.Sequential(*layers).to(torch.device(self.device))
         components["expression"].update({"cnn_sequential": expression_sequential})
 
         #######################################
@@ -915,9 +915,7 @@ class IMN(BertHead):
 
         # polarity had attention before linear
         components["polarity"].update({
-            "attention": torch.nn.MultiheadAttention(cnn_dim, num_heads=1)
-        })
-        components["polarity"].update({
+            "attention": torch.nn.MultiheadAttention(cnn_dim, num_heads=1).to(torch.device(self.device)), 
             "linear": torch.nn.Sequential(
                 torch.nn.Dropout(self.dropout),
                 torch.nn.Linear(
@@ -932,10 +930,13 @@ class IMN(BertHead):
         # Re-encoder
         #######################################
         components["shared"].update({
-            "re_encode": torch.nn.Linear(
-                # sentence_output:cnn_dim + target_output:3 + expression_output:3 + polarity_output:3
-                in_features=int(cnn_dim + 3 + 3 + 3),  
-                out_features=cnn_dim,
+            "re_encode": torch.nn.Sequential(
+                torch.nn.Linear(
+                    # sentence_output:cnn_dim + target_output:3 + expression_output:3 + polarity_output:3
+                    in_features=int(cnn_dim + 3 + 3 + 3),  
+                    out_features=cnn_dim,
+                ),
+                torch.nn.ReLU()
             ).to(torch.device(self.device))
         })
 
@@ -1040,7 +1041,7 @@ class IMN(BertHead):
             values =  torch.mul(
                 polarity_output.permute(1, 0, 2), # embedding, batch, sequence
                 bi_probs,
-            ).permute(2, 1, 0).to(torch.device(self.device))  # sequence, batch, embedding
+            ).permute(2, 1, 0)  # sequence, batch, embedding
 
             polarity_output = polarity_output.permute(2, 0, 1)  # sequence, batch, embedding
             # print(attn_mask.shape)
