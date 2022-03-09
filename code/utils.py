@@ -3,7 +3,7 @@ import numpy as np
 from sklearn.metrics import f1_score
 
 
-def pad(batch, ignore_id=-1):
+def pad(batch, pad_id=0, ignore_id=-1):
     """
     Pad batches according to largest sentence.
 
@@ -25,6 +25,7 @@ def pad(batch, ignore_id=-1):
     padded_ids, padded_masks = [], []
     padded_expression, padded_holder, padded_polarity, padded_target= [], [], [], []
 
+    # for datapoint in batch
     for b in batch:
         # this manual unpacking should not be necessary..
         ids = b[0]
@@ -38,7 +39,7 @@ def pad(batch, ignore_id=-1):
             torch.nn.functional.pad(
                 ids,
                 (0, longest_sentence - ids.size(0)),
-                value=0  # padding token can vary between Berts
+                value=pad_id  # padding token can vary between Berts
             )
         )
         padded_masks.append(

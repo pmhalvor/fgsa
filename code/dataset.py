@@ -15,11 +15,13 @@ class Norec(Dataset):
     """
     Base Norec dataset class.
 
-    Labels order:
-        0: expression
-        1: holder
-        2: polarity
-        3: target
+    __get__ return order:
+        0: input_ids
+        1: attention_mask
+        2: expression
+        3: holder
+        4: polarity
+        5: target
 
     Parameters:
         bert_path (str): location of BertModel for tokenizer
@@ -49,6 +51,7 @@ class Norec(Dataset):
     ):
         self.tokenizer = self.get_tokenizer(bert_path, tokenizer)
         self.IGNORE_ID = ignore_id  # FIXME get form BertTokenizer, idk if this is FIXME is needed
+        self.unk_token = self.tokenizer.unk_token
         self.partition = partition
 
         # parse raw data
@@ -124,23 +127,24 @@ class Norec(Dataset):
         try:  # Some datasets won't have this annotation, and should therefore ignore it. 
             with open(data_path+'/holder.txt') as f:  # NOTE filename opinion -> object name expression 
                 holder = [[int(ele) for ele in line.strip().split(' ')] for line in f.readlines()]
+
         except FileNotFoundError:
             logging.warning("holder.txt not found at path {}. Generating blank list...".format(data_path))
-            holder = [[self.IGNORE_ID for _ in line] for line in target]  # TODO give ignore index?
+            holder = [[self.unk_token for _ in line] for line in target]  # FIXME replace with UNK for bert, or mask?
 
         return (expression, holder, polarity, sentence, target)
 
-    def shrink(self, p):
-        if p is not None:
+    def shrink(self, p=None):
+        if p:
             count = int(len(self.sentence)*p)
 
             for key, value in self.label.items():
                 self.label[key] = value[:count]
             self.sentence = self.sentence[:count]
 
-        logging.info("Dataset {part} shrunk by a scale of {p}. Now {c} rows.".format(
-            part=self.partition, p=p, c=count)
-        )
+            logging.info("Dataset {part} shrunk by a scale of {p}. Now {c} rows.".format(
+                part=self.partition, p=p, c=count)
+            )
 
     def get_tokenizer(self, bert_path=None, tokenizer=None):
         if bert_path is not None:
