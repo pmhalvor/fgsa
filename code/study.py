@@ -195,6 +195,7 @@ class Study():
 
     def params(self):
         params = {
+            "bert_path": self.bert_path,
             "debug": self.debug,
             "device": self.device,
             "epochs": self.epochs,
