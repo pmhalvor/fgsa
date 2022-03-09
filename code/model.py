@@ -786,6 +786,7 @@ class IMN(BertHead):
             components (dict): output layers used for the model indexed by task name
         """
 
+        cnn_dim = self.find("cnn_dim", default=768)
         expression_layers = self.find("expression_layers", default=2)
         polarity_layers = self.find("polarity_layers", default=2)
         shared_layers = self.find("shared_layers", default=2)
@@ -815,18 +816,27 @@ class IMN(BertHead):
             print("Shared CNN layer {}".format(i))
             layer = {
                 f"dropout": torch.nn.Dropout(self.dropout).to(torch.device(self.device)),
-
-                f"cnn_{i}_5": torch.nn.Conv1d(
-                    in_channels = 768,
-                    out_channels = 768, 
-                    kernel_size = 5,
-                ).to(torch.device(self.device))
             }
             if i == 0:
                 layer[f"cnn_{i}_3"] = torch.nn.Conv1d(
                     in_channels = 768,
-                    out_channels = 768, 
+                    out_channels = cnn_dim/2, 
                     kernel_size = 3,
+                ).to(torch.device(self.device))
+
+                
+                layer[f"cnn_{i}_5"] = torch.nn.Conv1d(
+                    in_channels = 768,
+                    out_channels = cnn_dim/2, 
+                    kernel_size = 5,
+                ).to(torch.device(self.device))
+            
+            else:
+                
+                layer[f"cnn_{i}_5"] = torch.nn.Conv1d(
+                    in_channels = cnn_dim,
+                    out_channels = cnn_dim, 
+                    kernel_size = 5,
                 ).to(torch.device(self.device))
             components["shared"].update(layer)
 
@@ -835,40 +845,40 @@ class IMN(BertHead):
         #######################################
         layers = []
         for layer in range(target_layers):
+            # every layer gets a dropout, cnn, and relu activation
             layers.append(torch.nn.Dropout(self.dropout).to(torch.device(self.device)))
-            layers.append(
-                torch.nn.Conv1d(
-                    in_channels = 768,
-                    out_channels = 768, 
+            layers.append(torch.nn.Conv1d(
+                    in_channels = cnn_dim,
+                    out_channels = cnn_dim, 
                     kernel_size = 5,
-                ).to(torch.device(self.device))
-            )
+                ).to(torch.device(self.device)))
+            layers.append(torch.nn.ReLu())
         target_sequential = torch.nn.Sequential(*layers)
         components["target"].update({"cnn_sequential": target_sequential})
 
         layers = []
-        for layer in range(target_layers):
+        for layer in range(polarity_layers):
+            # every layer gets a dropout, cnn, and relu activation
             layers.append(torch.nn.Dropout(self.dropout).to(torch.device(self.device)))
-            layers.append(
-                torch.nn.Conv1d(
-                    in_channels = 768,
-                    out_channels = 768, 
+            layers.append(torch.nn.Conv1d(
+                    in_channels = cnn_dim,
+                    out_channels = cnn_dim, 
                     kernel_size = 5,
-                ).to(torch.device(self.device))
-            )
+                ).to(torch.device(self.device)))
+            layers.append(torch.nn.ReLu())
         polarity_sequential = torch.nn.Sequential(*layers)
         components["polarity"].update({"cnn_sequential": polarity_sequential})
         
         layers = []
         for layer in range(expression_layers):
+            # every layer gets a dropout, cnn, and relu activation
             layers.append(torch.nn.Dropout(self.dropout).to(torch.device(self.device)))
-            layers.append(
-                torch.nn.Conv1d(
-                    in_channels = 768,
-                    out_channels = 768, 
+            layers.append(torch.nn.Conv1d(
+                    in_channels = cnn_dim,
+                    out_channels = cnn_dim, 
                     kernel_size = 5,
-                ).to(torch.device(self.device))
-            )
+                ).to(torch.device(self.device)))
+            layers.append(torch.nn.ReLu())
         expression_sequential = torch.nn.Sequential(*layers)
         components["expression"].update({"cnn_sequential": expression_sequential})
 
@@ -877,25 +887,25 @@ class IMN(BertHead):
         #######################################
         components["expression"].update({
             "linear": torch.nn.Linear(
-                in_features=768, 
+                in_features=cnn_dim, 
                 out_features=3
             ).to(torch.device(self.device))
         })
 
         components["target"].update({
             "linear": torch.nn.Linear(
-                in_features=768, 
+                in_features=cnn_dim, 
                 out_features=3
             ).to(torch.device(self.device))
         })
 
         # polarity had attention before linear
         components["polarity"].update({
-            "attention": torch.nn.MultiheadAttention(768, num_heads=1)
+            "attention": torch.nn.MultiheadAttention(cnn_dim, num_heads=1)
         })
         components["polarity"].update({
             "linear": torch.nn.Linear(
-                in_features=768, 
+                in_features=cnn_dim, 
                 out_features=3
             ).to(torch.device(self.device))
         })
@@ -965,9 +975,8 @@ class IMN(BertHead):
 
             target_output = torch.cat((word_embeddings, target_output), dim=-1)
             target_output = self.components["shared"]["dropout"](target_output)
-            target_output = target_output.permute(0, 2, 1)  # batch, sequence, embedding
-            target_output = self.components["target"]["linear"](target_output)
-            self.output["target"] = softmax(target_output)
+            ### target_output.shape = [batch, sequence, embedding]
+            self.output["target"] = softmax(self.components["target"]["linear"](target_output.permute(0, 2, 1)))
             # TODO need a softmax here, right?
 
             ### Subtask: expression
@@ -983,6 +992,8 @@ class IMN(BertHead):
 
             ### Subtask: polarity
             polarity_output = sentence_output
+            print("Before anything polarity: {}".format(polarity_output.shape))
+
             if polarity_layers > 0:
                 polarity_output = self.components["polarity"]["cnn_sequential"](polarity_output)
                 print("After cnn: {}".format(polarity_output.shape))
@@ -1017,29 +1028,27 @@ class IMN(BertHead):
             print("Before concat: polarity {}".format(polarity_output.shape))
             # NOTE: concat w/ initial_shared_features not word_embeddings like in target
             polarity_output = torch.cat((initial_shared_features, polarity_output), dim=-1)
+            print("After concat: polarity {}".format(polarity_output.shape))
             polarity_output = self.components["shared"]["dropout"](polarity_output)
-            polarity_output = polarity_output.permute(0, 2, 1) 
-            self.output["polarity"] = self.components["polarity"]["linear"](polarity_output)
+            print("Before linear: polarity {}".format(polarity_output.shape))
+            self.output["polarity"] = softmax(self.components["polarity"]["linear"](polarity_output.permute(0, 2, 1)))
             # TODO need a softmax here, right?
 
 
-            print("output[polarity]: {}".format(self.output["polarity"].shape))  # torch.Size([32, 140, 3])
-            print("output[target]: {}".format(self.output["target"].shape))      # torch.Size([32, 260, 3])
+            print("output_polarity: {}".format(polarity_output.shape))          # torch.Size([32, 140, 768])
+            print("output_target: {}".format(target_output.shape))      # torch.Size([32, 260, 3])
             print("sentence_output: {}".format(sentence_output.shape))           # torch.Size([32, 768, 74])
             # update sentence_output for next iteration
             sentence_output = torch.cat(
-                sentence_output, self.output["target"], self.output["polarity"]
+                (sentence_output, target_output, polarity_output),
+                dim=-1
             )
 
-            sentence_output = torch.nn.Linear(in_features=sentence_output.size(-1), out_features=768)
-            print("Iteration complete: {}".format(polarity_output.shape))
+            # a re-encoder here tells me that embedding dim will be changeed through this process
+            sentence_output = torch.nn.Linear(in_features=sentence_output.size(-1), out_features=768)(sentence_output)
+            print("Iteration complete: {}".format(sentence_output.shape))
 
-
-        # TODO now we have to set it up so that message passing can be turned on or off via hyperparameter
-        if self.interactions is not None:
-            hidden 
-        for task in self.components:  # shared, target, polarity, expression
-            pass 
+            raise NotImplementedError # dense() to re-encode the sentence_output
 
         return output
 
