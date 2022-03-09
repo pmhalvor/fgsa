@@ -5,6 +5,7 @@ import os
 import argparse
 
 ### LOCAL
+from config import BERT_PATH
 from config import DATA_DIR
 from config import default_parameters
 from config import log_template
@@ -24,6 +25,7 @@ class Study():
         name="base",
 
         batch_size=32, 
+        bert_path=BERT_PATH,
         data_dir=DATA_DIR,
         debug = False, 
         epochs = 50,
@@ -41,6 +43,7 @@ class Study():
         **kwargs
     ):
         self.batch_size = batch_size
+        self.bert_path = bert_path
         self.data_dir = data_dir
         self.debug = debug
         self.epochs = epochs
@@ -106,12 +109,14 @@ class Study():
         # load train/dev/test data so every build has complete result set
         self.logger.info("Loading datasets..")
         self.train_dataset = Norec(
+            bert_path=self.bert_path,
             data_dir=self.data_dir,
             partition="train/", 
             ignore_id=self.ignore_id,
             proportion=self.proportion,
         )
         self.test_dataset = Norec(
+            bert_path=self.bert_path,
             data_dir=self.data_dir,
             partition="test/", 
             ignore_id=self.ignore_id,
@@ -119,6 +124,7 @@ class Study():
             tokenizer=self.train_dataset.tokenizer,
         )
         self.dev_dataset = Norec(
+            bert_path=self.bert_path,
             data_dir=self.data_dir,
             partition="dev/", 
             ignore_id=self.ignore_id,
