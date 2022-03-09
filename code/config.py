@@ -4,8 +4,12 @@ import datetime
 import torch
 
 # TODO download from git automagically
-BERT_PATH = "ltgoslo/norbert"
-DATA_DIR = "/fp/homes01/u01/ec-pmhalvor/data/norec_fine/"  # TODO hide personal info
+# BERT_PATH = "ltgoslo/norbert"
+# DATA_DIR = "/fp/homes01/u01/ec-pmhalvor/data/norec_fine/"  # TODO hide personal info
+
+BERT_PATH = "bert-base-uncased"
+DATA_DIR = "/fp/homes01/u01/ec-pmhalvor/nlp/msc/racl/data/res14"
+
 default_parameters = {
         "debug": False,
         "epochs": 50,
