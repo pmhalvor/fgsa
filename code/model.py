@@ -1040,7 +1040,7 @@ class IMN(BertHead):
             values =  torch.mul(
                 polarity_output.permute(1, 0, 2), # embedding, batch, sequence
                 bi_probs,
-            ).permute(2, 1, 0)  # sequence, batch, embedding
+            ).permute(2, 1, 0).to(torch.device(self.device))  # sequence, batch, embedding
 
             polarity_output = polarity_output.permute(2, 0, 1)  # sequence, batch, embedding
             # print(attn_mask.shape)
