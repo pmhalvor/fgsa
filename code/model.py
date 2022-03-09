@@ -452,11 +452,11 @@ class BertHead(torch.nn.Module):
                 input=output[task].to(torch.device(self.device)),
                 target=true[task].to(torch.device(self.device))
             )
-            for task in self.subtasks
+            for task in self.optimizers
         }
 
         # calculate gradients for parameters used per task
-        for task in self.subtasks:
+        for task in self.optimizers:
             self.losses[task].backward(retain_graph=True)  # retain_graph needed to update bert for all tasks
 
         # TODO should there be bert optimizer alone, 
@@ -464,7 +464,7 @@ class BertHead(torch.nn.Module):
         # in addition to task specific optimizers
 
         # update weights from the model by calling optimizer.step()
-        for task in self.subtasks:
+        for task in self.optimizers:
             self.optimizers[task].step()
 
         return self.losses
