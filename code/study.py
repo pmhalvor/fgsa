@@ -31,23 +31,12 @@ class Study():
         ignore_id = -1,
         load_checkpoint = False,
 
-        learning_rate = 1e-7,
-        lrs = None,
-
         metric = "easy",
 
         model_name = "FgsaLSTM",
         model_path = None,
         proportion = 1.,
         shuffle = True,
-        subtasks = [
-           "expression",
-           "holder",
-            "polarity",
-            "target", 
-        ],
-
-        loss_function = "cross-entropy",
 
         verbose = False,
         **kwargs
@@ -73,7 +62,6 @@ class Study():
 
         self.proportion = proportion
         self.shuffle = shuffle
-        self.subtasks = subtasks
 
         self.name = name
         self.build_name()
