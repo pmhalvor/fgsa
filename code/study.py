@@ -50,8 +50,6 @@ class Study():
         self.kwargs = kwargs
         self.load_checkpoint = load_checkpoint
         
-        self.learning_rate = learning_rate
-        self.lrs = lrs
 
         self.loss_function = loss_function
 
