@@ -789,9 +789,9 @@ class IMN(BertHead):
         shared_layers (int, default=2)
         target_layers (int, default=2)
     """
-    def __init__(self, **kwargs):
-        # overwrite class default for subtasks
-        kwargs["subtasks"] = ["target", "expression", "polarity"]
+    def __init__(self, subtasks = ["target", "expression", "polarity"], **kwargs):
+        # overwrite BertHead class default for subtasks
+        kwargs["subtasks"] = subtasks
         super(IMN, self).__init__(**kwargs)
 
 
@@ -972,9 +972,6 @@ class IMN(BertHead):
 
         input_ids = batch[0].to(torch.device(self.device))
         mask = batch[1].to(torch.device(self.device))
-
-        # polarity attention: (batch, sequence, embedding)
-        attn_mask = mask.unsqueeze(-1).expand([mask.size(0), mask.size(1), mask.size(1)])
 
         # NOTE: Development now focused on maintaining sequence size
         # and expanding/re-encoding embedding size 
