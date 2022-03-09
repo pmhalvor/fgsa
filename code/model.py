@@ -955,8 +955,8 @@ class IMN(BertHead):
         components["shared"].update({
             "re_encode": torch.nn.Sequential(
                 torch.nn.Linear(
-                    # sentence_output:cnn_dim + target_output:3 + expression_output:3 + polarity_output:3
-                    in_features=int(cnn_dim + 3 + 3 + 3),  
+                    # sentence_output:cnn_dim + target_output:3 + expression_output:3 + polarity_output:5
+                    in_features=int(cnn_dim + 3 + 3 + 5),  
                     out_features=cnn_dim,
                 ),
                 torch.nn.ReLU()
