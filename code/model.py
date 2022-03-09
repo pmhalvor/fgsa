@@ -989,7 +989,7 @@ class IMN(BertHead):
                 attention_mask = mask,
             ).last_hidden_state
         except Exception as e:
-            print("input_ids {}".format(input_ids))
+            print("input_ids {}".format(input_ids.max().item()))
             raise e
         word_embeddings = self.bert_dropout(word_embeddings)
 
