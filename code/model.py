@@ -308,6 +308,7 @@ class BertHead(torch.nn.Module):
 
         """
         super().__init__()
+        print("main init called")
 
         self.device = device
         self.dropout = dropout  # TODO potentially refactor name?
@@ -452,11 +453,11 @@ class BertHead(torch.nn.Module):
                 input=output[task].to(torch.device(self.device)),
                 target=true[task].to(torch.device(self.device))
             )
-            for task in self.optimizers
+            for task in self.subtasks
         }
 
         # calculate gradients for parameters used per task
-        for task in self.optimizers:
+        for task in self.subtasks:
             self.losses[task].backward(retain_graph=True)  # retain_graph needed to update bert for all tasks
 
         # TODO should there be bert optimizer alone, 
@@ -650,13 +651,19 @@ class BertHead(torch.nn.Module):
             for task in self.subtasks
         }
         
-        for task in self.components:  # TODO make sure in self.components in others
+        for task in self.subtasks:  # TODO make sure in self.components in others
             lr = task_lrs[task] if task_lrs.get(task) is not None else self.learning_rate
             opt = torch.optim.Adam(
                     self.bert.parameters(),  # NOTE all tasks can optimize bert params if need
                     lr=self.learning_rate  # use main learning rate for bert training
             ) # TODO test other optimizers?
             optimizers[task] = opt
+
+            if self.components.get("shared") is not None:
+                for layer in self.components["shared"]:
+                    optimizers[task].add_param_group(
+                        {"params": self.components["shared"][layer].parameters(), "lr":lr}
+                    )
 
             for layer in self.components[task]:
                 optimizers[task].add_param_group(
@@ -775,6 +782,10 @@ class IMN(BertHead):
         shared_layers (int, default=2)
         target_layers (int, default=2)
     """
+    def __init__(self, **kwargs):
+        # overwrite class default for subtasks
+        super(IMN, self).__init__(subtasks = ["target", "expression", "polarity"], **kwargs)
+
 
     def init_components(self, subtasks):
         """
@@ -1014,9 +1025,9 @@ class IMN(BertHead):
 
             target_output = torch.cat((word_embeddings, target_output), dim=1)  # cat embedding dim
             ### target_output.shape = [batch, sequence, embedding]
-            target_output = target_output.permute(0, 2, 1)
+            target_output = target_output.permute(0, 2, 1)  # batch, sequence, embedding
             target_output = self.components["target"]["linear"](target_output)
-            self.output["target"] = target_output
+            self.output["target"] = target_output.permute(0, 2, 1)  # batch, labels, sequence
 
 
             ### Subtask: expression
@@ -1026,7 +1037,7 @@ class IMN(BertHead):
             expression_output = torch.cat((word_embeddings, expression_output), dim=1)  # cat embedding dim
             expression_output = expression_output.permute(0, 2, 1)  # batch, sequence, embedding
             expression_output = self.components["expression"]["linear"](expression_output)
-            self.output["expression"] = expression_output
+            self.output["expression"] = expression_output.permute(0, 2, 1)  # batch, labels, sequence
 
 
             ### Subtask: polarity
@@ -1044,7 +1055,6 @@ class IMN(BertHead):
             ).permute(2, 1, 0)  # sequence, batch, embedding
 
             polarity_output = polarity_output.permute(2, 0, 1)  # sequence, batch, embedding
-            # print(attn_mask.shape)
             polarity_output, _ = self.components["polarity"]["attention"](
                 polarity_output,  # query, i.e. polar cnn output w/ weights
                 polarity_output,  # keys, i.e. (polar cnn output).T for self attention
@@ -1056,24 +1066,23 @@ class IMN(BertHead):
 
             # NOTE: concat w/ initial_shared_features not word_embeddings like in target
             polarity_output = torch.cat((initial_shared_features, polarity_output), dim=1)  # cat embedding dim
-            polarity_output = polarity_output.permute(0, 2, 1)
+            polarity_output = polarity_output.permute(0, 2, 1)  # batch, sequence, embedding
             polarity_output = self.components["polarity"]["linear"](polarity_output)
-            self.output["polarity"] = polarity_output
+            self.output["polarity"] = polarity_output.permute(0, 2, 1)  # batch, labels, sequence
 
             # update sentence_output for next iteration
             sentence_output = torch.cat(
                 (
-                    sentence_output.permute(0, 2, 1), 
+                    sentence_output,            # batch, embedding, sequence
                     self.output['target'], 
                     self.output['expression'], 
                     self.output["polarity"],
                 ),
-                dim=2
-            )
+                dim=1
+            ).permute(0, 2, 1)  # batch, sequence, embedding
 
             # re-encode embedding dim to expected cnn dimension
-            sentence_output = self.components["shared"]["re_encode"](sentence_output).permute(0, 2, 1) # gimme an error!
-            # print("Iteration complete: {}".format(sentence_output.shape))
+            sentence_output = self.components["shared"]["re_encode"](sentence_output).permute(0, 2, 1)  # batch, embedding, sequence
 
         return self.output
 
