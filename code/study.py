@@ -199,9 +199,9 @@ class Study():
             model = FgsaLSTM
         elif model_name.lower() == "berthead":
             model = BertHead
-        elif if model_name.lower() == "imn":
+        elif model_name.lower() == "imn":
           model = IMN
-        # elif if model_name.lower() == "next":
+        # elif model_name.lower() == "next":
         #   model = Next
 
         return model
