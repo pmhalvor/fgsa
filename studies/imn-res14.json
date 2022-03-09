@@ -1,0 +1,15 @@
+{
+    "name": "imn-res14",
+    "bert_path": "bert-base-uncased",
+    "data_dir": "/fp/homes01/u01/ec-pmhalvor/nlp/msc/racl/data/res14/",
+    
+    "model_name": "imn",
+    "cnn_dim": 700,
+    "dropout": 0.3,
+    "shared_layers": 2,
+    "target_layers": 2,
+    "polarity_layers": 1,
+    "expression_layers": 2,
+    "interactions": 2,
+    "epochs": [1, 50]
+}
