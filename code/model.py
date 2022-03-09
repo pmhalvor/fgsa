@@ -951,7 +951,10 @@ class IMN(BertHead):
         target_layers = self.find("target_layers", default=2)
 
         input_ids = batch[0].to(torch.device(self.device))
-        attention_mask = batch[1].to(torch.device(self.device))
+        mask = batch[1].to(torch.device(self.device))
+
+        # polarity attention: (batch, sequence, embedding)
+        attn_mask = mask.unsqueeze(-1).expand([mask.size(0), mask.size(1), mask.size(1)])
 
         # NOTE: Development now focused on maintaining sequence size
         # and expanding/re-encoding embedding size 
@@ -961,7 +964,7 @@ class IMN(BertHead):
         #########################################
         word_embeddings = self.bert(
             input_ids = input_ids,
-            attention_mask = attention_mask,
+            attention_mask = mask,
         ).last_hidden_state
         word_embeddings = self.bert_dropout(word_embeddings)
 
@@ -993,8 +996,8 @@ class IMN(BertHead):
 
         # only the information learned from shared cnn(s), no embeddings
         initial_shared_features = sentence_output  # TODO detach and/or clone?    
-        print("forward: after shared: word_embeddings.shape={}".format(word_embeddings.shape))
-        print("forward: after shared: sentence_output.shape={}".format(sentence_output.shape))
+        # print("forward: after shared: word_embeddings.shape={}".format(word_embeddings.shape))
+        # print("forward: after shared: sentence_output.shape={}".format(sentence_output.shape))
 
         #######################################
         # Task-specific layers
@@ -1040,11 +1043,13 @@ class IMN(BertHead):
             ).permute(2, 1, 0)  # sequence, batch, embedding
 
             polarity_output = polarity_output.permute(2, 0, 1)  # sequence, batch, embedding
+            # print(attn_mask.shape)
             polarity_output, _ = self.components["polarity"]["attention"](
                 polarity_output,  # query, i.e. polar cnn output w/ weights
                 polarity_output,  # keys, i.e. (polar cnn output).T for self attention
                 values,  # values include probabilities for B and I tags
-                need_weights=False
+                need_weights=False,
+                # TODO: implement attention mask?
             )
             polarity_output = polarity_output.permute(1, 2, 0)  # batch, embedding, sequence
 
@@ -1067,9 +1072,7 @@ class IMN(BertHead):
 
             # re-encode embedding dim to expected cnn dimension
             sentence_output = self.components["shared"]["re_encode"](sentence_output).permute(0, 2, 1) # gimme an error!
-            print("Iteration complete: {}".format(sentence_output.shape))
-
-            # raise NotImplementedError # dense() to re-encode the sentence_output
+            # print("Iteration complete: {}".format(sentence_output.shape))
 
         return self.output
 

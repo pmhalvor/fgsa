@@ -9,7 +9,7 @@ from config import DATA_DIR
 from config import default_parameters
 from config import log_template
 from dataset import Norec 
-from model import FgsaLSTM
+from model import *
 from utils import pad
 
 
@@ -199,6 +199,8 @@ class Study():
             model = FgsaLSTM
         elif model_name.lower() == "berthead":
             model = BertHead
+        elif if model_name.lower() == "imn":
+          model = IMN
         # elif if model_name.lower() == "next":
         #   model = Next
 

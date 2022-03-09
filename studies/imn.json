@@ -1,0 +1,7 @@
+{
+    "cnn_dim": 300,
+    "shared_layers": 2,
+    "target_layers": 2,
+    "polarity_layers": 2,
+    "expression_layers": 2
+}
