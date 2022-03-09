@@ -125,7 +125,7 @@ def score(true_aspect, predict_aspect, true_sentiment, predict_sentiment, train_
         # sentiment distribution in original data
         total_count = {'pos':0, 'neg':0, 'neu':0}
 
-        polarity_map = {1: 'pos', 2: 'neg', 3: 'neu'}
+        polarity_map = {1: 'pos', 2: 'neg', 3: 'neu', 4: 'neu'}
 
         # count of predicted conflict aspect term
         predicted_conf = 0
