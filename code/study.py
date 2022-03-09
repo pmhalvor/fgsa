@@ -298,3 +298,5 @@ if __name__ == "__main__":
                 
                 params[param] = best_hyper
                 print("Best results for {m} metric: {p}={h}".format(m=study.metric, p=param, h=best_hyper))
+    
+        print("Final params after study:\n{}".format(params))
