@@ -784,7 +784,8 @@ class IMN(BertHead):
     """
     def __init__(self, **kwargs):
         # overwrite class default for subtasks
-        super(IMN, self).__init__(subtasks = ["target", "expression", "polarity"], **kwargs)
+        kwargs["subtasks"] = ["target", "expression", "polarity"]
+        super(IMN, self).__init__(**kwargs)
 
 
     def init_components(self, subtasks):
