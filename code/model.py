@@ -983,10 +983,14 @@ class IMN(BertHead):
         #########################################
         # Shared word embedding layer 
         #########################################
-        word_embeddings = self.bert(
-            input_ids = input_ids,
-            attention_mask = mask,
-        ).last_hidden_state
+        try:
+            word_embeddings = self.bert(
+                input_ids = input_ids,
+                attention_mask = mask,
+            ).last_hidden_state
+        except Exception as e:
+            print("input_ids {}".format(input_ids))
+            raise e
         word_embeddings = self.bert_dropout(word_embeddings)
 
         # NOTE permute so shape is [32, 768, 42] into cnn
