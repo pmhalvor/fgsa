@@ -50,9 +50,6 @@ class Study():
         self.kwargs = kwargs
         self.load_checkpoint = load_checkpoint
         
-
-        self.loss_function = loss_function
-
         self.metric = metric
 
         self.model_name = model_name
