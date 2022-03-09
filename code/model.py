@@ -892,16 +892,24 @@ class IMN(BertHead):
         # Task-specific output layers
         #######################################
         components["target"].update({
-            "linear": torch.nn.Linear(
-                in_features=int(768+(shared_layers+1)*cnn_dim),  # bert:768 + shared_cnn:(300 + 300) + target_cnn:300
-                out_features=3
+            "linear": torch.nn.Sequential(
+                torch.nn.Dropout(self.dropout),
+                torch.nn.Linear(
+                    in_features=int(768+(shared_layers+1)*cnn_dim),  # bert:768 + shared_cnn:(300 + 300) + target_cnn:300
+                    out_features=3
+                ), 
+                torch.nn.Softmax(dim=-1)
             ).to(torch.device(self.device))
         })
 
         components["expression"].update({
-            "linear": torch.nn.Linear(
-                in_features=int(768+(shared_layers+1)*cnn_dim), # bert:768 + shared_cnn:(300 + 300) + expression_cnn:300
-                out_features=3
+            "linear": torch.nn.Sequential(
+                torch.nn.Dropout(self.dropout),
+                torch.nn.Linear(
+                    in_features=int(768+(shared_layers+1)*cnn_dim), # bert:768 + shared_cnn:(300 + 300) + expression_cnn:300
+                    out_features=3
+                ), 
+                torch.nn.Softmax(dim=-1)
             ).to(torch.device(self.device))
         })
 
@@ -910,9 +918,13 @@ class IMN(BertHead):
             "attention": torch.nn.MultiheadAttention(cnn_dim, num_heads=1)
         })
         components["polarity"].update({
-            "linear": torch.nn.Linear(
-                in_features=int(2*cnn_dim), # initial_shared_features:300 + polarity_cnn:300
-                out_features=3
+            "linear": torch.nn.Sequential(
+                torch.nn.Dropout(self.dropout),
+                torch.nn.Linear(
+                    in_features=int(2*cnn_dim), # initial_shared_features:300 + polarity_cnn:300
+                    out_features=3
+                ), 
+                torch.nn.Softmax(dim=-1)
             ).to(torch.device(self.device))
         })
 
@@ -997,92 +1009,69 @@ class IMN(BertHead):
                 target_output = self.components["target"]["cnn_sequential"](target_output)
 
             target_output = torch.cat((word_embeddings, target_output), dim=1)  # cat embedding dim
-            target_output = self.components["shared"]["dropout"](target_output)
             ### target_output.shape = [batch, sequence, embedding]
-            print("forward: before target linear: target_output.shape={}".format(target_output.shape))
-            self.output["target"] = softmax(self.components["target"]["linear"](target_output.permute(0, 2, 1)))
-            print("forward: after target:         target_output.shape={}".format(target_output.shape))
-            print("forward: after target: self.output['target'].shape={}".format(self.output['target'].shape))
-            # TODO need a softmax here, right?
+            target_output = target_output.permute(0, 2, 1)
+            target_output = self.components["target"]["linear"](target_output)
+            self.output["target"] = target_output
+
 
             ### Subtask: expression
             expression_output = sentence_output
             if expression_layers > 0:
                 expression_output = self.components["expression"]["cnn_sequential"](expression_output)
             expression_output = torch.cat((word_embeddings, expression_output), dim=1)  # cat embedding dim
-            expression_output = self.components["shared"]["dropout"](expression_output)
             expression_output = expression_output.permute(0, 2, 1)  # batch, sequence, embedding
             expression_output = self.components["expression"]["linear"](expression_output)
-            self.output["expression"] = softmax(expression_output)
-            # TODO need a softmax here, right?
+            self.output["expression"] = expression_output
+
 
             ### Subtask: polarity
             polarity_output = sentence_output
-            print("Before anything polarity: {}".format(polarity_output.shape))
 
             if polarity_layers > 0:
                 polarity_output = self.components["polarity"]["cnn_sequential"](polarity_output)
-                print("After cnn: {}".format(polarity_output.shape))
 
-            # add information from previous subtasks
-            # target: batch, sequence, embedding
-            # express: batch, sequence, embedding
-            # polarity: batch, embedding, sequence
-            bi_probs = (self.output["target"][:,:,1:].sum(dim=-1) + self.output["expression"][:,:,1:].sum(dim=-1))/2.
+            # predicted prob of B or I in target and expression outputs
+            bi_probs = (target_output[:,:,1:].sum(dim=-1) + expression_output[:,:,1:].sum(dim=-1))/2.
             bi_probs = bi_probs[:,:polarity_output.size(2)]
-            print("polarity: {}".format(polarity_output.shape))
-            print("bi_probs: {}".format(bi_probs.shape))
             values =  torch.mul(
-                polarity_output.permute(1, 0, 2), 
+                polarity_output.permute(1, 0, 2), # embedding, batch, sequence
                 bi_probs,
             ).permute(2, 1, 0)  # sequence, batch, embedding
 
             polarity_output = polarity_output.permute(2, 0, 1)  # sequence, batch, embedding
-            print("Before attention: polarity {}".format(polarity_output.shape))
-            print("Before attention: values {}".format(values.shape))
             polarity_output, _ = self.components["polarity"]["attention"](
                 polarity_output,  # query, i.e. polar cnn output w/ weights
                 polarity_output,  # keys, i.e. (polar cnn output).T for self attention
-                values,  # values should include probabilities for B and I tags
+                values,  # values include probabilities for B and I tags
                 need_weights=False
             )
-            print("After attention: {}".format(polarity_output.shape))
             polarity_output = polarity_output.permute(1, 2, 0)  # batch, embedding, sequence
-            print("After permute: {}".format(polarity_output.shape))
 
-            print("Before concat: shared feat {}".format(initial_shared_features.shape))
-            print("Before concat: polarity {}".format(polarity_output.shape))
             # NOTE: concat w/ initial_shared_features not word_embeddings like in target
             polarity_output = torch.cat((initial_shared_features, polarity_output), dim=1)  # cat embedding dim
-            print("After concat: polarity {}".format(polarity_output.shape))
-            polarity_output = self.components["shared"]["dropout"](polarity_output)
-            print("Before linear: polarity {}".format(polarity_output.shape))
-            self.output["polarity"] = softmax(self.components["polarity"]["linear"](polarity_output.permute(0, 2, 1)))
-            # TODO need a softmax here, right?
+            polarity_output = polarity_output.permute(0, 2, 1)
+            polarity_output = self.components["polarity"]["linear"](polarity_output)
+            self.output["polarity"] = polarity_output
 
-
-            print("output['polarity']: {}".format(self.output["polarity"].shape))       # torch.Size([32, 42, 3])
-            print("output['target']: {}".format(self.output['target'].shape))           # torch.Size([32, 42, 3])
-            print("output['expression']: {}".format(self.output['expression'].shape))   # torch.Size([32, 42, 3])
-            print("sentence_output: {}".format(sentence_output.shape))                  # torch.Size([32, 300, 42])
             # update sentence_output for next iteration
             sentence_output = torch.cat(
                 (
                     sentence_output.permute(0, 2, 1), 
                     self.output['target'], 
-                    self.output['expression'],#.permute(0, 2, 1), 
-                    self.output["polarity"],#.permute(0, 2, 1)
+                    self.output['expression'], 
+                    self.output["polarity"],
                 ),
                 dim=2
             )
 
-            # a re-encoder here tells me that embedding dim will be changeed through this process
+            # re-encode embedding dim to expected cnn dimension
             sentence_output = self.components["shared"]["re_encode"](sentence_output).permute(0, 2, 1) # gimme an error!
             print("Iteration complete: {}".format(sentence_output.shape))
 
-            raise NotImplementedError # dense() to re-encode the sentence_output
+            # raise NotImplementedError # dense() to re-encode the sentence_output
 
-        return output
+        return self.output
 
 
 class RACL(BertHead):
