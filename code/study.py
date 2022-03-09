@@ -23,7 +23,6 @@ class Study():
         self, 
         name="base",
 
-        bert_finetune=False,
         batch_size=32, 
         data_dir=DATA_DIR,
         debug = False, 
@@ -41,7 +40,6 @@ class Study():
         verbose = False,
         **kwargs
     ):
-        self.bert_finetune = bert_finetune
         self.batch_size = batch_size
         self.data_dir = data_dir
         self.debug = debug
@@ -191,15 +189,10 @@ class Study():
 
     def params(self):
         params = {
-            "bert_finetune": self.bert_finetune,
             "debug": self.debug,
             "device": self.device,
             "epochs": self.epochs,
             "ignore_id": self.ignore_id, 
-            "learning_rate": self.learning_rate,
-            "lrs": self.lrs,
-            "loss_function": self.loss_function,
-            "subtasks": self.subtasks,
         }
         params.update(self.kwargs)
 
