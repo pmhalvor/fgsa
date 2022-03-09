@@ -454,9 +454,9 @@ class BertHead(torch.nn.Module):
             "target": batch[5],
         }
 
-        for task in self.subtasks:
-            print(task, output[task].shape, true[task].shape)
-            logging.info(task, output[task].shape, true[task].shape)
+        # for task in self.subtasks:
+        #     print(task, output[task].shape, true[task].shape)
+        #     logging.info(task, output[task].shape, true[task].shape)
 
         # calcaulate losses per task
         self.losses = {
