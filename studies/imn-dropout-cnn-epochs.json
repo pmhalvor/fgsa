@@ -1,12 +1,12 @@
 {
-    "name": "imn",
+    "name": "imn-dropout-cnn-epochs",
     "model_name": "imn",
-    "cnn_dim": 700,
-    "dropout": 0.5,
+    "cnn_dim": [100, 300, 700],
+    "dropout": [0.3, 0.5],
     "shared_layers": 2,
     "target_layers": 2,
     "polarity_layers": 1,
     "expression_layers": 2,
     "interactions": 2,
-    "epochs": [1, 50]
+    "epochs": [10, 50]
 }
