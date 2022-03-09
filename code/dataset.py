@@ -51,7 +51,7 @@ class Norec(Dataset):
     ):
         self.tokenizer = self.get_tokenizer(bert_path, tokenizer)
         self.IGNORE_ID = ignore_id  # FIXME get form BertTokenizer, idk if this is FIXME is needed
-        self.unk_token = self.tokenizer.unk_token
+        self.unk_id = self.tokenizer._convert_token_to_id(self.tokenizer.unk_token)
         self.partition = partition
 
         # parse raw data
@@ -130,7 +130,7 @@ class Norec(Dataset):
 
         except FileNotFoundError:
             logging.warning("holder.txt not found at path {}. Generating blank list...".format(data_path))
-            holder = [[self.unk_token for _ in line] for line in target]  # FIXME replace with UNK for bert, or mask?
+            holder = [[self.unk_id for _ in line] for line in target]  # FIXME replace with UNK for bert, or mask?
 
         return (expression, holder, polarity, sentence, target)
 
