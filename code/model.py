@@ -287,7 +287,6 @@ class BertHead(torch.nn.Module):
     def __init__(
         self, 
         bert_finetune=True,         # TODO tune
-        bert_lr=1e-6,               # TODO tune
         bert_path="ltgoslo/norbert",  
         device="cpu",
         dropout=0.1,                # TODO tune
