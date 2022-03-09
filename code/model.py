@@ -943,7 +943,7 @@ class IMN(BertHead):
                 torch.nn.Dropout(self.dropout),
                 torch.nn.Linear(
                     in_features=int(2*cnn_dim), # initial_shared_features:300 + polarity_cnn:300
-                    out_features=3
+                    out_features=5  # NOTE: SemEval data has neutral and confusing polarities
                 ), 
                 torch.nn.Softmax(dim=-1)
             ).to(torch.device(self.device))
