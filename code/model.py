@@ -401,7 +401,7 @@ class BertHead(torch.nn.Module):
 
             for b, batch in enumerate(train_loader):
                 self.train()        # turn off eval mode
-                self.zero_grad()    # clear updates from prev epoch
+                # self.zero_grad()    # clear updates from prev epoch
 
                 # feed batch to model
                 output = self.forward(batch)
@@ -453,12 +453,7 @@ class BertHead(torch.nn.Module):
 
         # calculate gradients for parameters used per task
         for task in self.subtasks:
-            print(task)
-            print(self.losses[task])
             self.losses[task].backward(retain_graph=True)  # retain_graph needed to update shared tasks
-            print(self.losses[task])
-
-        quit()
 
         # TODO should there be bert optimizer alone, 
         # if so needs to be updated for each task 
