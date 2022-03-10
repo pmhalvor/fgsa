@@ -32,7 +32,7 @@ class Study():
         ignore_id = -1,
         load_checkpoint = False,
 
-        metric = "easy",
+        metric = "span",
 
         model_name = "FgsaLSTM",
         model_path = None,
@@ -210,7 +210,7 @@ class Study():
         params["tokenizer"] = self.train_dataset.tokenizer
         return params
 
-    def fit(self):
+    def fit(self, metric=None):
         """ 
         scikit-learn like fit() call for use in pipelines and gridsearches.
 
@@ -222,6 +222,8 @@ class Study():
             dev_loader=self.dev_loader, 
             epochs=self.epochs
         )
+        self.score(metric)
+        
 
     def score(self, metric=None):
         """
@@ -231,30 +233,28 @@ class Study():
             metric (str): ["easy", "hard", "strict", "binary", "proportional"]
         """
         self.logger.info('Scoring model...')
-        absa_f1, easy_f1, hard_f1 = self.model.evaluate(self.dev_loader, verbose=self.verbose)
-
-        self.logger.info("ABSA F1: {}".format(absa_f1))
-        self.logger.info("Easy F1: {}".format(easy_f1))
-        self.logger.info("Hard F1: {}".format(hard_f1))
+        absa, binary, hard, macro, proportional, span = self.model.evaluate(self.dev_loader, verbose=self.verbose)
 
         if metric is None:
             metric = self.metric 
+
         self.final = None
-        if metric == "easy":
-            self.final = easy_f1
+        if metric == "absa":
+            self.final = absa
+        elif metric == "binary":
+            self.final = binary
         elif metric == "hard":
-            self.final = hard_f1
+            self.final = hard
+        elif metric == "macro":
+            self.final = macro
+        elif metric == "proportional":
+            self.final = proportional
+        elif metric == "span":
+            self.final = span
         elif metric == "strict":
             self.final = absa_f1
-        elif metric == "binary":
-            raise NotImplementedError
-            binary = None
-            self.final = binary
-        elif metric == "proportional":
-            raise NotImplementedError
-            proportional = None
-            self.final = proportional
 
+        self.logger.info('Metric:{}  Score:{}'.format(metric, self.final))
         return self.final
 
     def save_model(self):

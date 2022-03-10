@@ -10,8 +10,11 @@ from transformers import BertModel  # TODO next step, Bert as head
 
 ## Local imports
 from loss import DiceLoss
+from utils import binary_f1
+from utils import proportional_f1
 from utils import score
-from utils import ez_score
+from utils import span_f1
+from utils import weighted_macro
 
 
 class BertSimple(torch.nn.Module):
@@ -307,7 +310,6 @@ class BertHead(torch.nn.Module):
 
         """
         super().__init__()
-        print("main init called")
 
         self.device = device
         self.dropout = dropout  # TODO potentially refactor name?
@@ -367,15 +369,9 @@ class BertHead(torch.nn.Module):
             loss (torch.SomeLoss or None): either CrossEntropyLoss, MSELoss, or home-made IoULoss
         """
         loss = None
-        weight = torch.tensor(loss_weight)
         
         if loss_function is None:
-            weight = torch.tensor[1, loss_weight, loss_weight]
             loss = torch.nn.CrossEntropyLoss(ignore_index=self.ignore_id)
-
-        elif False and weight is not None:
-            # BUG: on weight tensor size, not needed for now
-            loss = torch.nn.CrossEntropyLoss(ignore_index=self.ignore_id, weight=weight)
 
         elif "cross" in loss_function.lower():
             loss = torch.nn.CrossEntropyLoss(ignore_index=self.ignore_id)
@@ -485,11 +481,25 @@ class BertHead(torch.nn.Module):
         Returns overall binary and proportional F1 scores for predictions on the
         development data via loader, while logging task-wise scores along the way.
 
+        F1 variants:
+            ABSA: overall F1 score as measured by IMN and RACL
+            Binary: binary over F1 looking only for an overlap of correctly estimated labels
+            Hard: averaged task wise F1 as measured by IMN and RACL
+            Macro: averaged task wise f1_score from sklearn using param average='weights'
+            Proportional: token wise f1_score from sklearn using param average='micro'
+            Span: 'nicer' version of scope checking similar to RACL and IMN metrics TODO rewrite
+
         Parameters:
             loader (torch.DataLoader): 
+
+        Return:
+            absa_overall, binary_overall, hard_overall, macro_overall, proportional_overall, span_overall
         """
         absa_total_over_batches = 0  # f_absa from score() used in RACL experiment across batches
-        easy_total_over_batches = 0  # avg of easy task-wise f1-scores across batches
+        binary_total_over_batches = 0  # avg of easy task-wise f1-scores across batches
+        macro_total_over_batches = 0  # avg of easy task-wise f1-scores across batches
+        proportional_total_over_batches = 0  # avg of easy task-wise f1-scores across batches
+        span_total_over_batches = 0  # avg of easy task-wise f1-scores across batches
         hard_total_over_batches = 0  # avg of hard task-wise f1-scores across batches
 
 
@@ -550,31 +560,60 @@ class BertHead(torch.nn.Module):
 
                 logging.debug("{:10} hard: {}".format("holder", f_holder))
 
-            ### easy score
+            ### binary overlap, proportional f1, span f1, and weighted macro f1 (sklearn)
+            binary = {}
+            proportional = {}
+            span = {}
+            macro = {}
             easy = {}
             for task in self.subtasks: 
-                ez = ez_score(true[task], predictions[task], num_labels=3)
-                easy[task] = ez
-                logging.debug("{task:10} easy: {score}".format(task=task, score=ez))
+                b = binary_f1(true[task], predictions[task])
+                p = proportional_f1(true[task], predictions[task], num_labels=3)
+                s = span_f1(true[task], predictions[task])
+                m = weighted_macro(true[task], predictions[task], num_labels=3)
+                binary[task] = b
+                proportional[task] = p
+                span[task] = s
+                macro[task] = m
+                logging.debug("{task:10}       binary: {score}".format(task=task, score=b))
+                logging.debug("{task:10} proportional: {score}".format(task=task, score=p))
+                logging.debug("{task:10}         span: {score}".format(task=task, score=s))
+                logging.debug("{task:10}        macro: {score}".format(task=task, score=m))
+
 
             # to find average f1 over entire dev set
             absa_total_over_batches += f_absa
-            easy_total_over_batches += (sum([easy[task] for task in self.subtasks])/len(self.subtasks))
+            binary_total_over_batches += (sum([binary[task] for task in self.subtasks])/len(self.subtasks))
+            proportional_total_over_batches += (sum([proportional[task] for task in self.subtasks])/len(self.subtasks))
+            span_total_over_batches += (sum([span[task] for task in self.subtasks])/len(self.subtasks))
+            macro_total_over_batches += (sum([macro[task] for task in self.subtasks])/len(self.subtasks))
             hard_total_over_batches += (sum([hard[task] for task in self.subtasks])/len(self.subtasks))
 
         absa_overall = absa_total_over_batches/len(loader)
-        easy_overall = easy_total_over_batches/len(loader)
+        binary_overall = binary_total_over_batches/len(loader)
+        proportional_overall = proportional_total_over_batches/len(loader)
+        span_overall = span_total_over_batches/len(loader)
+        macro_overall = macro_total_over_batches/len(loader)
         hard_overall = hard_total_over_batches/len(loader)
 
-        logging.info("ABSA overall: {absa}".format(absa=absa_overall))
-        logging.info("Easy overall: {easy}".format(easy=easy_overall))
-        logging.info("Hard overall: {hard}".format(hard=hard_overall))
-        
-        print("ABSA overall: {absa}".format(absa=absa_overall))
-        print("Easy overall: {easy}".format(easy=easy_overall))
-        print("Hard overall: {hard}".format(hard=hard_overall))
+        logging.info(" (RACL) ABSA overall: {absa}".format(absa=absa_overall))
+        logging.info(" (RACL) Hard overall: {hard}".format(hard=hard_overall))
 
-        return absa_overall, easy_overall, hard_overall
+        logging.info("      Binary overall: {binary}".format(binary=binary_overall))
+        logging.info("Proportional overall: {proportional}".format(proportional=proportional_overall))
+        logging.info("        Span overall: {span}".format(span=span_overall))
+        logging.info("       Macro overall: {macro}".format(macro=macro_overall))
+        
+        print(" (RACL) ABSA overall: {absa}".format(absa=absa_overall))
+        print(" (RACL) Hard overall: {hard}".format(hard=hard_overall))
+
+        print("      Binary overall: {binary}".format(binary=binary_overall))
+        print("Proportional overall: {proportional}".format(proportional=proportional_overall))
+        print("        Span overall: {span}".format(span=span_overall))
+        print("       Macro overall: {macro}".format(macro=macro_overall))
+        
+
+        return absa_overall, binary_overall, hard_overall, macro_overall, proportional_overall, span_overall
 
     def predict(self, batch):
         """
@@ -1098,6 +1137,14 @@ class IMN(BertHead):
 
         return self.output
 
+
+    def get_weighted_values(self, output):
+        """
+        Calculations for values for polarity attention.
+        First few epochs guide attention values according to true labels for target and expression.
+        See imn/code/my_layers.py:Self_attention().call() for more. 
+        """
+        return None
 
 class RACL(BertHead):
 
