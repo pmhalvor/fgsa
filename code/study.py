@@ -216,6 +216,7 @@ class Study():
 
         TODO learn if you need to feed data in through grid search.
         """  
+        self.check_devices()
         self.logger.info('Fitting model...')
         self.model.fit(
             train_loader=self.train_loader, 
@@ -223,7 +224,13 @@ class Study():
             epochs=self.epochs
         )
         self.score(metric)
+
+    def check_devices(self):
+        for param in self.model.parameters():
+            print(param.shape, param.device)
         
+        quit()
+
 
     def score(self, metric=None):
         """

@@ -329,14 +329,10 @@ class BertHead(torch.nn.Module):
         self.unpack_lrs()
 
         # initialize bert head
-        self.bert = BertModel.from_pretrained(bert_path)
+        self.bert = BertModel.from_pretrained(bert_path).to(torch.device(self.device))
         self.bert.requires_grad = self.finetune
-        self.bert_dropout = torch.nn.Dropout(self.dropout)
+        self.bert_dropout = torch.nn.Dropout(self.dropout).to(torch.device(self.device)) 
         
-        # ensure everything is on specified device
-        self.bert = self.bert.to(torch.device(self.device))
-        self.bert_dropout = self.bert_dropout.to(torch.device(self.device))  # TODO is this needed?
-
         # architecture specific components
         self.components = self.init_components(self.subtasks)  # returns dict of task-specific output layers
 
@@ -838,6 +834,7 @@ class IMN(BertHead):
 
         cnn_dim = self.find("cnn_dim", default=768)
         expression_layers = self.find("expression_layers", default=2)
+        polarity_labels = self.find("polarity_labels", default=3)  # expands to 5 when using english data sets
         polarity_layers = self.find("polarity_layers", default=2)
         shared_layers = self.find("shared_layers", default=2)
         target_layers = self.find("target_layers", default=2)
@@ -970,7 +967,7 @@ class IMN(BertHead):
                 torch.nn.Dropout(self.dropout),
                 torch.nn.Linear(
                     in_features=int(2*cnn_dim), # initial_shared_features:300 + polarity_cnn:300
-                    out_features=5  # NOTE: SemEval data has neutral and confusing polarities
+                    out_features=polarity_labels  # NOTE: SemEval data has neutral and confusing polarities
                 ), 
                 torch.nn.Softmax(dim=-1)
             ).to(torch.device(self.device))
@@ -1149,6 +1146,7 @@ class RACL(BertHead):
         return components
 
     def forward(self, batch):
+        raise NotImplementedError
         input_ids = batch[0].to(torch.device(self.device))
         attention_mask = batch[1].to(torch.device(self.device))
 
