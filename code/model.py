@@ -341,7 +341,7 @@ class BertHead(torch.nn.Module):
         self.components = self.init_components(self.subtasks)  # returns dict of task-specific output layers
 
         # loss function
-        self.loss = self.get_loss(loss_function, loss_weight)
+        self.loss = self.get_loss(loss_function, loss_weight).to(torch.device(self.device))
 
         # optimizers
         self.optimizers, self.schedulers = self.init_optimizer()  # creates same number of optimizers as output layers
@@ -457,7 +457,7 @@ class BertHead(torch.nn.Module):
 
         # calculate gradients for parameters used per task
         for task in self.subtasks:
-            self.losses[task].backward(retain_graph=True)  # retain_graph needed to update bert for all tasks
+            self.losses[task].backward()  # retain_graph needed to update bert for all tasks
 
         # TODO should there be bert optimizer alone, 
         # if so needs to be updated for each task 
