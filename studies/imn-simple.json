@@ -1,0 +1,12 @@
+{
+    "name": "imn-simple",
+    "model_name": "imn",
+    "cnn_dim": 768,
+    "dropout": 0.1,
+    "shared_layers": 5,
+    "target_layers": 0,
+    "polarity_layers": 0,
+    "expression_layers": 0,
+    "interactions": 0,
+    "epochs": [50]
+}

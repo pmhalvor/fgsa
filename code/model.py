@@ -969,7 +969,7 @@ class IMN(BertHead):
 
         # polarity had attention before linear
         components["polarity"].update({
-            "attention": torch.nn.MultiheadAttention(cnn_dim, num_heads=1).to(torch.device(self.device)), 
+            # "attention": torch.nn.MultiheadAttention(cnn_dim, num_heads=1).to(torch.device(self.device)), 
             "linear": torch.nn.Sequential(
                 torch.nn.Dropout(self.dropout),
                 torch.nn.Linear(
@@ -1090,17 +1090,17 @@ class IMN(BertHead):
             if polarity_layers > 0:
                 polarity_output = self.components["polarity"]["cnn_sequential"](polarity_output)
 
-            values = polarity_output.permute(2, 0, 1)
-
-            polarity_output = polarity_output.permute(2, 0, 1)  # sequence, batch, embedding
-            polarity_output, _ = self.components["polarity"]["attention"](
-                polarity_output,  # query, i.e. polar cnn output w/ weights
-                polarity_output,  # keys, i.e. (polar cnn output).T for self attention
-                values,  # values should include probabilities for B and I tags
-                need_weights=False,
-                # TODO: implement attention mask?
-            )
-            polarity_output = polarity_output.permute(1, 2, 0)  # batch, embedding, sequence
+            # attention block
+            # values = polarity_output.permute(2, 0, 1)
+            # polarity_output = polarity_output.permute(2, 0, 1)  # sequence, batch, embedding
+            # polarity_output, _ = self.components["polarity"]["attention"](
+            #     polarity_output,  # query, i.e. polar cnn output w/ weights
+            #     polarity_output,  # keys, i.e. (polar cnn output).T for self attention
+            #     values,  # values should include probabilities for B and I tags
+            #     need_weights=False,
+            #     # TODO: implement attention mask?
+            # )
+            # polarity_output = polarity_output.permute(1, 2, 0)  # batch, embedding, sequence
 
             # NOTE: concat w/ initial_shared_features not word_embeddings like in target
             polarity_output = torch.cat((initial_shared_features, polarity_output), dim=1)  # cat embedding dim
