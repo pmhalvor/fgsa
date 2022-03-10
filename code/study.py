@@ -269,7 +269,8 @@ if __name__ == "__main__":
 
     if len(sys.argv) > 0:
         filename = sys.argv[1]
-        with open('../studies/'+filename, 'r') as f:  # find sutdy configs in studies/ dir
+        filename += '.json' if '.json' not in filename else ''
+        with open('../studies/'+filename, 'r') as f:  # find study configs in studies/ dir
             data = json.load(f)
 
         params = {k : data[k][0] if isinstance(data[k], list) else data[k] for k in data}
