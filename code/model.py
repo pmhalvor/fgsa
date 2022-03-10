@@ -291,7 +291,7 @@ class BertHead(torch.nn.Module):
         self, 
         bert_finetune=True,         # TODO tune
         bert_path="ltgoslo/norbert",  
-        device="cpu",
+        device="cuda" if torch.cuda.is_available() else "cpu",
         dropout=0.1,                # TODO tune
         ignore_id=-1,
         loss_function="cross-entropy",  # cross-entropy, dice, mse, or iou 
@@ -334,8 +334,8 @@ class BertHead(torch.nn.Module):
         self.bert_dropout = torch.nn.Dropout(self.dropout)
         
         # ensure everything is on specified device
-        self.bert = self.bert.to(self.device)
-        self.bert_dropout = self.bert_dropout.to(self.device)  # TODO is this needed?
+        self.bert = self.bert.to(torch.device(self.device))
+        self.bert_dropout = self.bert_dropout.to(torch.device(self.device))  # TODO is this needed?
 
         # architecture specific components
         self.components = self.init_components(self.subtasks)  # returns dict of task-specific output layers
@@ -442,9 +442,9 @@ class BertHead(torch.nn.Module):
             "target": batch[5].to(torch.device(self.device)),
         }
 
-        # for task in self.subtasks:
-        #     print(task, output[task].shape, true[task].shape)
-        #     logging.info(task, output[task].shape, true[task].shape)
+        print("device:", self.device)
+        print("output:", output["expression"])
+        print("true  :", true["expression"])
 
         # calcaulate losses per task
         self.losses = {
@@ -736,7 +736,7 @@ class BertHead(torch.nn.Module):
         embeddings = self.bert(
             input_ids = input_ids,
             attention_mask = attention_mask,
-        ).last_hidden_state
+        ).last_hidden_state.to(torch.device(self.device))
         embeddings = self.bert_dropout(embeddings)
 
         # task-specific forwards
@@ -1018,7 +1018,7 @@ class IMN(BertHead):
             word_embeddings = self.bert(
                 input_ids = input_ids,
                 attention_mask = mask,
-            ).last_hidden_state
+            ).last_hidden_state.to(torch.device(self.device))
         except Exception as e:
             print("input_ids {}".format(input_ids.max().item()))
             raise e
