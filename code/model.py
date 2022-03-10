@@ -436,10 +436,10 @@ class BertHead(torch.nn.Module):
         """
 
         true = {
-            "expression": batch[2], 
-            "holder": batch[3],
-            "polarity": batch[4],
-            "target": batch[5],
+            "expression": batch[2].to(torch.device(self.device)), 
+            "holder": batch[3].to(torch.device(self.device)),
+            "polarity": batch[4].to(torch.device(self.device)),
+            "target": batch[5].to(torch.device(self.device)),
         }
 
         # for task in self.subtasks:
@@ -457,7 +457,7 @@ class BertHead(torch.nn.Module):
 
         # calculate gradients for parameters used per task
         for task in self.subtasks:
-            self.losses[task].backward()  # retain_graph needed to update bert for all tasks
+            self.losses[task].backward(retain_graph=True)  # retain_graph needed to update shared tasks
 
         # TODO should there be bert optimizer alone, 
         # if so needs to be updated for each task 
