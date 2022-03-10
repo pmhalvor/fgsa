@@ -409,14 +409,7 @@ class BertHead(torch.nn.Module):
                 # apply loss
                 loss = self.backward(output, batch)
 
-                # log loss every 33th batch, on every 7th epoch
-                # if epoch%7==0 and b%33==0:
-                #     logging.info("Epoch:{:3} Batch:{:3}".format(epoch, b))
-                #     for task in self.subtasks:
-                #         logging.info("{:10} loss:{}".format(task, loss[task].item()))
-        
-                #     if dev_loader is not None:
-                #         self.evaluate(dev_loader)
+                # show results for first batch of each epoch
                 if b==0:
                     logging.info("Epoch:{:3} Batch:{:3}".format(epoch, b))
                     for task in self.subtasks:
@@ -1031,8 +1024,8 @@ class IMN(BertHead):
             raise e
         word_embeddings = self.bert_dropout(word_embeddings)
 
-        # NOTE permute so shape is [32, 768, 42] into cnn
-        # then permute back to [32, 42, 768] for attnetion
+        # NOTE permute so shape is [batch, embedding, sequence] into cnn
+        # then permute back to [batch, sequence, embedding] for attnetion
         word_embeddings = word_embeddings.permute(0, 2, 1)
         sentence_output = word_embeddings  # TODO detach and/or clone?
 
@@ -1097,19 +1090,13 @@ class IMN(BertHead):
             if polarity_layers > 0:
                 polarity_output = self.components["polarity"]["cnn_sequential"](polarity_output)
 
-            # predicted prob of B or I in target and expression outputs
-            bi_probs = (target_output[:,:,1:].sum(dim=-1) + expression_output[:,:,1:].sum(dim=-1))/2.
-            bi_probs = bi_probs[:,:polarity_output.size(2)]
-            values =  torch.mul(
-                polarity_output.permute(1, 0, 2), # embedding, batch, sequence
-                bi_probs,
-            ).permute(2, 1, 0)  # sequence, batch, embedding
+            values = polarity_output.permute(2, 0, 1)
 
             polarity_output = polarity_output.permute(2, 0, 1)  # sequence, batch, embedding
             polarity_output, _ = self.components["polarity"]["attention"](
                 polarity_output,  # query, i.e. polar cnn output w/ weights
                 polarity_output,  # keys, i.e. (polar cnn output).T for self attention
-                values,  # values include probabilities for B and I tags
+                values,  # values should include probabilities for B and I tags
                 need_weights=False,
                 # TODO: implement attention mask?
             )
@@ -1144,7 +1131,17 @@ class IMN(BertHead):
         First few epochs guide attention values according to true labels for target and expression.
         See imn/code/my_layers.py:Self_attention().call() for more. 
         """
+        # PICK UP HERE
+        # Could help guide model in correct direction
+        # predicted prob of B or I in target and expression outputs
+        # bi_probs = (target_output[:,:,1:].sum(dim=-1) + expression_output[:,:,1:].sum(dim=-1))/2.
+        # bi_probs = bi_probs[:,:polarity_output.size(2)]
+        # values =  torch.mul(
+        #     polarity_output.permute(1, 0, 2), # embedding, batch, sequence
+        #     bi_probs,
+        # ).permute(2, 1, 0)  # sequence, batch, embedding
         return None
+
 
 class RACL(BertHead):
 
