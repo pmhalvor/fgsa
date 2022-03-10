@@ -1,6 +1,8 @@
 {
     "name": "imn-simple",
     "model_name": "imn",
+
+    "bert_finetune": true,
     "cnn_dim": 768,
     "dropout": 0.1,
     "shared_layers": 5,
