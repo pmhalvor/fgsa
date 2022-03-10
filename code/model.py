@@ -442,10 +442,6 @@ class BertHead(torch.nn.Module):
             "target": batch[5].to(torch.device(self.device)),
         }
 
-        # print("device:", self.device)
-        # print("output:", output["expression"])
-        # print("true  :", true["expression"])
-
         # calcaulate losses per task
         self.losses = {
             task: self.loss(
@@ -498,13 +494,13 @@ class BertHead(torch.nn.Module):
 
         for b, batch in enumerate(loader):
             predictions = self.predict(batch)
-            predictions = {task: predictions[task].cpu() for task in self.subtasks}
+            predictions = {task: predictions[task].detach().cpu() for task in self.subtasks}
 
             true = {
-                "expression": batch[2].cpu(), 
-                "holder": batch[3].cpu(),
-                "polarity": batch[4].cpu(),
-                "target": batch[5].cpu(),
+                "expression": batch[2].detach().cpu(), 
+                "holder": batch[3].detach().cpu(),
+                "polarity": batch[4].detach().cpu(),
+                "target": batch[5].detach().cpu(),
             }
 
             ### hard score
