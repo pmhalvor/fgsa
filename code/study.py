@@ -212,11 +212,8 @@ class Study():
 
     def fit(self, metric=None):
         """ 
-        scikit-learn like fit() call for use in pipelines and gridsearches.
-
-        TODO learn if you need to feed data in through grid search.
+        Easy fit() call, since data loaders created on init
         """  
-        self.check_devices()
         self.logger.info('Fitting model...')
         self.model.fit(
             train_loader=self.train_loader, 
@@ -228,7 +225,6 @@ class Study():
     def check_devices(self):
         for param in self.model.parameters():
             print(param.shape, param.device)
-        
         quit()
 
 
