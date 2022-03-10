@@ -442,9 +442,9 @@ class BertHead(torch.nn.Module):
             "target": batch[5].to(torch.device(self.device)),
         }
 
-        print("device:", self.device)
-        print("output:", output["expression"])
-        print("true  :", true["expression"])
+        # print("device:", self.device)
+        # print("output:", output["expression"])
+        # print("true  :", true["expression"])
 
         # calcaulate losses per task
         self.losses = {
