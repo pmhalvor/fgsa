@@ -295,6 +295,7 @@ if __name__ == "__main__":
 
                     if results > best_score:
                         best_hyper = hyper
+                        best_score = results
                 
                 params[param] = best_hyper
                 print("Best results for {m} metric: {p}={h}".format(m=study.metric, p=param, h=best_hyper))
