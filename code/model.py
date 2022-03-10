@@ -449,8 +449,8 @@ class BertHead(torch.nn.Module):
         # calcaulate losses per task
         self.losses = {
             task: self.loss(
-                input=output[task].to(torch.device(self.device)),
-                target=true[task].to(torch.device(self.device))
+                input=output[task],
+                target=true[task]
             )
             for task in self.subtasks
         }
