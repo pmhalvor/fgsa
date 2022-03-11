@@ -77,6 +77,9 @@ class Study():
         ###### init model #####
         self.init_model(model_path=model_path)
 
+        ###### log plots ######
+        self.study_param = study_param
+        self.study_param_value = study_param_value
         start_msg = "Starting study"
         if study_param and study_param_value:
             start_msg += " on {}={}".format(study_param, study_param_value)
@@ -235,7 +238,6 @@ class Study():
             print(param.shape, param.device)
         quit()
 
-
     def score(self, metric=None):
         """
         scikit-learn like score() to  use in GridSearchCV
@@ -265,7 +267,16 @@ class Study():
         elif metric == "strict":
             self.final = absa_f1
 
-        self.logger.info('Metric:{}  Score:{}'.format(metric, self.final))
+
+        param = ""
+        if self.study_param is not None:
+            param += "{p}:{v}".format(p=self.study_param, v=self.study_param_value)
+        
+        self.logger.info('Metric:{m}  Score:{s}  {p}'.format(
+            m=metric, 
+            s=self.final,
+            p=param
+        ))
         return self.final
 
     def save_model(self):
