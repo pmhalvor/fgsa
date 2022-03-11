@@ -406,9 +406,8 @@ class BertHead(torch.nn.Module):
                 # show results for first batch of each epoch
                 if b==0:
                     logging.info("Epoch:{:3} Batch:{:3}".format(epoch, b))
-                    # for task in self.subtasks:
-                    #     logging.info("{:10} loss:{}".format(task, loss[task].item()))
-                    logging.info("Total loss:{}".format(loss.item()))
+                    for task in self.subtasks:
+                        logging.info("{:10} loss:{}".format(task, loss[task].item()))
                     
 
                     if dev_loader is not None:
@@ -444,24 +443,26 @@ class BertHead(torch.nn.Module):
             self.optimizers[task].zero_grad()
 
         # calcaulate losses per task
-        # self.losses = {
-        #     task: self.loss(
-        #         input=output[task],
-        #         target=true[task]
-        #     )
-        #     for task in self.subtasks
-        # }
-        self.loss_total = torch.zeros(1).to(torch.device(self.device))
+        self.losses = {
+            task: self.loss(
+                input=output[task],
+                target=true[task]
+            )
+            for task in self.subtasks
+        }
+        loss_total = torch.zeros(1).to(torch.device(self.device))
         for task in self.subtasks:
             self.loss_total += self.loss(
                 input=output[task],
                 target=true[task]
             )
+        self.losses["total"] = loss_total
+
 
         # calculate gradients for parameters used per task
-        # for task in self.subtasks:
-        #     self.losses[task].backward(retain_graph=True)  # retain_graph needed to update shared tasks
-        self.loss_total.backward()
+        for task in self.subtasks:
+            self.losses[task].backward(retain_graph=True)  # retain_graph needed to update shared tasks
+        # self.loss_total.backward()
 
         # TODO should there be bert optimizer alone, 
         # if so needs to be updated for each task 
@@ -471,7 +472,7 @@ class BertHead(torch.nn.Module):
         for task in self.optimizers:
             self.optimizers[task].step()
 
-        return self.loss_total
+        return self.losses
 
     def evaluate(self, loader, verbose=False):
         """
