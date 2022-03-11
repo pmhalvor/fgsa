@@ -393,11 +393,9 @@ class BertHead(torch.nn.Module):
     ########### Model training ###########
     def fit(self, train_loader, dev_loader=None, epochs=10):
         for epoch in range(epochs):
-            self.train()
 
             for b, batch in enumerate(train_loader):
                 self.train()        # turn off eval mode
-                # self.zero_grad()    # clear updates from prev epoch
 
                 # feed batch to model
                 output = self.forward(batch)
@@ -437,6 +435,11 @@ class BertHead(torch.nn.Module):
             "polarity": batch[4].to(torch.device(self.device)),
             "target": batch[5].to(torch.device(self.device)),
         }
+
+        # resetting the gradients from the optimizer
+        # more info: https://pytorch.org/docs/stable/optim.html
+        for task in self.optimizers:
+            self.optimizers[task].zero_grad()
 
         # calcaulate losses per task
         self.losses = {
@@ -728,7 +731,7 @@ class BertHead(torch.nn.Module):
         embeddings = self.bert(
             input_ids = input_ids,
             attention_mask = attention_mask,
-        ).last_hidden_state.to(torch.device(self.device))
+        ).last_hidden_state
         embeddings = self.bert_dropout(embeddings)
 
         # task-specific forwards
