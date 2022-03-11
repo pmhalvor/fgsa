@@ -406,9 +406,11 @@ class BertHead(torch.nn.Module):
                 # show results for first batch of each epoch
                 if b==0:
                     logging.info("Epoch:{:3} Batch:{:3}".format(epoch, b))
-                    for task in self.subtasks:
-                        logging.info("{:10} loss:{}".format(task, loss[task].item()))
-        
+                    # for task in self.subtasks:
+                    #     logging.info("{:10} loss:{}".format(task, loss[task].item()))
+                    logging.info("{:10} loss:{}".format(task, loss.item()))
+                    
+
                     if dev_loader is not None:
                         self.evaluate(dev_loader)
 
@@ -469,7 +471,7 @@ class BertHead(torch.nn.Module):
         for task in self.optimizers:
             self.optimizers[task].step()
 
-        return self.losses
+        return self.loss_total
 
     def evaluate(self, loader, verbose=False):
         """
