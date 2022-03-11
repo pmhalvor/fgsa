@@ -501,24 +501,24 @@ class BertHead(torch.nn.Module):
 
 
         for b, batch in enumerate(loader):
-            predictions = self.predict(batch)
-            predictions = {task: predictions[task].detach().cpu() for task in self.subtasks}
+            preds, golds = self.predict(batch)
+            # preds = {task: preds[task].detach().cpu() for task in self.subtasks}
 
-            true = {
-                "expression": batch[2].detach().cpu(), 
-                "holder": batch[3].detach().cpu(),
-                "polarity": batch[4].detach().cpu(),
-                "target": batch[5].detach().cpu(),
-            }
+            # true = {
+            #     "expression": batch[2].detach().cpu(), 
+            #     "holder": batch[3].detach().cpu(),
+            #     "polarity": batch[4].detach().cpu(),
+            #     "target": batch[5].detach().cpu(),
+            # }
 
             ### hard score
             hard = {}
             if "target" in self.subtasks and "polarity" in self.subtasks:
                 f_target, acc_polarity, f_polarity, f_absa = score(
-                    true_aspect = true["target"], 
-                    predict_aspect = predictions["target"], 
-                    true_sentiment = true["polarity"], 
-                    predict_sentiment = predictions["polarity"], 
+                    true_aspect = golds["target"], 
+                    predict_aspect = preds["target"], 
+                    true_sentiment = golds["polarity"], 
+                    predict_sentiment = preds["polarity"], 
                     train_op = False
                 ) 
 
@@ -533,10 +533,10 @@ class BertHead(torch.nn.Module):
 
             if "expression" in self.subtasks:
                 f_expression, _, _, _ = score(
-                    true_aspect = true["expression"], 
-                    predict_aspect = predictions["expression"], 
-                    true_sentiment = true["polarity"], 
-                    predict_sentiment = predictions["polarity"], 
+                    true_aspect = golds["expression"], 
+                    predict_aspect = preds["expression"], 
+                    true_sentiment = golds["polarity"], 
+                    predict_sentiment = preds["polarity"], 
                     train_op = True
                 )
 
@@ -546,10 +546,10 @@ class BertHead(torch.nn.Module):
 
             if "holder" in self.subtasks:
                 f_holder, _, _, _ = score(
-                    true_aspect = true["holder"], 
-                    predict_aspect = predictions["holder"], 
-                    true_sentiment = true["polarity"], 
-                    predict_sentiment = predictions["polarity"], 
+                    true_aspect = golds["holder"], 
+                    predict_aspect = preds["holder"], 
+                    true_sentiment = golds["polarity"], 
+                    predict_sentiment = preds["polarity"], 
                     train_op = True
                 )
 
@@ -564,10 +564,10 @@ class BertHead(torch.nn.Module):
             macro = {}
             easy = {}
             for task in self.subtasks: 
-                b = binary_f1(true[task], predictions[task])
-                p = proportional_f1(true[task], predictions[task], num_labels=3)
-                s = span_f1(true[task], predictions[task])
-                m = weighted_macro(true[task], predictions[task], num_labels=3)
+                b = binary_f1(golds[task], preds[task])
+                p = proportional_f1(golds[task], preds[task], num_labels=3)
+                s = span_f1(golds[task], preds[task])
+                m = weighted_macro(golds[task], preds[task], num_labels=3)
                 binary[task] = b
                 proportional[task] = p
                 span[task] = s
@@ -620,12 +620,34 @@ class BertHead(torch.nn.Module):
 
         outputs = self.forward(batch)
 
-        self.predictions = {
+        prediction_tensors = {
             task: outputs[task].argmax(1)
             for task in self.subtasks
         }
 
-        return self.predictions
+        self.golds = {task: [] for task in self.subtasks}
+        self.preds = {task: [] for task in self.subtasks}
+        true = {
+            "expression": batch[2], 
+            "holder": batch[3],
+            "polarity": batch[4],
+            "target": batch[5],
+        }
+
+        # strip away padding
+        for i, row in enumerate(batch[0]):
+            for t, token in enumerate(row):
+                if token.item() == 0:  # padding id is 0
+                    for task in self.subtasks:
+                        self.preds[task].append(
+                            prediction_tensors[task][i][:t].tolist()
+                        )
+                        self.golds[task].append(
+                            true[task][i][:t].tolist()
+                        )
+            break
+
+        return self.preds, self.golds
         
     def score(self, X, y):
         absa, easy, hard = self.evaluate(X)

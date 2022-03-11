@@ -89,13 +89,25 @@ def pad(batch, pad_id=0, ignore_id=-1):
 
 
 def compare(tensor_1, tensor_2):
+    """ 
+    TODO Delete? if not in use
+    """
     b = torch.eq(tensor_1, tensor_2)
 
     for ele in b:
         assert ele
     
     return True
-  
+
+
+def flatten(item):
+    flat_item = [
+        ele
+        for row in item
+        for ele in row 
+    ]
+    return flat_item
+
 
 def score(true_aspect, predict_aspect, true_sentiment, predict_sentiment, train_op):
     """
@@ -243,7 +255,7 @@ def weighted_macro(true_labels, predict_labels, num_labels):
             average='weighted',
             zero_division=1,  # set score to 1 when all labels and predictions are 0
         )
-    return total/true_labels.shape[0]
+    return total/len(true_labels)
 
 
 def span_f1(gold, pred):
@@ -251,12 +263,8 @@ def span_f1(gold, pred):
     Borrowed from: https://github.com/jerbarnes/sentiment_graphs
     """
     tp, fp, fn = 0, 0, 0
-    for gold_sent, pred_sent in zip(gold, pred):
-        gold_labels = gold_sent.flatten()
-        pred_labels = pred_sent.flatten()
+    for gold_labels, pred_labels in zip(gold, pred):
         for gold_label, pred_label in zip(gold_labels, pred_labels):
-            gold_label = gold_label.item()
-            pred_label = pred_label.item()
             # TP
             if gold_label == pred_label:
                 tp += 1
@@ -293,7 +301,7 @@ def proportional_f1(true_labels, predict_labels, num_labels):
             average='micro',
             zero_division=1,  # set score to 1 when all labels and predictions are 0
         )
-    return total/true_labels.shape[0]
+    return total/len(true_labels)
 
 
 def binary_f1(golds, preds, eps=1e-7):
