@@ -442,17 +442,24 @@ class BertHead(torch.nn.Module):
             self.optimizers[task].zero_grad()
 
         # calcaulate losses per task
-        self.losses = {
-            task: self.loss(
+        # self.losses = {
+        #     task: self.loss(
+        #         input=output[task],
+        #         target=true[task]
+        #     )
+        #     for task in self.subtasks
+        # }
+        self.loss_total = torch.zeros(1, requires_grad=True)
+        for task in self.subtasks:
+            self.loss_total += self.loss(
                 input=output[task],
                 target=true[task]
             )
-            for task in self.subtasks
-        }
 
         # calculate gradients for parameters used per task
-        for task in self.subtasks:
-            self.losses[task].backward(retain_graph=True)  # retain_graph needed to update shared tasks
+        # for task in self.subtasks:
+        #     self.losses[task].backward(retain_graph=True)  # retain_graph needed to update shared tasks
+        self.loss_total.backward()
 
         # TODO should there be bert optimizer alone, 
         # if so needs to be updated for each task 
