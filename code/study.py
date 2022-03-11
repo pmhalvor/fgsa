@@ -34,10 +34,13 @@ class Study():
 
         metric = "span",
 
-        model_name = "FgsaLSTM",
+        model_name = "BertHead",
         model_path = None,
         proportion = 1.,
         shuffle = True,
+
+        study_param=None,  # for logging purposes only
+        study_param_value=None,  # for logging purposes only
 
         verbose = False,
         **kwargs
@@ -73,7 +76,12 @@ class Study():
 
         ###### init model #####
         self.init_model(model_path=model_path)
-        self.logger.info("Ready to fit!")
+
+        start_msg = "Starting study"
+        if study_param and study_param_value:
+            start_msg += " on {}={}".format(study_param, study_param_value)
+        self.logger.info(start_msg)
+
 
     def store_kwargs(self, kwargs):
         for arg in kwargs:
@@ -292,6 +300,8 @@ if __name__ == "__main__":
                 for hyper in data[param]:
                     params.pop(param)
                     params[param] = hyper
+                    params["study_param"] = param
+                    params["study_param_value"] = hyper
                     study = Study(**params)
                     study.fit()
                     results = study.score()
