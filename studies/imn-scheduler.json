@@ -1,9 +1,10 @@
 {
-    "name": "imn-lr",
+    "name": "imn-scheduler",
     "model_name": "imn",
     "cnn_dim": 768,
     "dropout": 0.1,
-    "lr": [0.001, 0.01, 0.1],
+    "lr": [0.00001, 0.0001, 0.001],
+    "lr_scheduler_patience": 5,
     "shared_layers": 2,
     "target_layers": 2,
     "polarity_layers": 1,
