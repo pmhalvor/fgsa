@@ -85,7 +85,6 @@ class Study():
             start_msg += " on {}={}".format(study_param, study_param_value)
         self.logger.info(start_msg)
 
-
     def store_kwargs(self, kwargs):
         for arg in kwargs:
             self.__dict__[arg] = kwargs[args]
@@ -211,6 +210,7 @@ class Study():
             "device": self.device,
             "epochs": self.epochs,
             "ignore_id": self.ignore_id, 
+            "model_name": self.model_name,
         }
         params.update(self.kwargs)
 
