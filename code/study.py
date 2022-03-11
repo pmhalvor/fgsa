@@ -267,7 +267,6 @@ class Study():
         elif metric == "strict":
             self.final = absa_f1
 
-
         param = ""
         if self.study_param is not None:
             param += "{p}={v}".format(p=self.study_param, v=self.study_param_value)

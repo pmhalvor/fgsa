@@ -295,7 +295,6 @@ class BertHead(torch.nn.Module):
         dropout=0.1,                # TODO tune
         ignore_id=-1,
         loss_function="cross-entropy",  # cross-entropy, dice, mse, or iou 
-        loss_weight=1,              # TODO tune
         lr=1e-7,                    # TODO tune
         lr_scheduler_factor=0.1,    # TODO tune
         lr_scheduler_patience=2,    # TODO tune
@@ -337,7 +336,7 @@ class BertHead(torch.nn.Module):
         self.components = self.init_components(self.subtasks)  # returns dict of task-specific output layers
 
         # loss function
-        self.loss = self.get_loss(loss_function, loss_weight).to(torch.device(self.device))
+        self.loss = self.get_loss(loss_function).to(torch.device(self.device))
 
         # optimizers
         self.optimizers, self.schedulers = self.init_optimizer()  # creates same number of optimizers as output layers
@@ -356,7 +355,7 @@ class BertHead(torch.nn.Module):
         value = self.__dict__.get(arg)
         return value if value is not None else default
 
-    def get_loss(self, loss_function, loss_weight=None):
+    def get_loss(self, loss_function):
         """
         Parameters:
             loss_function (str): must be either cross-entropy, mse, or iou. Otherwise returns None
@@ -365,9 +364,22 @@ class BertHead(torch.nn.Module):
             loss (torch.SomeLoss or None): either CrossEntropyLoss, MSELoss, or home-made IoULoss
         """
         loss = None
-        
+        label_importance = self.find("label_importance", default=None)
+        weight = self.find("loss_weight", default=label_importance)
+
+        if weight is not None:
+            num_labels = 3  # NOTE: Cannot use loss_weight when polarity_labels > 3 (i.e. English datasets)
+            d = 1. + weight*(num_labels - 1) 
+            weight = [1/d] + [
+                weight/d for _ in range(num_labels - 1) 
+            ] 
+            weight = torch.tensor(weight)
+
         if loss_function is None:
             loss = torch.nn.CrossEntropyLoss(ignore_index=self.ignore_id)
+
+        elif "cross" in loss_function.lower() and weight is not None:
+            loss = torch.nn.CrossEntropyLoss(ignore_index=self.ignore_id, weight=weight)
 
         elif "cross" in loss_function.lower():
             loss = torch.nn.CrossEntropyLoss(ignore_index=self.ignore_id)
