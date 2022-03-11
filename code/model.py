@@ -9,6 +9,7 @@ from transformers import BertForTokenClassification
 from transformers import BertModel  # TODO next step, Bert as head
 
 ## Local imports
+from functools import partial
 from loss import DiceLoss
 from utils import binary_f1
 from utils import proportional_f1
@@ -20,6 +21,7 @@ from utils import weighted_macro
 class BertSimple(torch.nn.Module):
     """
     First model built for fgsa on norec_fine. 
+
     Expects one-hot encoded dataset, classifying num_labels outputs, w/ BertForTokenClassification
     """
     def __init__(
@@ -358,7 +360,7 @@ class BertHead(torch.nn.Module):
     def get_loss(self, loss_function):
         """
         Parameters:
-            loss_function (str): must be either cross-entropy, mse, or iou. Otherwise returns None
+            loss_function (str): must be either cross-entropy, mse, or dice. Otherwise returns None
 
         Returns:
             loss (torch.SomeLoss or None): either CrossEntropyLoss, MSELoss, or home-made IoULoss
@@ -394,6 +396,60 @@ class BertHead(torch.nn.Module):
             raise NotImplementedError()
         
         return loss
+
+    def get_optimizer(self, optimizer_name):
+        """
+        Parameters:
+            optimizer_name (str): Adam, AdamW, ... TODO more?
+
+        Returns:
+            optimizer (torch.optim.SomeOpt or None): the selected optimizer
+        """
+        optimizer = None
+
+        if optimizer_name is None:
+            params = {
+                "amsgrad": self.find("amsgrad", default=False),
+                "betas": self.find("betas", default=(0.9, 0.999)),
+                "eps": self.find("eps", default=1e-10),
+                "weight_decay": self.find("weight_decay", default=0),
+            }
+            optimizer = partial(torch.optim.Adam, **params)
+
+        elif "adamw" in optimizer_name.lower():
+            params = {
+                "amsgrad": self.find("amsgrad", default=False),
+                "betas": self.find("betas", default=(0.9, 0.999)),
+                "eps": self.find("eps", default=1e-10),
+                "weight_decay": self.find("weight_decay", default=0),
+            }
+            optimizer = partial(torch.optim.AdamW, **params)
+
+        elif "adam" in optimizer_name.lower():
+            params = {
+                "amsgrad": self.find("amsgrad", default=False),
+                "betas": self.find("betas", default=(0.9, 0.999)),
+                "eps": self.find("eps", default=1e-10),
+                "weight_decay": self.find("weight_decay", default=0),
+            }
+            optimizer = partial(torch.optim.Adam, **params)
+
+        elif "sgd" in optimizer_name.lower():
+            params = {
+                "dampening": self.find("dampening", default=0),
+                "eps": self.find("eps", default=1e-10),
+                "momentum": self.find("momentum", default=0),
+                "nesterov": self.find("nesterov", default=True),  # NOTE: different than torch defaults
+                "weight_decay": self.find("weight_decay", default=0),
+            }
+            optimizer = torch.optim.SGD 
+
+        elif "adadelta" in optimizer_name.lower():
+            rho = self.find("rho", default=0.9)
+            eps = self.find("eps", default=1e-10)
+            optimizer = partial(torch.optim.Adadelta, rho=rho, eps=eps)
+        
+        return optimizer
 
     def unpack_lrs(self):
         if self.find("lrs") is not None:
@@ -726,6 +782,11 @@ class BertHead(torch.nn.Module):
         optimizers = {}
         schedulers = {}
 
+        # single optimizer type for all subtasks for simplicity
+        optimizer = self.get_optimizer(
+            self.find("optimizer_name", default=self.find("optimizer"))
+        )
+
         # check if task specific learning rates are provided
         task_lrs = {
             task: self.find(task+"_learning_rate", default=self.find(task+"_lr")) 
@@ -734,11 +795,10 @@ class BertHead(torch.nn.Module):
         
         for task in self.subtasks:  # TODO make sure in self.components in others
             lr = task_lrs[task] if task_lrs.get(task) is not None else self.learning_rate
-            opt = torch.optim.Adam(
+            optimizers[task] = optimizer(
                     self.bert.parameters(),  # NOTE all tasks can optimize bert params if need
                     lr=self.learning_rate  # use main learning rate for bert training
             ) # TODO test other optimizers?
-            optimizers[task] = opt
 
             if self.components.get("shared") is not None:
                 for layer in self.components["shared"]:
@@ -753,7 +813,7 @@ class BertHead(torch.nn.Module):
 
             # learning rate scheduler to mitigate overfitting
             schedulers[task] = torch.optim.lr_scheduler.ReduceLROnPlateau(
-                optimizer=opt,
+                optimizer=optimizers[task],
                 mode='min',
                 factor=self.lr_scheduler_factor,
                 patience=self.lr_scheduler_patience,
