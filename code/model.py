@@ -520,7 +520,7 @@ class BertHead(torch.nn.Module):
         }
         loss_total = torch.zeros(1).to(torch.device(self.device))
         for task in self.subtasks:
-            self.loss_total += self.loss(
+            loss_total += self.loss(
                 input=output[task],
                 target=true[task]
             )
