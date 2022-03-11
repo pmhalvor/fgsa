@@ -255,7 +255,7 @@ def weighted_macro(true_labels, predict_labels, num_labels):
             average='weighted',
             zero_division=1,  # set score to 1 when all labels and predictions are 0
         )
-    return total/len(true_labels)
+    return total/(len(true_labels) + 1e-10)
 
 
 def span_f1(gold, pred):
@@ -301,7 +301,7 @@ def proportional_f1(true_labels, predict_labels, num_labels):
             average='micro',
             zero_division=1,  # set score to 1 when all labels and predictions are 0
         )
-    return total/len(true_labels)
+    return total/(len(true_labels) + 1e-10)
 
 
 def binary_f1(golds, preds, eps=1e-7):
