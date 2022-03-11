@@ -449,7 +449,7 @@ class BertHead(torch.nn.Module):
         #     )
         #     for task in self.subtasks
         # }
-        self.loss_total = torch.zeros(1, requires_grad=True)
+        self.loss_total = torch.zeros(1)
         for task in self.subtasks:
             self.loss_total += self.loss(
                 input=output[task],
