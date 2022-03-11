@@ -1,11 +1,11 @@
 #!/bin/bash
 
 # Job name:
-#SBATCH --job-name=fgsa-dev
+#SBATCH --job-name=fgsa-imn
 # Project:
 #SBATCH --account=ec37
 # Wall time limit: --time=DD-HH:MM:SS
-#SBATCH --time=20:30:00
+#SBATCH --time=10:30:00
 # Memory requested:
 #SBATCH --mem-per-cpu=30G
 # Run on GPU

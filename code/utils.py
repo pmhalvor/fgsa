@@ -89,13 +89,25 @@ def pad(batch, pad_id=0, ignore_id=-1):
 
 
 def compare(tensor_1, tensor_2):
+    """ 
+    TODO Delete? if not in use
+    """
     b = torch.eq(tensor_1, tensor_2)
 
     for ele in b:
         assert ele
     
     return True
-  
+
+
+def flatten(item):
+    flat_item = [
+        ele
+        for row in item
+        for ele in row 
+    ]
+    return flat_item
+
 
 def score(true_aspect, predict_aspect, true_sentiment, predict_sentiment, train_op):
     """
@@ -220,9 +232,11 @@ def score(true_aspect, predict_aspect, true_sentiment, predict_sentiment, train_
     return f_aspect, acc_s, f_s, f_absa
 
 
-def ez_score(true_labels, predict_labels, num_labels):
+def weighted_macro(true_labels, predict_labels, num_labels):
     """
     DEPRECATED: use proportional instead
+
+    Similar to proportional, except uses weights averaging to test macros (inspired by sentiment_graphs)
     F1-score for _any_ correctly guessed label. Much more lenient than score() from RACL (above).
 
     Parameters:
@@ -238,10 +252,33 @@ def ez_score(true_labels, predict_labels, num_labels):
             true, 
             pred, 
             labels=[e for e in range(1, num_labels)],
-            average='micro',
+            average='weighted',
             zero_division=1,  # set score to 1 when all labels and predictions are 0
         )
-    return total/true_labels.shape[0]
+    return total/(len(true_labels) + 1e-10)
+
+
+def span_f1(gold, pred):
+    """
+    Borrowed from: https://github.com/jerbarnes/sentiment_graphs
+    """
+    tp, fp, fn = 0, 0, 0
+    for gold_labels, pred_labels in zip(gold, pred):
+        for gold_label, pred_label in zip(gold_labels, pred_labels):
+            # TP
+            if gold_label == pred_label:
+                tp += 1
+            #FP
+            if gold_label != pred_label and pred_label > 0:
+                fp += 1
+            #FN
+            if gold_label > 0 and pred_label != gold_label:
+                fn += 1
+    prec = tp / (tp + fp + 1e-6)
+    rec = tp / (tp + fn + 1e-6)
+    f1 = 2 * prec * rec / (prec + rec + 1e-6)
+    # return prec, rec, f1
+    return f1
 
 
 def proportional_f1(true_labels, predict_labels, num_labels):
@@ -264,10 +301,13 @@ def proportional_f1(true_labels, predict_labels, num_labels):
             average='micro',
             zero_division=1,  # set score to 1 when all labels and predictions are 0
         )
-    return total/true_labels.shape[0]
+    return total/(len(true_labels) + 1e-10)
 
 
 def binary_f1(golds, preds, eps=1e-7):
+    """
+    Needs to read in a single batch at a time (currently expects full data_loader)
+    """
     prec = binary_precision(golds, preds)
     rec = binary_recall(golds, preds)
     return 2 * ((prec * rec) / (prec + rec + eps))
@@ -276,7 +316,7 @@ def binary_f1(golds, preds, eps=1e-7):
 def binary_precision(golds, preds):
     tps = 0
     fps = 0
-    for i, (gold, pred) in zip(golds, preds):
+    for i, (gold, pred) in enumerate(zip(golds, preds)):  # for row in batch
         tps += binary_tp(gold, pred)
         fps += binary_fp(gold, pred)
     return tps / (tps + fps + 10**-10)
@@ -285,7 +325,7 @@ def binary_precision(golds, preds):
 def binary_recall(golds, preds):
     tps = 0
     fns = 0
-    for i, (gold, pred) in zip(golds, preds):
+    for i, (gold, pred) in enumerate(zip(golds, preds)):
         tps += binary_tp(gold, pred)
         fns += binary_fn(gold, pred)
     return tps / (tps + fns + 10**-10)
@@ -293,55 +333,52 @@ def binary_recall(golds, preds):
 
 def binary_tp(gold, pred):
     """
-    for each member in pred, if it overlaps with any member of gold,
+    if for each member in pred, 
+    it correctly overlaps with corresponding index in gold,
     return 1
     else
     return 0
     """
     tps = 0
-    for p in pred:
-        tp = False
-        for word in p:
-            for span in gold:
-                if word in span:
-                    tp = True
-        if tp is True:
-            tps += 1
+
+    # for p in pred:  # for token in prediction
+    tp = False  # reset tp value
+    for p, g in zip(pred, gold):
+        if p == g:
+            tp = True
+    if tp is True:
+        tps += 1
     return tps
 
 
 def binary_fn(gold, pred):
     """
-    if there is any member of gold that overlaps with no member of pred,
+    if there is a label > 0 in gold that is pred set to 0,
     return 1
     else
     return 0
     """
     fns = 0
-    for p in gold:
-        fn = True
-        for word in p:
-            for span in pred:
-                if word in span:
-                    fn = False
-        if fn is True:
-            fns += 1
+    fn = False
+    for g, p in zip(gold, pred):
+        if g > 0 and p == 0:  # gold label present but predicted none 
+            fn = True
+    if fn is True:
+        fns += 1
     return fns
 
 
 def binary_fp(gold, pred):
     """
-    if there is any member of pred that overlaps with
-    no member of gold, return 1
+    if there is a label > 0 in pred that is 0 in gold, 
+    return 1
     else return 0
     """
     fps = 0
-    for p in pred:
-        fp = True
-        for word in p:
-            for span in gold:
-                if word in span:
-                    fp = False
-        if fp is True:
-            fps += 1
+    fp = False
+    for p, g in zip(pred, gold):
+        if p>0 and g==0:  # predicted label present, but zero in gold
+            fp = True
+    if fp is True:
+        fps += 1
     return fps

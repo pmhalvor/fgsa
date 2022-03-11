@@ -32,7 +32,7 @@ class Study():
         ignore_id = -1,
         load_checkpoint = False,
 
-        metric = "easy",
+        metric = "span",
 
         model_name = "FgsaLSTM",
         model_path = None,
@@ -210,11 +210,9 @@ class Study():
         params["tokenizer"] = self.train_dataset.tokenizer
         return params
 
-    def fit(self):
+    def fit(self, metric=None):
         """ 
-        scikit-learn like fit() call for use in pipelines and gridsearches.
-
-        TODO learn if you need to feed data in through grid search.
+        Easy fit() call, since data loaders created on init
         """  
         self.logger.info('Fitting model...')
         self.model.fit(
@@ -222,6 +220,13 @@ class Study():
             dev_loader=self.dev_loader, 
             epochs=self.epochs
         )
+        self.score(metric)
+
+    def check_devices(self):
+        for param in self.model.parameters():
+            print(param.shape, param.device)
+        quit()
+
 
     def score(self, metric=None):
         """
@@ -231,30 +236,28 @@ class Study():
             metric (str): ["easy", "hard", "strict", "binary", "proportional"]
         """
         self.logger.info('Scoring model...')
-        absa_f1, easy_f1, hard_f1 = self.model.evaluate(self.dev_loader, verbose=self.verbose)
-
-        self.logger.info("ABSA F1: {}".format(absa_f1))
-        self.logger.info("Easy F1: {}".format(easy_f1))
-        self.logger.info("Hard F1: {}".format(hard_f1))
+        absa, binary, hard, macro, proportional, span = self.model.evaluate(self.dev_loader, verbose=self.verbose)
 
         if metric is None:
             metric = self.metric 
+
         self.final = None
-        if metric == "easy":
-            self.final = easy_f1
+        if metric == "absa":
+            self.final = absa
+        elif metric == "binary":
+            self.final = binary
         elif metric == "hard":
-            self.final = hard_f1
+            self.final = hard
+        elif metric == "macro":
+            self.final = macro
+        elif metric == "proportional":
+            self.final = proportional
+        elif metric == "span":
+            self.final = span
         elif metric == "strict":
             self.final = absa_f1
-        elif metric == "binary":
-            raise NotImplementedError
-            binary = None
-            self.final = binary
-        elif metric == "proportional":
-            raise NotImplementedError
-            proportional = None
-            self.final = proportional
 
+        self.logger.info('Metric:{}  Score:{}'.format(metric, self.final))
         return self.final
 
     def save_model(self):
@@ -269,7 +272,8 @@ if __name__ == "__main__":
 
     if len(sys.argv) > 0:
         filename = sys.argv[1]
-        with open('../studies/'+filename, 'r') as f:  # find sutdy configs in studies/ dir
+        filename += '.json' if '.json' not in filename else ''
+        with open('../studies/'+filename, 'r') as f:  # find study configs in studies/ dir
             data = json.load(f)
 
         params = {k : data[k][0] if isinstance(data[k], list) else data[k] for k in data}

@@ -10,8 +10,11 @@ from transformers import BertModel  # TODO next step, Bert as head
 
 ## Local imports
 from loss import DiceLoss
+from utils import binary_f1
+from utils import proportional_f1
 from utils import score
-from utils import ez_score
+from utils import span_f1
+from utils import weighted_macro
 
 
 class BertSimple(torch.nn.Module):
@@ -288,7 +291,7 @@ class BertHead(torch.nn.Module):
         self, 
         bert_finetune=True,         # TODO tune
         bert_path="ltgoslo/norbert",  
-        device="cpu",
+        device="cuda" if torch.cuda.is_available() else "cpu",
         dropout=0.1,                # TODO tune
         ignore_id=-1,
         loss_function="cross-entropy",  # cross-entropy, dice, mse, or iou 
@@ -307,7 +310,6 @@ class BertHead(torch.nn.Module):
 
         """
         super().__init__()
-        print("main init called")
 
         self.device = device
         self.dropout = dropout  # TODO potentially refactor name?
@@ -327,19 +329,15 @@ class BertHead(torch.nn.Module):
         self.unpack_lrs()
 
         # initialize bert head
-        self.bert = BertModel.from_pretrained(bert_path)
+        self.bert = BertModel.from_pretrained(bert_path).to(torch.device(self.device))
         self.bert.requires_grad = self.finetune
-        self.bert_dropout = torch.nn.Dropout(self.dropout)
+        self.bert_dropout = torch.nn.Dropout(self.dropout).to(torch.device(self.device)) 
         
-        # ensure everything is on specified device
-        self.bert = self.bert.to(self.device)
-        self.bert_dropout = self.bert_dropout.to(self.device)  # TODO is this needed?
-
         # architecture specific components
         self.components = self.init_components(self.subtasks)  # returns dict of task-specific output layers
 
         # loss function
-        self.loss = self.get_loss(loss_function, loss_weight)
+        self.loss = self.get_loss(loss_function, loss_weight).to(torch.device(self.device))
 
         # optimizers
         self.optimizers, self.schedulers = self.init_optimizer()  # creates same number of optimizers as output layers
@@ -367,15 +365,9 @@ class BertHead(torch.nn.Module):
             loss (torch.SomeLoss or None): either CrossEntropyLoss, MSELoss, or home-made IoULoss
         """
         loss = None
-        weight = torch.tensor(loss_weight)
         
         if loss_function is None:
-            weight = torch.tensor[1, loss_weight, loss_weight]
             loss = torch.nn.CrossEntropyLoss(ignore_index=self.ignore_id)
-
-        elif False and weight is not None:
-            # BUG: on weight tensor size, not needed for now
-            loss = torch.nn.CrossEntropyLoss(ignore_index=self.ignore_id, weight=weight)
 
         elif "cross" in loss_function.lower():
             loss = torch.nn.CrossEntropyLoss(ignore_index=self.ignore_id)
@@ -401,11 +393,9 @@ class BertHead(torch.nn.Module):
     ########### Model training ###########
     def fit(self, train_loader, dev_loader=None, epochs=10):
         for epoch in range(epochs):
-            self.train()
 
             for b, batch in enumerate(train_loader):
                 self.train()        # turn off eval mode
-                self.zero_grad()    # clear updates from prev epoch
 
                 # feed batch to model
                 output = self.forward(batch)
@@ -413,19 +403,14 @@ class BertHead(torch.nn.Module):
                 # apply loss
                 loss = self.backward(output, batch)
 
-                # log loss every 33th batch, on every 7th epoch
-                # if epoch%7==0 and b%33==0:
-                #     logging.info("Epoch:{:3} Batch:{:3}".format(epoch, b))
-                #     for task in self.subtasks:
-                #         logging.info("{:10} loss:{}".format(task, loss[task].item()))
-        
-                #     if dev_loader is not None:
-                #         self.evaluate(dev_loader)
+                # show results for first batch of each epoch
                 if b==0:
                     logging.info("Epoch:{:3} Batch:{:3}".format(epoch, b))
-                    for task in self.subtasks:
-                        logging.info("{:10} loss:{}".format(task, loss[task].item()))
-        
+                    # for task in self.subtasks:
+                    #     logging.info("{:10} loss:{}".format(task, loss[task].item()))
+                    logging.info("Total loss:{}".format(loss.item()))
+                    
+
                     if dev_loader is not None:
                         self.evaluate(dev_loader)
 
@@ -447,28 +432,36 @@ class BertHead(torch.nn.Module):
         """
 
         true = {
-            "expression": batch[2], 
-            "holder": batch[3],
-            "polarity": batch[4],
-            "target": batch[5],
+            "expression": batch[2].to(torch.device(self.device)), 
+            "holder": batch[3].to(torch.device(self.device)),
+            "polarity": batch[4].to(torch.device(self.device)),
+            "target": batch[5].to(torch.device(self.device)),
         }
 
-        # for task in self.subtasks:
-        #     print(task, output[task].shape, true[task].shape)
-        #     logging.info(task, output[task].shape, true[task].shape)
+        # resetting the gradients from the optimizer
+        # more info: https://pytorch.org/docs/stable/optim.html
+        for task in self.optimizers:
+            self.optimizers[task].zero_grad()
 
         # calcaulate losses per task
-        self.losses = {
-            task: self.loss(
-                input=output[task].to(torch.device(self.device)),
-                target=true[task].to(torch.device(self.device))
+        # self.losses = {
+        #     task: self.loss(
+        #         input=output[task],
+        #         target=true[task]
+        #     )
+        #     for task in self.subtasks
+        # }
+        self.loss_total = torch.zeros(1).to(torch.device(self.device))
+        for task in self.subtasks:
+            self.loss_total += self.loss(
+                input=output[task],
+                target=true[task]
             )
-            for task in self.subtasks
-        }
 
         # calculate gradients for parameters used per task
-        for task in self.subtasks:
-            self.losses[task].backward(retain_graph=True)  # retain_graph needed to update bert for all tasks
+        # for task in self.subtasks:
+        #     self.losses[task].backward(retain_graph=True)  # retain_graph needed to update shared tasks
+        self.loss_total.backward()
 
         # TODO should there be bert optimizer alone, 
         # if so needs to be updated for each task 
@@ -478,40 +471,54 @@ class BertHead(torch.nn.Module):
         for task in self.optimizers:
             self.optimizers[task].step()
 
-        return self.losses
+        return self.loss_total
 
     def evaluate(self, loader, verbose=False):
         """
         Returns overall binary and proportional F1 scores for predictions on the
         development data via loader, while logging task-wise scores along the way.
 
+        F1 variants:
+            ABSA: overall F1 score as measured by IMN and RACL
+            Binary: binary over F1 looking only for an overlap of correctly estimated labels
+            Hard: averaged task wise F1 as measured by IMN and RACL
+            Macro: averaged task wise f1_score from sklearn using param average='weights'
+            Proportional: token wise f1_score from sklearn using param average='micro'
+            Span: 'nicer' version of scope checking similar to RACL and IMN metrics TODO rewrite
+
         Parameters:
             loader (torch.DataLoader): 
+
+        Return:
+            absa_overall, binary_overall, hard_overall, macro_overall, proportional_overall, span_overall
         """
         absa_total_over_batches = 0  # f_absa from score() used in RACL experiment across batches
-        easy_total_over_batches = 0  # avg of easy task-wise f1-scores across batches
+        binary_total_over_batches = 0  # avg of easy task-wise f1-scores across batches
+        macro_total_over_batches = 0  # avg of easy task-wise f1-scores across batches
+        proportional_total_over_batches = 0  # avg of easy task-wise f1-scores across batches
+        span_total_over_batches = 0  # avg of easy task-wise f1-scores across batches
         hard_total_over_batches = 0  # avg of hard task-wise f1-scores across batches
 
 
         for b, batch in enumerate(loader):
-            predictions = self.predict(batch)
-            predictions = {task: predictions[task].cpu() for task in self.subtasks}
+            preds, golds = self.predict(batch)
+            # preds = {task: preds[task].detach().cpu() for task in self.subtasks}
 
-            true = {
-                "expression": batch[2].cpu(), 
-                "holder": batch[3].cpu(),
-                "polarity": batch[4].cpu(),
-                "target": batch[5].cpu(),
-            }
+            # true = {
+            #     "expression": batch[2].detach().cpu(), 
+            #     "holder": batch[3].detach().cpu(),
+            #     "polarity": batch[4].detach().cpu(),
+            #     "target": batch[5].detach().cpu(),
+            # }
 
             ### hard score
             hard = {}
             if "target" in self.subtasks and "polarity" in self.subtasks:
                 f_target, acc_polarity, f_polarity, f_absa = score(
-                    true_aspect = true["target"], 
-                    predict_aspect = predictions["target"], 
-                    true_sentiment = true["polarity"], 
-                    predict_sentiment = predictions["polarity"], 
+                    true_aspect = golds["target"], 
+                    predict_aspect = preds["target"], 
+                    true_sentiment = golds["polarity"], 
+                    predict_sentiment = preds["polarity"], 
                     train_op = False
                 ) 
 
@@ -526,10 +533,10 @@ class BertHead(torch.nn.Module):
 
             if "expression" in self.subtasks:
                 f_expression, _, _, _ = score(
-                    true_aspect = true["expression"], 
-                    predict_aspect = predictions["expression"], 
-                    true_sentiment = true["polarity"], 
-                    predict_sentiment = predictions["polarity"], 
+                    true_aspect = golds["expression"], 
+                    predict_aspect = preds["expression"], 
+                    true_sentiment = golds["polarity"], 
+                    predict_sentiment = preds["polarity"], 
                     train_op = True
                 )
 
@@ -539,10 +546,10 @@ class BertHead(torch.nn.Module):
 
             if "holder" in self.subtasks:
                 f_holder, _, _, _ = score(
-                    true_aspect = true["holder"], 
-                    predict_aspect = predictions["holder"], 
-                    true_sentiment = true["polarity"], 
-                    predict_sentiment = predictions["polarity"], 
+                    true_aspect = golds["holder"], 
+                    predict_aspect = preds["holder"], 
+                    true_sentiment = golds["polarity"], 
+                    predict_sentiment = preds["polarity"], 
                     train_op = True
                 )
 
@@ -550,31 +557,60 @@ class BertHead(torch.nn.Module):
 
                 logging.debug("{:10} hard: {}".format("holder", f_holder))
 
-            ### easy score
+            ### binary overlap, proportional f1, span f1, and weighted macro f1 (sklearn)
+            binary = {}
+            proportional = {}
+            span = {}
+            macro = {}
             easy = {}
             for task in self.subtasks: 
-                ez = ez_score(true[task], predictions[task], num_labels=3)
-                easy[task] = ez
-                logging.debug("{task:10} easy: {score}".format(task=task, score=ez))
+                b = binary_f1(golds[task], preds[task])
+                p = proportional_f1(golds[task], preds[task], num_labels=3)
+                s = span_f1(golds[task], preds[task])
+                m = weighted_macro(golds[task], preds[task], num_labels=3)
+                binary[task] = b
+                proportional[task] = p
+                span[task] = s
+                macro[task] = m
+                logging.debug("{task:10}       binary: {score}".format(task=task, score=b))
+                logging.debug("{task:10} proportional: {score}".format(task=task, score=p))
+                logging.debug("{task:10}         span: {score}".format(task=task, score=s))
+                logging.debug("{task:10}        macro: {score}".format(task=task, score=m))
+
 
             # to find average f1 over entire dev set
             absa_total_over_batches += f_absa
-            easy_total_over_batches += (sum([easy[task] for task in self.subtasks])/len(self.subtasks))
+            binary_total_over_batches += (sum([binary[task] for task in self.subtasks])/len(self.subtasks))
+            proportional_total_over_batches += (sum([proportional[task] for task in self.subtasks])/len(self.subtasks))
+            span_total_over_batches += (sum([span[task] for task in self.subtasks])/len(self.subtasks))
+            macro_total_over_batches += (sum([macro[task] for task in self.subtasks])/len(self.subtasks))
             hard_total_over_batches += (sum([hard[task] for task in self.subtasks])/len(self.subtasks))
 
         absa_overall = absa_total_over_batches/len(loader)
-        easy_overall = easy_total_over_batches/len(loader)
+        binary_overall = binary_total_over_batches/len(loader)
+        proportional_overall = proportional_total_over_batches/len(loader)
+        span_overall = span_total_over_batches/len(loader)
+        macro_overall = macro_total_over_batches/len(loader)
         hard_overall = hard_total_over_batches/len(loader)
 
-        logging.info("ABSA overall: {absa}".format(absa=absa_overall))
-        logging.info("Easy overall: {easy}".format(easy=easy_overall))
-        logging.info("Hard overall: {hard}".format(hard=hard_overall))
-        
-        print("ABSA overall: {absa}".format(absa=absa_overall))
-        print("Easy overall: {easy}".format(easy=easy_overall))
-        print("Hard overall: {hard}".format(hard=hard_overall))
+        logging.info(" (RACL) ABSA overall: {absa}".format(absa=absa_overall))
+        logging.info(" (RACL) Hard overall: {hard}".format(hard=hard_overall))
 
-        return absa_overall, easy_overall, hard_overall
+        logging.info("      Binary overall: {binary}".format(binary=binary_overall))
+        logging.info("Proportional overall: {proportional}".format(proportional=proportional_overall))
+        logging.info("        Span overall: {span}".format(span=span_overall))
+        logging.info("       Macro overall: {macro}".format(macro=macro_overall))
+        
+        print(" (RACL) ABSA overall: {absa}".format(absa=absa_overall))
+        print(" (RACL) Hard overall: {hard}".format(hard=hard_overall))
+
+        print("      Binary overall: {binary}".format(binary=binary_overall))
+        print("Proportional overall: {proportional}".format(proportional=proportional_overall))
+        print("        Span overall: {span}".format(span=span_overall))
+        print("       Macro overall: {macro}".format(macro=macro_overall))
+        
+
+        return absa_overall, binary_overall, hard_overall, macro_overall, proportional_overall, span_overall
 
     def predict(self, batch):
         """
@@ -584,12 +620,34 @@ class BertHead(torch.nn.Module):
 
         outputs = self.forward(batch)
 
-        self.predictions = {
+        prediction_tensors = {
             task: outputs[task].argmax(1)
             for task in self.subtasks
         }
 
-        return self.predictions
+        self.golds = {task: [] for task in self.subtasks}
+        self.preds = {task: [] for task in self.subtasks}
+        true = {
+            "expression": batch[2], 
+            "holder": batch[3],
+            "polarity": batch[4],
+            "target": batch[5],
+        }
+
+        # strip away padding
+        for i, row in enumerate(batch[0]):
+            for t, token in enumerate(row):
+                if token.item() == 0:  # padding id is 0
+                    for task in self.subtasks:
+                        self.preds[task].append(
+                            prediction_tensors[task][i][:t].tolist()
+                        )
+                        self.golds[task].append(
+                            true[task][i][:t].tolist()
+                        )
+            break
+
+        return self.preds, self.golds
         
     def score(self, X, y):
         absa, easy, hard = self.evaluate(X)
@@ -810,6 +868,7 @@ class IMN(BertHead):
 
         cnn_dim = self.find("cnn_dim", default=768)
         expression_layers = self.find("expression_layers", default=2)
+        polarity_labels = self.find("polarity_labels", default=3)  # expands to 5 when using english data sets
         polarity_layers = self.find("polarity_layers", default=2)
         shared_layers = self.find("shared_layers", default=2)
         target_layers = self.find("target_layers", default=2)
@@ -937,12 +996,12 @@ class IMN(BertHead):
 
         # polarity had attention before linear
         components["polarity"].update({
-            "attention": torch.nn.MultiheadAttention(cnn_dim, num_heads=1).to(torch.device(self.device)), 
+            # "attention": torch.nn.MultiheadAttention(cnn_dim, num_heads=1).to(torch.device(self.device)), 
             "linear": torch.nn.Sequential(
                 torch.nn.Dropout(self.dropout),
                 torch.nn.Linear(
                     in_features=int(2*cnn_dim), # initial_shared_features:300 + polarity_cnn:300
-                    out_features=5  # NOTE: SemEval data has neutral and confusing polarities
+                    out_features=polarity_labels  # NOTE: SemEval data has neutral and confusing polarities
                 ), 
                 torch.nn.Softmax(dim=-1)
             ).to(torch.device(self.device))
@@ -955,7 +1014,7 @@ class IMN(BertHead):
             "re_encode": torch.nn.Sequential(
                 torch.nn.Linear(
                     # sentence_output:cnn_dim + target_output:3 + expression_output:3 + polarity_output:5
-                    in_features=int(cnn_dim + 3 + 3 + 5),  
+                    in_features=int(cnn_dim + 3 + 3 + polarity_labels),  
                     out_features=cnn_dim,
                 ),
                 torch.nn.ReLU()
@@ -986,14 +1045,14 @@ class IMN(BertHead):
             word_embeddings = self.bert(
                 input_ids = input_ids,
                 attention_mask = mask,
-            ).last_hidden_state
+            ).last_hidden_state.to(torch.device(self.device))
         except Exception as e:
             print("input_ids {}".format(input_ids.max().item()))
             raise e
         word_embeddings = self.bert_dropout(word_embeddings)
 
-        # NOTE permute so shape is [32, 768, 42] into cnn
-        # then permute back to [32, 42, 768] for attnetion
+        # NOTE permute so shape is [batch, embedding, sequence] into cnn
+        # then permute back to [batch, sequence, embedding] for attnetion
         word_embeddings = word_embeddings.permute(0, 2, 1)
         sentence_output = word_embeddings  # TODO detach and/or clone?
 
@@ -1058,23 +1117,17 @@ class IMN(BertHead):
             if polarity_layers > 0:
                 polarity_output = self.components["polarity"]["cnn_sequential"](polarity_output)
 
-            # predicted prob of B or I in target and expression outputs
-            bi_probs = (target_output[:,:,1:].sum(dim=-1) + expression_output[:,:,1:].sum(dim=-1))/2.
-            bi_probs = bi_probs[:,:polarity_output.size(2)]
-            values =  torch.mul(
-                polarity_output.permute(1, 0, 2), # embedding, batch, sequence
-                bi_probs,
-            ).permute(2, 1, 0)  # sequence, batch, embedding
-
-            polarity_output = polarity_output.permute(2, 0, 1)  # sequence, batch, embedding
-            polarity_output, _ = self.components["polarity"]["attention"](
-                polarity_output,  # query, i.e. polar cnn output w/ weights
-                polarity_output,  # keys, i.e. (polar cnn output).T for self attention
-                values,  # values include probabilities for B and I tags
-                need_weights=False,
-                # TODO: implement attention mask?
-            )
-            polarity_output = polarity_output.permute(1, 2, 0)  # batch, embedding, sequence
+            # attention block
+            # values = polarity_output.permute(2, 0, 1)
+            # polarity_output = polarity_output.permute(2, 0, 1)  # sequence, batch, embedding
+            # polarity_output, _ = self.components["polarity"]["attention"](
+            #     polarity_output,  # query, i.e. polar cnn output w/ weights
+            #     polarity_output,  # keys, i.e. (polar cnn output).T for self attention
+            #     values,  # values should include probabilities for B and I tags
+            #     need_weights=False,
+            #     # TODO: implement attention mask?
+            # )
+            # polarity_output = polarity_output.permute(1, 2, 0)  # batch, embedding, sequence
 
             # NOTE: concat w/ initial_shared_features not word_embeddings like in target
             polarity_output = torch.cat((initial_shared_features, polarity_output), dim=1)  # cat embedding dim
@@ -1099,6 +1152,24 @@ class IMN(BertHead):
         return self.output
 
 
+    def get_weighted_values(self, output):
+        """
+        Calculations for values for polarity attention.
+        First few epochs guide attention values according to true labels for target and expression.
+        See imn/code/my_layers.py:Self_attention().call() for more. 
+        """
+        # PICK UP HERE
+        # Could help guide model in correct direction
+        # predicted prob of B or I in target and expression outputs
+        # bi_probs = (target_output[:,:,1:].sum(dim=-1) + expression_output[:,:,1:].sum(dim=-1))/2.
+        # bi_probs = bi_probs[:,:polarity_output.size(2)]
+        # values =  torch.mul(
+        #     polarity_output.permute(1, 0, 2), # embedding, batch, sequence
+        #     bi_probs,
+        # ).permute(2, 1, 0)  # sequence, batch, embedding
+        return None
+
+
 class RACL(BertHead):
 
     def init_components(self, subtasks):
@@ -1109,6 +1180,7 @@ class RACL(BertHead):
         return components
 
     def forward(self, batch):
+        raise NotImplementedError
         input_ids = batch[0].to(torch.device(self.device))
         attention_mask = batch[1].to(torch.device(self.device))
 

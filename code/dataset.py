@@ -130,7 +130,7 @@ class Norec(Dataset):
 
         except FileNotFoundError:
             logging.warning("holder.txt not found at path {}. Generating blank list...".format(data_path))
-            holder = [[self.unk_id for _ in line] for line in target]  # FIXME replace with UNK for bert, or mask?
+            holder = [[self.IGNORE_ID for _ in line] for line in target]  # FIXME replace with UNK for bert, or mask?
 
         return (expression, holder, polarity, sentence, target)
 
