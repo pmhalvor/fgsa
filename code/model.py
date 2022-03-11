@@ -408,7 +408,7 @@ class BertHead(torch.nn.Module):
                     logging.info("Epoch:{:3} Batch:{:3}".format(epoch, b))
                     # for task in self.subtasks:
                     #     logging.info("{:10} loss:{}".format(task, loss[task].item()))
-                    logging.info("{:10} loss:{}".format(task, loss.item()))
+                    logging.info("Total loss:{}".format(loss.item()))
                     
 
                     if dev_loader is not None:
