@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Job name:
-#SBATCH --job-name=fgsa-dev
+#SBATCH --job-name=fgsa-study
 # Project:
 #SBATCH --account=ec37
 # Wall time limit: --time=DD-HH:MM:SS
