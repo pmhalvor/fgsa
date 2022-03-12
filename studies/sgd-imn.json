@@ -1,25 +1,27 @@
 {
-    "name": "sgd",
-    "model_name": ["IMN", "FgsaLSTM", "BertHead"],
+    "name": "sgd-imn",
+    "model_name": "IMN",
 
     "optimizer_name": "sgd",
-    "momentum": [0, 0.3, 0.6, 0.9],
+    "momentum": [0.6, 0.9],
     "nesterov": [true, false],
 
     "bert_finetune": true,
-    "lr":[1e-7, 1e-9],
+    "lr":[1e-4, 1e-5, 1e-6],
 
     "expression_lr": 1e-7,
     "target_lr": 1e-7,
     "polarity_lr": 1e-7,
 
+    "dropout": [0.1, 0.4],
+
     "cnn_dim": [768, 1000],
-    "dropout": 0.1,
-    "lr_scheduler_patience":25,
-    "shared_layers": 5,
+    "shared_layers": [2, 5],
     "target_layers": 2,
     "polarity_layers": 2,
-    "expression_layers": 2,
-    "interactions": 2,
+    "expression_layers": 2,    
+    "interactions": [1, 3, 5],
+
+    "lr_scheduler_patience":25,
     "epochs": 40
 }
