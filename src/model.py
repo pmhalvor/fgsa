@@ -862,6 +862,7 @@ class FgsaLSTM(BertHead):
             components (dict): output layers used for the model indexed by task name
         """
         bidirectional = self.find("bidirectional", default=False)
+        hidden_size = self.find("hidden_size", default=768)
         num_layers = self.find("num_layers", default=3)
         dropout = self.find("dropout", default=0.1)
 
@@ -870,14 +871,14 @@ class FgsaLSTM(BertHead):
                 # cannot use nn.Sequential since LSTM outputs a tuple of last hidden layer and final cell states
                 "lstm": torch.nn.LSTM(
                     input_size=768,
-                    hidden_size=768,  # Following BERT paper
+                    hidden_size=hidden_size,  # Following BERT paper
                     num_layers=num_layers,
                     batch_first=True,
                     dropout=dropout,
                     bidirectional=bidirectional, 
                 ).to(torch.device(self.device)),
                 "linear": torch.nn.Linear(
-                    in_features=768*2 if bidirectional else 768,
+                    in_features=hidden_size*2 if bidirectional else hidden_size,
                     out_features=3,
                 ).to(torch.device(self.device))
             }
@@ -1069,7 +1070,7 @@ class IMN(BertHead):
 
         # polarity had attention before linear
         components["polarity"].update({
-            # "attention": torch.nn.MultiheadAttention(cnn_dim, num_heads=1).to(torch.device(self.device)), 
+            "attention": torch.nn.MultiheadAttention(cnn_dim, num_heads=1).to(torch.device(self.device)), 
             "linear": torch.nn.Sequential(
                 torch.nn.Dropout(self.dropout),
                 torch.nn.Linear(
@@ -1152,8 +1153,6 @@ class IMN(BertHead):
 
         # only the information learned from shared cnn(s), no embeddings
         initial_shared_features = sentence_output  # TODO detach and/or clone?    
-        # print("forward: after shared: word_embeddings.shape={}".format(word_embeddings.shape))
-        # print("forward: after shared: sentence_output.shape={}".format(sentence_output.shape))
 
         #######################################
         # Task-specific layers
@@ -1191,16 +1190,16 @@ class IMN(BertHead):
                 polarity_output = self.components["polarity"]["cnn_sequential"](polarity_output)
 
             # attention block
-            # values = polarity_output.permute(2, 0, 1)
-            # polarity_output = polarity_output.permute(2, 0, 1)  # sequence, batch, embedding
-            # polarity_output, _ = self.components["polarity"]["attention"](
-            #     polarity_output,  # query, i.e. polar cnn output w/ weights
-            #     polarity_output,  # keys, i.e. (polar cnn output).T for self attention
-            #     values,  # values should include probabilities for B and I tags
-            #     need_weights=False,
-            #     # TODO: implement attention mask?
-            # )
-            # polarity_output = polarity_output.permute(1, 2, 0)  # batch, embedding, sequence
+            values = polarity_output.permute(2, 0, 1)
+            polarity_output = polarity_output.permute(2, 0, 1)  # sequence, batch, embedding
+            polarity_output, _ = self.components["polarity"]["attention"](
+                polarity_output,  # query, i.e. polar cnn output w/ weights
+                polarity_output,  # keys, i.e. (polar cnn output).T for self attention
+                values,  # values should include probabilities for B and I tags
+                need_weights=False,
+                # TODO: implement attention mask?
+            )
+            polarity_output = polarity_output.permute(1, 2, 0)  # batch, embedding, sequence
 
             # NOTE: concat w/ initial_shared_features not word_embeddings like in target
             polarity_output = torch.cat((initial_shared_features, polarity_output), dim=1)  # cat embedding dim
