@@ -22,5 +22,5 @@ module load PyTorch/1.7.1-foss-2020b
 
 
 ## Do some work:
-cd code
+cd $HOME/nlp/msc/fgsa/src
 python preprocess.py --interactive 0 --overwrite 1
