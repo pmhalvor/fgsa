@@ -140,9 +140,11 @@ def show_study_loss(name, title=None):
         loss = parse_loss(run)
         metrics = parse_metrics(run)
         
+        if title is None:
+            title = name + f" Run:{i}"
         try:
-            loss_df = show_data(loss, "Loss:{}".format(title if title is not None else name))
-            metrics_df = show_data(metrics, "Metrics:{}".format(title if title is not None else name))
+            loss_df = show_data(loss, "Loss:{}".format(title))
+            metrics_df = show_data(metrics, "Metrics:{}".format(title))
             plt.show()
             
             loss_dfs[i] = loss_df.T
@@ -158,7 +160,8 @@ def show_study_loss(name, title=None):
     return loss_dfs, metrics_dfs
 
 
-### DEPRECATED ### Batch-wise loss 
+### DEPRECATED BELOW ------------------------------------------------------
+### Batch-wise loss 
 def parse_batchwise_loss(data):
     """This logging format has been changed. Needed only for older logs"""
     epochs = {}
