@@ -10,7 +10,7 @@ slurm*
 
 # But allow these!
 !log/plot-results.ipynb
-
+!hyper-optimizers.ipynb
 
 
 
