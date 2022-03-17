@@ -1104,6 +1104,8 @@ class IMN(BertHead):
         polarity_layers = self.find("polarity_layers", default=2)
         shared_layers = self.find("shared_layers", default=2)
         target_layers = self.find("target_layers", default=2)
+        # attention params
+        queries = self.find("queries", default=batch[4])  # batch[4] = polarity
 
         input_ids = batch[0].to(torch.device(self.device))
         mask = batch[1].to(torch.device(self.device))
@@ -1191,16 +1193,21 @@ class IMN(BertHead):
                 polarity_output = self.components["polarity"]["cnn_sequential"](polarity_output)
 
             # attention block
-            # values = polarity_output.permute(2, 0, 1)
-            # polarity_output = polarity_output.permute(2, 0, 1)  # sequence, batch, embedding
-            # polarity_output, _ = self.components["polarity"]["attention"](
-            #     polarity_output,  # query, i.e. polar cnn output w/ weights
-            #     polarity_output,  # keys, i.e. (polar cnn output).T for self attention
-            #     values,  # values should include probabilities for B and I tags
-            #     need_weights=False,
-            #     # TODO: implement attention mask?
-            # )
-            # polarity_output = polarity_output.permute(1, 2, 0)  # batch, embedding, sequence
+            values = polarity_output.permute(2, 0, 1)
+            queries, keys, values = self.get_attention_inputs(
+                target_cnn_output, 
+                expression_cnn_output, 
+                polarity_cnn_polarity
+            )
+            polarity_output = polarity_output.permute(2, 0, 1)  # sequence, batch, embedding
+            polarity_output, _ = self.components["polarity"]["attention"](
+                polarity_output,  # query, i.e. polar cnn output w/ weights
+                polarity_output,  # keys, i.e. (polar cnn output).T for self attention
+                values,  # values should include probabilities for B and I tags
+                need_weights=False,
+                # TODO: implement attention mask?
+            )
+            polarity_output = polarity_output.permute(1, 2, 0)  # batch, embedding, sequence
 
             # NOTE: concat w/ initial_shared_features not word_embeddings like in target
             polarity_output = torch.cat((initial_shared_features, polarity_output), dim=1)  # cat embedding dim
@@ -1225,7 +1232,7 @@ class IMN(BertHead):
         return self.output
 
 
-    def get_weighted_values(self, output):
+    def get_attention_inputs(self, output):
         """
         Calculations for values for polarity attention.
         First few epochs guide attention values according to true labels for target and expression.
