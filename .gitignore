@@ -9,7 +9,7 @@ slurm*
 *.code-workspace
 
 # But allow these!
-!log/plot-results.ipynb
+!plot-results.ipynb
 !hyper-optimizers.ipynb
 
 
