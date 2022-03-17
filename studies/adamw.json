@@ -16,7 +16,6 @@
     "polarity_lr": 1e-7,
 
     "cnn_dim": [768, 1000],
-    "hidden_layers": [300, 768],
     "dropout": 0.1,
     "lr_scheduler_patience":25,
     "shared_layers": 5,

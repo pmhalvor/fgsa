@@ -25,5 +25,5 @@ module load nlpl-tokenizers/0.10.2-foss-2019b-Python-3.7.4
 
 
 ## Do some work:
-cd $HOME/nlp/msc/fgsa/code
+cd $HOME/nlp/msc/fgsa/src
 python study.py $1 
