@@ -1198,12 +1198,11 @@ class IMN(BertHead):
             # attention block
             # values = polarity_output.permute(2, 0, 1)
             queries, keys, values = self.get_attention_inputs(
-                target_cnn_output, 
-                expression_cnn_output, 
-                polarity_cnn_output
+                target_cnn_output.permute(2, 0, 1),     # sequence, batch, embedding
+                expression_cnn_output.permute(2, 0, 1), 
+                polarity_cnn_output.permute(2, 0, 1)
             )
 
-            polarity_output = polarity_output.permute(2, 0, 1)  # sequence, batch, embedding
             polarity_output, _ = self.components["polarity"]["attention"](
                 queries,    # query, i.e. polar cnn output w/ weights
                 keys,       # keys, i.e. (polar cnn output).T for self attention
