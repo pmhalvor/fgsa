@@ -1127,6 +1127,8 @@ class IMN(BertHead):
             raise e
         word_embeddings = self.bert_dropout(word_embeddings)
 
+        # TODO output shared layers to some "relevant" scope
+
         # NOTE permute so shape is [batch, embedding, sequence] into cnn
         # then permute back to [batch, sequence, embedding] for attnetion
         word_embeddings = word_embeddings.permute(0, 2, 1)
@@ -1277,20 +1279,21 @@ class IMN(BertHead):
         return queries, keys, values
 
 
-    # def guided_start(self):
-        # """
-        # Calculations for values for polarity attention.
-        # First few epochs guide attention values according to true labels for target and expression.
-        # See imn/code/my_layers.py:Self_attention().call() for more. 
-        # """
+    def guided_start(self):
+        """
+        Calculations for values for polarity attention.
+        First few epochs guide attention values according to true labels for target and expression.
+        See imn/code/my_layers.py:Self_attention().call() for more. 
+        """
+        raise NotImplementedError
         # Could help guide model in correct direction
         # predicted prob of B or I in target and expression outputs
-        # bi_probs = (target_output[:,:,1:].sum(dim=-1) + expression_output[:,:,1:].sum(dim=-1))/2.
-        # bi_probs = bi_probs[:,:polarity_output.size(2)]
-        # values =  torch.mul(
-        #     polarity_output.permute(1, 0, 2), # embedding, batch, sequence
-        #     bi_probs,
-        # ).permute(2, 1, 0)  # sequence, batch, embedding
+        bi_probs = (target_output[:,:,1:].sum(dim=-1) + expression_output[:,:,1:].sum(dim=-1))/2.
+        bi_probs = bi_probs[:,:polarity_output.size(2)]
+        values =  torch.mul(
+            polarity_output.permute(1, 0, 2), # embedding, batch, sequence
+            bi_probs,
+        ).permute(2, 1, 0)  # sequence, batch, embedding
 
 
 class RACL(BertHead):
