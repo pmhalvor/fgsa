@@ -1105,6 +1105,8 @@ class IMN(BertHead):
         polarity_layers = self.find("polarity_layers", default=2)
         shared_layers = self.find("shared_layers", default=2)
         target_layers = self.find("target_layers", default=2)
+        # attention params
+        queries = self.find("queries", default=batch[4])  # batch[4] = polarity
 
         input_ids = batch[0].to(torch.device(self.device))
         mask = batch[1].to(torch.device(self.device))
@@ -1191,6 +1193,12 @@ class IMN(BertHead):
 
             # attention block
             values = polarity_output.permute(2, 0, 1)
+            # queries, keys, values = self.get_attention_inputs(
+            #     target_cnn_output, 
+            #     expression_cnn_output, 
+            #     polarity_cnn_polarity
+            # )
+
             polarity_output = polarity_output.permute(2, 0, 1)  # sequence, batch, embedding
             polarity_output, _ = self.components["polarity"]["attention"](
                 polarity_output,  # query, i.e. polar cnn output w/ weights
@@ -1224,7 +1232,7 @@ class IMN(BertHead):
         return self.output
 
 
-    def get_weighted_values(self, output):
+    def get_attention_inputs(self, output):
         """
         Calculations for values for polarity attention.
         First few epochs guide attention values according to true labels for target and expression.
