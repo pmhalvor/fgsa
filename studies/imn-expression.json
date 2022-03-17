@@ -1,0 +1,24 @@
+{
+    "bert_path": "ltgoslo/norbert",
+
+    "debug": false,
+    "device": "cuda",
+    "epochs": 150,
+    "ignore_id": -1,
+    
+    "dropout": 0.4,
+    "lr": 1e-08,
+    "lr_scheduler_patience": 25,
+    "model_name": "IMN",
+    "optimizer_name": "adamw",
+    "weight_decay": 0.6,
+
+    "bert_finetune": true,
+
+    "cnn_dim": 768,
+    "shared_layers": 2,
+    "target_layers": 2, 
+    "polarity_layers": 2,
+    "expression_layers": [2,4,6,8],
+    "interactions": 1
+}

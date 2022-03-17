@@ -1,0 +1,24 @@
+{
+    "name": "adamw-imn",
+    "model_name": "IMN",
+
+    "optimizer_name": "adamw",
+    "weight_decay": [0.3, 0.6, 0.9],
+
+    "metric": "span",
+
+    "bert_finetune": true,
+    "lr":[1e-8, 1e-9],
+
+    "dropout": [0.1, 0.4],
+    
+    "cnn_dim": [768, 1000],
+    "shared_layers": [2, 5],
+    "target_layers": 2,
+    "polarity_layers": 2,
+    "expression_layers": 2,
+    "interactions": [1, 3, 5],
+
+    "lr_scheduler_patience":25,
+    "epochs": 40
+}

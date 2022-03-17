@@ -8,6 +8,13 @@ slurm*
 /checkpoints/*
 *.code-workspace
 
+# But allow these!
+!log/plot-results.ipynb
+!hyper-optimizers.ipynb
+
+
+
+
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
