@@ -1200,7 +1200,7 @@ class IMN(BertHead):
             queries, keys, values = self.get_attention_inputs(
                 target_cnn_output, 
                 expression_cnn_output, 
-                polarity_cnn_polarity
+                polarity_cnn_output
             )
 
             polarity_output = polarity_output.permute(2, 0, 1)  # sequence, batch, embedding
