@@ -1166,7 +1166,8 @@ class IMN(BertHead):
             ### Subtask: target
             target_output = sentence_output
             if target_layers > 0:
-                target_output = self.components["target"]["cnn_sequential"](target_output)
+                target_cnn_output = self.components["target"]["cnn_sequential"](target_output)
+                target_output = target_cnn_output
 
             target_output = torch.cat((word_embeddings, target_output), dim=1)  # cat embedding dim
             ### target_output.shape = [batch, sequence, embedding]
@@ -1178,7 +1179,9 @@ class IMN(BertHead):
             ### Subtask: expression
             expression_output = sentence_output
             if expression_layers > 0:
-                expression_output = self.components["expression"]["cnn_sequential"](expression_output)
+                expression_cnn_output = self.components["expression"]["cnn_sequential"](expression_output)
+                expression_output = expression_cnn_output
+
             expression_output = torch.cat((word_embeddings, expression_output), dim=1)  # cat embedding dim
             expression_output = expression_output.permute(0, 2, 1)  # batch, sequence, embedding
             expression_output = self.components["expression"]["linear"](expression_output)
@@ -1189,21 +1192,22 @@ class IMN(BertHead):
             polarity_output = sentence_output
 
             if polarity_layers > 0:
-                polarity_output = self.components["polarity"]["cnn_sequential"](polarity_output)
+                polarity_cnn_output = self.components["polarity"]["cnn_sequential"](polarity_output)
+                polarity_output = polarity_cnn_output
 
             # attention block
-            values = polarity_output.permute(2, 0, 1)
-            # queries, keys, values = self.get_attention_inputs(
-            #     target_cnn_output, 
-            #     expression_cnn_output, 
-            #     polarity_cnn_polarity
-            # )
+            # values = polarity_output.permute(2, 0, 1)
+            queries, keys, values = self.get_attention_inputs(
+                target_cnn_output, 
+                expression_cnn_output, 
+                polarity_cnn_polarity
+            )
 
             polarity_output = polarity_output.permute(2, 0, 1)  # sequence, batch, embedding
             polarity_output, _ = self.components["polarity"]["attention"](
-                polarity_output,  # query, i.e. polar cnn output w/ weights
-                polarity_output,  # keys, i.e. (polar cnn output).T for self attention
-                values,  # values should include probabilities for B and I tags
+                queries,    # query, i.e. polar cnn output w/ weights
+                keys,       # keys, i.e. (polar cnn output).T for self attention
+                values,     # values should include probabilities for B and I tags
                 need_weights=False,
                 # TODO: implement attention mask?
             )
@@ -1232,13 +1236,54 @@ class IMN(BertHead):
         return self.output
 
 
-    def get_attention_inputs(self, output):
-        """
-        Calculations for values for polarity attention.
-        First few epochs guide attention values according to true labels for target and expression.
-        See imn/code/my_layers.py:Self_attention().call() for more. 
-        """
-        # PICK UP HERE
+    def get_attention_inputs(self, target, expression, polarity):
+        """ """
+        query = self.find("query", default=self.find("queries", default="polarity"))
+        key = self.find("key", default=self.find("keys", default="polarity"))
+        value = self.find("value", default=self.find("values", default="polarity"))
+
+        queries, keys, values = None, None, None 
+
+        # Q
+        if "polar" in query:
+            queries = polarity
+        elif "target" in query:
+            queries = target
+        elif "expression" in query:
+            queries = expression
+        else:
+            queries = polarity
+
+        # K
+        if "polar" in key:
+            keys = polarity
+        elif "target" in key:
+            keys = target
+        elif "expression" in key:
+            keys = expression
+        else:
+            keys = polarity
+
+        # v
+        if "polar" in value:
+            values = polarity
+        elif "target" in value:
+            values = target
+        elif "expression" in value:
+            values = expression
+        else:
+            values = polarity
+
+
+        return queries, keys, values
+
+
+    # def guided_start(self):
+        # """
+        # Calculations for values for polarity attention.
+        # First few epochs guide attention values according to true labels for target and expression.
+        # See imn/code/my_layers.py:Self_attention().call() for more. 
+        # """
         # Could help guide model in correct direction
         # predicted prob of B or I in target and expression outputs
         # bi_probs = (target_output[:,:,1:].sum(dim=-1) + expression_output[:,:,1:].sum(dim=-1))/2.
@@ -1247,7 +1292,6 @@ class IMN(BertHead):
         #     polarity_output.permute(1, 0, 2), # embedding, batch, sequence
         #     bi_probs,
         # ).permute(2, 1, 0)  # sequence, batch, embedding
-        return None
 
 
 class RACL(BertHead):
