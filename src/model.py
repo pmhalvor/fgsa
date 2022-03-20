@@ -1350,7 +1350,7 @@ class IMN(BertHead):
         
         logging.info("{:10} loss:{}".format("scope", self.scope_loss_value.item()))
 
-        return self.scope_output
+        return self.scope_output.to(torch.device(self.device))
 
 
     @staticmethod
