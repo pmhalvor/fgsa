@@ -1,0 +1,18 @@
+{
+    "name": "imn-scope",
+
+    "model_name": "imn",
+    
+    "dropout": 0.5,
+
+    "warm_up_constant": [5, 10, 20],
+    "find_scope": [true, false],
+    
+    "cnn_dim": 768,
+    "shared_layers": 4,
+    "target_layers": 2,
+    "polarity_layers": 2,
+    "expression_layers": 2,
+    "interactions": 2,
+    "epochs": 100
+}

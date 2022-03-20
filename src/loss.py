@@ -1,3 +1,9 @@
+"""  
+This part of the experiment was only initially looked at. 
+A detailed investigation was given low priority during development. 
+
+"""
+
 from torch import nn
 import torch 
 

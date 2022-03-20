@@ -312,6 +312,7 @@ class BertHead(torch.nn.Module):
         """
         super().__init__()
 
+        self.current_epoch = 0
         self.device = device
         self.dropout = dropout  # TODO potentially refactor name?
         self.finetune = bert_finetune
@@ -335,7 +336,7 @@ class BertHead(torch.nn.Module):
         self.bert_dropout = torch.nn.Dropout(self.dropout).to(torch.device(self.device)) 
         
         # architecture specific components
-        self.components = self.init_components(self.subtasks)  # returns dict of task-specific output layers
+        self.components = torch.nn.ModuleDict(self.init_components(self.subtasks))  # returns dict of task-specific output layers
 
         # loss function
         self.loss = self.get_loss(loss_function).to(torch.device(self.device))
@@ -461,6 +462,7 @@ class BertHead(torch.nn.Module):
     ########### Model training ###########
     def fit(self, train_loader, dev_loader=None, epochs=10):
         for epoch in range(epochs):
+            self.current_epoch = epoch
 
             for b, batch in enumerate(train_loader):
                 self.train()        # turn off eval mode
@@ -800,7 +802,7 @@ class BertHead(torch.nn.Module):
                     lr=self.learning_rate  # use main learning rate for bert training
             ) # TODO test other optimizers?
 
-            if self.components.get("shared") is not None:
+            if "shared" in self.components.keys():
                 for layer in self.components["shared"]:
                     optimizers[task].add_param_group(
                         {"params": self.components["shared"][layer].parameters(), "lr":lr}
@@ -939,39 +941,41 @@ class IMN(BertHead):
         Returns:
             components (dict): output layers used for the model indexed by task name
         """
-
         cnn_dim = self.find("cnn_dim", default=768)
         expression_layers = self.find("expression_layers", default=2)
         polarity_labels = self.find("polarity_labels", default=3)  # expands to 5 when using english data sets
         polarity_layers = self.find("polarity_layers", default=2)
         shared_layers = self.find("shared_layers", default=2)
         target_layers = self.find("target_layers", default=2)
+        # scope specific
+        scope_lr = self.find("scope_lr", default=self.learning_rate)
+        optimizer_name = self.find("optimizer_name", default="adam")
 
-        components = {
-            "shared": {
+        components = torch.nn.ModuleDict({
+            "shared": torch.nn.ModuleDict({
                 # shared convolutions over embeddings
-            },
-            "target": {
+            }),
+            "target": torch.nn.ModuleDict({
                 # aspect extraction: dropout -> cnn -> cat -> dropout -> cnn -> cat -> dropout -> linear
-            },
-            "expression":{
+            }),
+            "expression":torch.nn.ModuleDict({
                 # opinion extraction: dropout -> cnn -> cat -> dropout -> cnn -> cat -> dropout -> linear
                 # this is really done jointly w/ target, but separate here for more flexibility
-            },
-            "polarity":{
+            }),
+            "polarity":torch.nn.ModuleDict({
                 # polarity classification: cnn -> attention -> cat -> dropout -> linear
-            }
+            }),
             # doc-level skipped for now
-        }
+        })
 
         ######################################
         # Shared CNN layers
         ######################################
         for i in range(shared_layers):
             print("Shared CNN layer {}".format(i))
-            layer = {
+            layer = torch.nn.ModuleDict({
                 f"dropout": torch.nn.Dropout(self.dropout).to(torch.device(self.device)),
-            }
+            })
             if i == 0:
                 layer[f"cnn_{i}_3"] = torch.nn.Conv1d(
                     in_channels = int(768),
@@ -1081,6 +1085,32 @@ class IMN(BertHead):
             ).to(torch.device(self.device))
         })
 
+        
+        #######################################
+        # Scope predictions
+        #######################################
+
+        components.update({
+            "scope": torch.nn.ModuleDict({
+                # scope finder: shared -> linear 
+                "linear": torch.nn.Sequential(
+                    torch.nn.Linear(
+                        in_features=cnn_dim,
+                        out_features=1
+                    ),
+                    torch.nn.Sigmoid()
+                )
+            })
+        })
+
+        self.relu = torch.nn.ReLU()
+        self.scope_loss = torch.nn.BCELoss()
+        scope_optimizer = self.get_optimizer(optimizer_name)
+        self.scope_optimizer = scope_optimizer(
+            components["scope"]["linear"].parameters(),
+            lr=scope_lr
+        )
+
         #######################################
         # Re-encoder
         #######################################
@@ -1111,8 +1141,8 @@ class IMN(BertHead):
         input_ids = batch[0].to(torch.device(self.device))
         mask = batch[1].to(torch.device(self.device))
 
-        # NOTE: Development now focused on maintaining sequence size
-        # and expanding/re-encoding embedding size 
+        # NOTE: System maintains sequence size by
+        # expanding/re-encoding to embedding size 
         
         #########################################
         # Shared word embedding layer 
@@ -1126,8 +1156,6 @@ class IMN(BertHead):
             print("input_ids {}".format(input_ids.max().item()))
             raise e
         word_embeddings = self.bert_dropout(word_embeddings)
-
-        # TODO output shared layers to some "relevant" scope
 
         # NOTE permute so shape is [batch, embedding, sequence] into cnn
         # then permute back to [batch, sequence, embedding] for attnetion
@@ -1157,6 +1185,16 @@ class IMN(BertHead):
 
         # only the information learned from shared cnn(s), no embeddings
         initial_shared_features = sentence_output  # TODO detach and/or clone?    
+
+
+        if self.find("find_scope", default=True):
+            scope_output = self.scope_relevance(
+                batch,
+                sentence_output
+            ) 
+            # sentence_output.shape = [batch, embedding (768), sequence]
+            sentence_output *= scope_output.unsqueeze(1).expand(-1, sentence_output.size(1), -1)
+
 
         #######################################
         # Task-specific layers
@@ -1279,21 +1317,55 @@ class IMN(BertHead):
         return queries, keys, values
 
 
-    def guided_start(self):
+    def scope_relevance(self, batch, shared_output) -> tuple():
         """
-        Calculations for values for polarity attention.
-        First few epochs guide attention values according to true labels for target and expression.
-        See imn/code/my_layers.py:Self_attention().call() for more. 
+        Return:
+            scope_loss_value: value of loss for current scope prediction
+            scope_logits: scope predictions after shared layers
+            scope_true: true scope for current batch
         """
-        raise NotImplementedError
-        # Could help guide model in correct direction
-        # predicted prob of B or I in target and expression outputs
-        bi_probs = (target_output[:,:,1:].sum(dim=-1) + expression_output[:,:,1:].sum(dim=-1))/2.
-        bi_probs = bi_probs[:,:polarity_output.size(2)]
-        values =  torch.mul(
-            polarity_output.permute(1, 0, 2), # embedding, batch, sequence
-            bi_probs,
-        ).permute(2, 1, 0)  # sequence, batch, embedding
+        labels = {
+            "expression": batch[2],
+            "polarity": batch[4],
+            "target": batch[5],
+        }
+
+        self.scope_true = self.relu(
+            (labels["expression"] + labels["polarity"] + labels["target"])
+        ).bool().float()
+        # scope_true.shape = [batch, sequence]
+
+        # shared_output.shape = [batch, embedding (768), sequence]
+        self.scope_logits = self.components["scope"]["linear"](shared_output.permute(0, 2, 1)).squeeze(-1)
+
+        # scope_logits.shape = [batch, sequence, 1]
+        self.scope_loss_value = self.scope_loss(self.scope_logits, self.scope_true)
+        self.scope_loss_value.backward(retain_graph=True)
+        self.scope_optimizer.step()
+
+        # TODO configurable guided start/warm_up?
+        gold_influence = self.get_prob(self.current_epoch, self.find("warm_up_constant", default=5))
+        self.scope_output = (gold_influence*self.scope_true + (1-gold_influence)*self.scope_logits).detach()
+        self.scope_output.requires_grad = True
+        
+        logging.info("{:10} loss:{}".format("scope", self.scope_loss_value.item()))
+
+        return self.scope_output
+
+
+    @staticmethod
+    def get_prob(epoch_count, constant=5):
+        """
+        Borrowed directly from https://github.com/ruidan/IMN-E2E-ABSA
+        
+        Compute the probability of using gold opinion labels in opinion transmission
+        (To alleviate the problem of unreliable predictions of opinion labels sent from AE to AS,
+        in the early stage of training, we use gold labels as prediction with probability 
+        that depends on the number of current epoch)
+
+        """
+        prob = constant/(constant+torch.exp(torch.tensor(epoch_count).float()/constant))
+        return prob
 
 
 class RACL(BertHead):
