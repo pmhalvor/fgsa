@@ -479,6 +479,7 @@ class BertHead(torch.nn.Module):
                     for task in self.subtasks:
                         logging.info("{:10} loss:{}".format(task, loss[task].item()))
                     
+                    logging.info("{:10} loss:{}".format("scope", self.scope_loss_value.item()))
 
                     if dev_loader is not None:
                         self.evaluate(dev_loader)
@@ -1348,7 +1349,6 @@ class IMN(BertHead):
         self.scope_output = (gold_influence*self.scope_true + (1-gold_influence)*self.scope_logits).detach()
         self.scope_output.requires_grad = True
         
-        logging.info("{:10} loss:{}".format("scope", self.scope_loss_value.item()))
 
         return self.scope_output.to(torch.device(self.device))
 
