@@ -1099,7 +1099,7 @@ class IMN(BertHead):
                         out_features=1
                     ),
                     torch.nn.Sigmoid()
-                )
+                ).to(torch.device(self.device))
             })
         })
 
