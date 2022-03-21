@@ -17,6 +17,7 @@ def parse_taskwise_loss(data, get_epochs=True):
         "polarity": [],
         "target": [],
         "total": [],
+        "scope": [],
     }
     
     epochs = [0]
