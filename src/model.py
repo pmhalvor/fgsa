@@ -464,7 +464,6 @@ class BertHead(torch.nn.Module):
     ########### Model training ###########
     def fit(self, train_loader, dev_loader=None, epochs=10):
         writer = SummaryWriter()
-        writer.add_graph(self, train_loader)
 
         for epoch in range(epochs):
             self.current_epoch = epoch
@@ -484,8 +483,11 @@ class BertHead(torch.nn.Module):
                     for task in self.subtasks:
                         logging.info("{:10} loss:{}".format(task, loss[task].item()))
                         writer.add_scalar("loss/{}".format(task), loss[task].item(), epoch)
-                    logging.info("{:10} loss:{}".format("scope", self.scope_loss_value.item()))
-                    writer.add_scalar("loss/{}".format("scope"), self.scope_loss_value.item(), epoch)
+
+                    # only needed when scope loss is calculated (IMN++)
+                    if self.find("scope_loss_value", default=None) is not None:
+                        logging.info("{:10} loss:{}".format("scope", self.scope_loss_value.item()))
+                        writer.add_scalar("loss/{}".format("scope"), self.scope_loss_value.item(), epoch)
 
                     if dev_loader is not None:
                         self.evaluate(dev_loader)
@@ -773,15 +775,15 @@ class BertHead(torch.nn.Module):
             components (dict): output layers used for the model indexed by task name
         """
 
-        components = {
-            task: {
+        components = torch.nn.ModuleDict({
+            task: torch.nn.ModuleDict({
                 "linear": torch.nn.Linear(
                     in_features=768,
                     out_features=3,  # 3 possible classifications for each task
                 ).to(torch.device(self.device))
-            }
+            })
             for task in subtasks
-        }
+        })
 
         return components
 
@@ -876,8 +878,8 @@ class FgsaLSTM(BertHead):
         num_layers = self.find("num_layers", default=3)
         dropout = self.find("dropout", default=0.1)
 
-        components = {
-            task: {
+        components = torch.nn.ModuleDict({
+            task: torch.nn.ModuleDict({
                 # cannot use nn.Sequential since LSTM outputs a tuple of last hidden layer and final cell states
                 "lstm": torch.nn.LSTM(
                     input_size=768,
@@ -891,9 +893,9 @@ class FgsaLSTM(BertHead):
                     in_features=hidden_size*2 if bidirectional else hidden_size,
                     out_features=3,
                 ).to(torch.device(self.device))
-            }
+            })
             for task in subtasks
-        }
+        })
 
         return components
     

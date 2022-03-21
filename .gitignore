@@ -7,6 +7,7 @@ slurm*
 *.pt
 /checkpoints/*
 *.code-workspace
+*/runs/
 
 # But allow these!
 !plot-results.ipynb
