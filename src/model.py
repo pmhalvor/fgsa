@@ -815,21 +815,23 @@ class BertHead(torch.nn.Module):
                         self.components[task][layer].parameters(),
                         lr=lr  # use main learning rate for bert training
                     ) # TODO test other optimizers?
+                    
+                    if "shared" in self.components.keys():
+                        for layer in self.components["shared"]:
+                            optimizers[task].add_param_group(
+                                {"params": self.components["shared"][layer].parameters(), "lr":lr}
+                            )
+
+                    if self.find(f"bert_{task}", default=False) and self.finetune:
+                        optimizers[task].add_param_group(
+                            {"params": self.bert.parameters(), "lr":self.learning_rate}
+                        )
+                        
                 else:
                     optimizers[task].add_param_group(
                         {"params": self.components[task][layer].parameters(), "lr":lr}
                     )
 
-                if "shared" in self.components.keys():
-                    for layer in self.components["shared"]:
-                        optimizers[task].add_param_group(
-                            {"params": self.components["shared"][layer].parameters(), "lr":lr}
-                        )
-
-                if self.find(f"bert_{task}", default=False) and self.finetune:
-                    optimizers[task].add_param_group(
-                        {"params": self.bert.parameters(), "lr":self.learning_rate}
-                    )
 
             # learning rate scheduler to mitigate overfitting
             schedulers[task] = torch.optim.lr_scheduler.ReduceLROnPlateau(
