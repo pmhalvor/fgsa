@@ -1,11 +1,11 @@
 {
-    "name": "loss-weights",
+    "name": "loss-weights-bert-target",
 
     "model_name": "imn",
     
     "dropout": 0.4,
 
-    "loss_weight": [10, [100, 1234, 1234]], 
+    "loss_weight": [10, 30, 70], 
 
     "optimizer_name": "adam",
     "weight_decay": [0.5, 0.7, 0.9],

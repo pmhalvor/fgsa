@@ -320,6 +320,7 @@ class BertHead(torch.nn.Module):
         self.device = device
         self.dropout = dropout  # TODO potentially refactor name?
         self.finetune = bert_finetune
+        self.bert_target = True if self.finetune else False
         self.learning_rate = lr
         self.lr_scheduler_factor = lr_scheduler_factor
         self.lr_scheduler_patience = lr_scheduler_patience
@@ -807,21 +808,28 @@ class BertHead(torch.nn.Module):
         
         for task in self.subtasks:  # TODO make sure in self.components in others
             lr = task_lrs[task] if task_lrs.get(task) is not None else self.learning_rate
-            optimizers[task] = optimizer(
-                    self.bert.parameters(),  # NOTE all tasks can optimize bert params if need
-                    lr=self.learning_rate  # use main learning rate for bert training
-            ) # TODO test other optimizers?
 
-            if "shared" in self.components.keys():
-                for layer in self.components["shared"]:
+            for i, layer in enumerate(self.components[task]):
+                if i == 0:
+                    optimizers[task] = optimizer(
+                        self.components[task][layer].parameters(),
+                        lr=self.lr  # use main learning rate for bert training
+                    ) # TODO test other optimizers?
+                else:
                     optimizers[task].add_param_group(
-                        {"params": self.components["shared"][layer].parameters(), "lr":lr}
+                        {"params": self.components[task][layer].parameters(), "lr":lr}
                     )
 
-            for layer in self.components[task]:
-                optimizers[task].add_param_group(
-                    {"params": self.components[task][layer].parameters(), "lr":lr}
-                )
+                if "shared" in self.components.keys():
+                    for layer in self.components["shared"]:
+                        optimizers[task].add_param_group(
+                            {"params": self.components["shared"][layer].parameters(), "lr":lr}
+                        )
+
+                if self.find(f"bert_{task}", default=False) and self.finetune:
+                    optimizers[task].add_param_group(
+                        {"params": self.bert.parameters(), "lr":self.learning_rate}
+                    )
 
             # learning rate scheduler to mitigate overfitting
             schedulers[task] = torch.optim.lr_scheduler.ReduceLROnPlateau(

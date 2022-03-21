@@ -35,7 +35,7 @@ def parse_taskwise_loss(data, get_epochs=True):
                     epochs.append(longest)
                     prev_batches = -1
             
-        if "loss" in line:
+        if "loss:" in line:
             task = line.split("INFO] ")[-1].split('loss:')[0].strip().lower()
             loss = float(line.split('loss:')[-1].split(' ')[0].strip())
             task_loss[task].append(loss)
