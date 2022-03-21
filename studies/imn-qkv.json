@@ -3,9 +3,9 @@
 
     "model_name": "imn",
 
-    "query": ["polarity", "target", "expression"],
-    "key": ["polarity", "target", "expression"],
-    "value": ["polarity", "target", "expression"],
+    "query": "polarity",
+    "key": ["target", "expression"],
+    "value": ["expression", "target"],
 
     "cnn_dim": 768,
     "dropout": 0.4,
@@ -13,7 +13,7 @@
     "shared_layers": 2,
     "target_layers": 2,
     "polarity_layers": 1,
-    "expression_layers": 8,
+    "expression_layers": 2,
     "interactions": 2,
 
     "epochs": 100

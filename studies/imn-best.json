@@ -1,0 +1,21 @@
+{
+    "name": "imn-best",
+
+    "model_name": "imn",
+
+    "lr": 1e-9,
+    "target_lr": 1e-8,
+    "polarity_lr": 1e-7,
+    "expression_lr": 1e-8,
+    "lr_scheduler_patience":25,
+
+
+    "cnn_dim": 900,
+    "dropout": 0.3,
+    "shared_layers": 5,
+    "target_layers": 2,
+    "polarity_layers": 1,
+    "expression_layers": 2,
+    "interactions": 2,
+    "epochs": [50]
+}
