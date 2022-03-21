@@ -220,37 +220,39 @@ class Norec(Dataset):
 
         for r, (row, token_row)  in enumerate(zip(data[0], self.tokens)):  # get each row of data
             # add placeholder for [CLS] token
-            row_expression = [-1]
-            row_holder = [-1]
-            row_polarity = [-1]
-            row_target = [-1]
-            e = 0
+            row_expression = [0]  # similar to RACL, use padding token
+            row_holder = [0]  # similar to RACL, use padding token
+            row_polarity = [0]  # similar to RACL, use padding token
+            row_target = [0]  # similar to RACL, use padding token
+
+            e = 0  # count how many expanded tokens so far in row
+
             for i, token in enumerate(token_row):  # get each token in row
                 if "##" == token[:2]:
                     # expand in other words, give these labels ignores
-                    row_expression.append(-1)
-                    row_holder.append(-1)
-                    row_polarity.append(-1)
-                    row_target.append(-1)
+                    row_expression.append(self.IGNORE_ID)
+                    row_holder.append(self.IGNORE_ID)
+                    row_polarity.append(self.IGNORE_ID)
+                    row_target.append(self.IGNORE_ID)
                     e+=1
                 else:
                     try:
-                        row_expression.append(data[0][r][i-e])
+                        row_expression.append(data[0][r][i-e])  # indexes 
                         row_holder.append(data[1][r][i-e])
                         row_polarity.append(data[2][r][i-e])
                         row_target.append(data[4][r][i-e])  # NOTE [4] for targets, not [3] which is sentences
                     except IndexError as ex:
-                        row_expression.append(-1)
-                        row_holder.append(-1)
-                        row_polarity.append(-1)
-                        row_target.append(-1)
+                        row_expression.append(self.IGNORE_ID)
+                        row_holder.append(self.IGNORE_ID)
+                        row_polarity.append(self.IGNORE_ID)
+                        row_target.append(self.IGNORE_ID)
 
 
             # add placeholder for [SEP] token
-            row_expression += [-1]
-            row_holder += [-1]
-            row_polarity += [-1]
-            row_target += [-1]
+            row_expression += [0]  # similar to RACL, use padding token
+            row_holder += [0]  # similar to RACL, use padding token
+            row_polarity += [0]  # similar to RACL, use padding token
+            row_target += [0]  # similar to RACL, use padding token
             
             # add to full lists
             expression.append(row_expression)
