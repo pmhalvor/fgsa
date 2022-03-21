@@ -3,6 +3,7 @@ import logging
 
 ## ML specific
 from torch.nn.utils.rnn import pad_packed_sequence
+from torch.utils.tensorboard import SummaryWriter
 import torch
 
 from transformers import BertForTokenClassification
@@ -16,6 +17,7 @@ from utils import proportional_f1
 from utils import score
 from utils import span_f1
 from utils import weighted_macro
+
 
 
 class BertSimple(torch.nn.Module):
@@ -461,6 +463,9 @@ class BertHead(torch.nn.Module):
 
     ########### Model training ###########
     def fit(self, train_loader, dev_loader=None, epochs=10):
+        writer = SummaryWriter()
+        writer.add_graph(self, train_loader)
+
         for epoch in range(epochs):
             self.current_epoch = epoch
 
@@ -478,13 +483,15 @@ class BertHead(torch.nn.Module):
                     logging.info("Epoch:{:3} Batch:{:3}".format(epoch, b))
                     for task in self.subtasks:
                         logging.info("{:10} loss:{}".format(task, loss[task].item()))
-                    
+                        writer.add_scalar("loss/{}".format(task), loss[task].item(), epoch)
                     logging.info("{:10} loss:{}".format("scope", self.scope_loss_value.item()))
+                    writer.add_scalar("loss/{}".format("scope"), self.scope_loss_value.item(), epoch)
 
                     if dev_loader is not None:
                         self.evaluate(dev_loader)
 
         logging.info("Fit complete.")
+        writer.close()
 
     def backward(self, output, batch):
         """
@@ -1371,9 +1378,22 @@ class IMN(BertHead):
 class RACL(BertHead):
 
     def init_components(self, subtasks):
-        components = {
-            # MultiheadAttention?
-        }
+        components = torch.nn.ModuleDict({
+            "shared": torch.nn.ModuleDict({
+                # seems only bert is the shared layers for racl
+            }),
+            "target": torch.nn.ModuleDict({
+                # aspect extraction: cnn -> relu -> matmul w/ expression -> attention -> cat -> linear
+            }),
+            "expression":torch.nn.ModuleDict({
+                # opinion extraction: cnn -> relu -> matmul w/ target -> attention -> cat -> linear
+            }),
+            "polarity":torch.nn.ModuleDict({
+                # polarity classification: cnn -> relu -> matmul w/ (embedding) -> attention -> cat -> dropout -> linear
+            }),
+            # doc-level skipped for now
+        })
+
 
         return components
 
