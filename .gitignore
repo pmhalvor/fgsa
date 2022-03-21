@@ -8,6 +8,7 @@ slurm*
 /checkpoints/*
 *.code-workspace
 
+
 # But allow these!
 !plot-results.ipynb
 !hyper-optimizers.ipynb
