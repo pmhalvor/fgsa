@@ -18,6 +18,8 @@ from utils import score
 from utils import span_f1
 from utils import weighted_macro
 
+import config
+
 
 
 class BertSimple(torch.nn.Module):
@@ -294,7 +296,7 @@ class BertHead(torch.nn.Module):
     def __init__(
         self, 
         bert_finetune=True,         # TODO tune
-        bert_path="ltgoslo/norbert",  
+        bert_path=config.BERT_PATH,  
         device="cuda" if torch.cuda.is_available() else "cpu",
         dropout=0.1,                # TODO tune
         ignore_id=-1,
