@@ -18,6 +18,8 @@ from utils import score
 from utils import span_f1
 from utils import weighted_macro
 
+import config
+
 
 
 class BertSimple(torch.nn.Module):
@@ -294,7 +296,7 @@ class BertHead(torch.nn.Module):
     def __init__(
         self, 
         bert_finetune=True,         # TODO tune
-        bert_path="ltgoslo/norbert",  
+        bert_path=config.BERT_PATH,  
         device="cuda" if torch.cuda.is_available() else "cpu",
         dropout=0.1,                # TODO tune
         ignore_id=-1,
@@ -373,12 +375,10 @@ class BertHead(torch.nn.Module):
         weight = self.find("loss_weight", default=label_importance)
 
         if weight is not None:
-            num_labels = 3  # NOTE: Cannot use loss_weight when polarity_labels > 3 (i.e. English datasets)
-            d = 1. + weight*(num_labels - 1) 
-            weight = [1/d] + [
-                weight/d for _ in range(num_labels - 1) 
-            ] 
-            weight = torch.tensor(weight)
+            if isinstance(weight, list):
+                weight = torch.tensor(weight).float()
+            elif isinstance(weight, int):
+                weight = torch.tensor([1., weight, weight])
 
         if loss_function is None:
             loss = torch.nn.CrossEntropyLoss(ignore_index=self.ignore_id)

@@ -5,11 +5,11 @@
     
     "dropout": 0.4,
 
-    "loss_weight": 10, 
+    "loss_weight": [10, [100, 1234, 1234]], 
 
-    "optimizer_name": ["adam", "adamw"],
+    "optimizer_name": "adam",
     "weight_decay": [0.5, 0.7, 0.9],
-    "warm_up_constant": [5, 20, 50],
+    "warm_up_constant": 5,
     "find_scope": true,
     
     "cnn_dim": 768,
