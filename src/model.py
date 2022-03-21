@@ -813,7 +813,7 @@ class BertHead(torch.nn.Module):
                 if i == 0:
                     optimizers[task] = optimizer(
                         self.components[task][layer].parameters(),
-                        lr=self.lr  # use main learning rate for bert training
+                        lr=lr  # use main learning rate for bert training
                     ) # TODO test other optimizers?
                 else:
                     optimizers[task].add_param_group(
