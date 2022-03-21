@@ -9,7 +9,8 @@ from transformers import BertTokenizer
 tokenizer = BertTokenizer.from_pretrained(config.BERT_PATH)
 
 def word_tokenize(text):
-    return tokenizer.tokenize(text, is_split_into_words=True)
+    # return tokenizer.tokenize(text, is_split_into_words=True)
+    return text.split() 
     
 
 def get_bio_target(opinion):

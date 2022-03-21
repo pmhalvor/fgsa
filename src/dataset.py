@@ -34,7 +34,7 @@ class Norec(Dataset):
     @staticmethod
     def tokenize(sentences, tokenizer):
         tokenized = [
-            tokenizer.convert_tokens_to_ids(row)
+            tokenizer.convert_tokens_to_ids(row)  # BUG second tokenize (after preprocessed)
             for row in sentences
         ]
         return tokenized
@@ -118,6 +118,7 @@ class Norec(Dataset):
         with open(data_path+'/target_polarity.txt') as f:
             polarity = [[int(ele) for ele in line.strip().split(' ')] for line in f.readlines()]
 
+        # BUG: part of the double tokenizing preprocessing error
         with open(data_path+'/sentence.txt', encoding='utf-8') as f:  # only needs tokens as strings
             sentence = [line.strip().split(' ') for line in f.readlines()]
 
@@ -147,10 +148,10 @@ class Norec(Dataset):
             )
 
     def get_tokenizer(self, bert_path=None, tokenizer=None):
-        if bert_path is not None:
-            self.tokenizer = BertTokenizer.from_pretrained(bert_path)
-        elif tokenizer is not None:
+        if tokenizer is not None:
             self.tokenizer = tokenizer
+        elif bert_path is not None:
+            self.tokenizer = BertTokenizer.from_pretrained(bert_path)
         return self.tokenizer
 
     def __getitem__(self, index):

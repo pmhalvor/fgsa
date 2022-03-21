@@ -50,12 +50,13 @@ config.log_template(job="pre", name="adding-BertTokenizer")
 ERROR_COUNT = 0
 KNOWN_ERRONEOUS_IDS = ['703281-03-01', '705034-09-03']
 LOWER = True
-OUTPUT_DIR = "/fp/homes01/u01/ec-pmhalvor/data/norec_fine/"
+NOREC_DIR = config.NOREC_DIR
+OUTPUT_DIR = config.DATA_DIR
 
-try:
-    word_tokenize('text')
-except LookupError:
-    nltk.download('punkt')  # only needed for first run
+# try:
+#     word_tokenize('text')
+# except LookupError:
+#     nltk.download('punkt')  # only needed for first run
 ##############################
 
 # read in json data
@@ -313,7 +314,7 @@ def store_data(filename, data):
     if len(filename.split('.txt')) == 1:
         filename += '.txt'
     
-    with open(filename, 'w+') as f:
+    with open(filename, 'w+', encoding="utf-8") as f:
         for line in data:
             if "sentence" not in filename:
                 f.write(" ".join(line))
@@ -354,7 +355,7 @@ def run(interactive=True, overwrite=False):
         return None
 
     for dataset in datasets:
-        data = read_data(f'../norec_fine/{dataset}.json')
+        data = read_data(f'{NOREC_DIR}/{dataset}.json')
 
         print(f"\n Parsing {dataset}...")
         logging.info(f"\n Parsing {dataset}...")

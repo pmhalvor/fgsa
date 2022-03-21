@@ -6,6 +6,10 @@ import torch
 # TODO download from git automagically
 BERT_PATH = "ltgoslo/norbert"
 DATA_DIR = "/fp/homes01/u01/ec-pmhalvor/data/norec_fine/"  # TODO hide personal info
+NOREC_DIR = "/fp/homes01/u01/ec-pmhalvor/nlp/msc/norec_fine"
+# DATA_DIR = "E:/pmhalvor/nlp/msc/data/norec_fine/"
+# NOREC_DIR = "E:/pmhalvor/nlp/msc/norec_fine/"
+
 
 default_parameters = {
         "debug": False,
