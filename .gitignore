@@ -7,9 +7,10 @@ slurm*
 *.pt
 /checkpoints/*
 *.code-workspace
+*/runs/
 
 # But allow these!
-!log/plot-results.ipynb
+!plot-results.ipynb
 !hyper-optimizers.ipynb
 
 

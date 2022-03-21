@@ -1,0 +1,20 @@
+{
+    "name": "imn-scope",
+
+    "model_name": "imn",
+    
+    "dropout": 0.4,
+
+    "optimizer_name": ["adam", "adamw"],
+    "weight_decay": [0.5, 0.7, 0.9],
+    "warm_up_constant": [5, 20, 50],
+    "find_scope": true,
+    
+    "cnn_dim": 768,
+    "shared_layers": 1,
+    "target_layers": 1,
+    "polarity_layers": 1,
+    "expression_layers": 1,
+    "interactions": 2,
+    "epochs": 100
+}

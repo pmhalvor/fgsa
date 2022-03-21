@@ -34,10 +34,17 @@ class Norec(Dataset):
     @staticmethod
     def tokenize(sentences, tokenizer):
         tokenized = [
-            tokenizer.convert_tokens_to_ids(row)
+            # tokenizer.convert_tokens_to_ids(row)  # BUG second tokenize (after preprocessed)
+            # tokenizer.encode(row)  # NOTE now a CLS and SEP token are added to the tokenized rows
+            tokenizer.tokenize(row)  # NOTE now labels need to be expanded at '##'
             for row in sentences
         ]
-        return tokenized
+
+        ids = [
+            tokenizer.encode(row)  # NOTE now a CLS and SEP token are added to the tokenized rows
+            for row in tokenized
+        ]
+        return tokenized, ids
             
 
     def __init__(
@@ -59,20 +66,27 @@ class Norec(Dataset):
         data = self.load_raw_data(data_path)
         self.sentence = data[3]  # only data piece not used in build_labels()
 
+        # tokenize in init for faster get item
+        self.tokens, self.ids = self.tokenize(self.sentence, self.tokenizer)
+
         # build dataset specific labels
         self.label = self.build_labels(data)
-
-        # tokenize in init for faster get item
-        self.tokens = self.tokenize(self.sentence, self.tokenizer)
 
         # reduce size for faster dev
         self.shrink(p=proportion)
 
-        # check shapes
-        assert len(self.sentence) == len(self.label["target"])   # check number of sentences vs targets
-        assert len(self.sentence[0]) == len(self.label["target"][0])  # check number of tokens in first sentence vs target
-        assert len(self.sentence[-1]) == len(self.label["target"][-1])  # check number of tokens in last sentence vs target
-        assert len(self.label.keys()) == 4   # check size of a single token 
+        # sanity check of shapes
+        try:
+            assert len(self.ids) == len(self.label["target"])   # check number of ids vs targets
+            assert len(self.ids[0]) == len(self.label["target"][0])  # check number of ids in first ids vs target
+            assert len(self.ids[-1]) == len(self.label["target"][-1])  # check number of ids in last ids vs target
+            assert len(self.label.keys()) == 4   # check size of a single token 
+        except AssertionError as ex:
+            print("len", len(self.ids), len(self.label["target"]))
+            print("1st", self.ids[0], self.label["target"][0])
+            print("last", self.ids[-1], self.label["target"][-1])
+            raise ex
+
 
     def load_raw_data(self, data_path) -> Tuple[List,List,List,List,List]:
         """
@@ -118,8 +132,9 @@ class Norec(Dataset):
         with open(data_path+'/target_polarity.txt') as f:
             polarity = [[int(ele) for ele in line.strip().split(' ')] for line in f.readlines()]
 
+        # BUG: part of the double tokenizing preprocessing error
         with open(data_path+'/sentence.txt', encoding='utf-8') as f:  # only needs tokens as strings
-            sentence = [line.strip().split(' ') for line in f.readlines()]
+            sentence = [line for line in f.readlines()]
 
         with open(data_path+'/target.txt') as f:
             target = [[int(ele) for ele in line.strip().split(' ')] for line in f.readlines()]
@@ -141,16 +156,18 @@ class Norec(Dataset):
             for key, value in self.label.items():
                 self.label[key] = value[:count]
             self.sentence = self.sentence[:count]
+            self.tokens = self.tokens[:count]
+            self.ids = self.ids[:count]
 
             logging.info("Dataset {part} shrunk by a scale of {p}. Now {c} rows.".format(
                 part=self.partition, p=p, c=count)
             )
 
     def get_tokenizer(self, bert_path=None, tokenizer=None):
-        if bert_path is not None:
-            self.tokenizer = BertTokenizer.from_pretrained(bert_path)
-        elif tokenizer is not None:
+        if tokenizer is not None:
             self.tokenizer = tokenizer
+        elif bert_path is not None:
+            self.tokenizer = BertTokenizer.from_pretrained(bert_path)
         return self.tokenizer
 
     def __getitem__(self, index):
@@ -166,7 +183,7 @@ class Norec(Dataset):
         self.current_target = self.label["target"][index]
 
         # ids for self.tokenizer mapping
-        self.input_ids = self.tokens[index]
+        self.input_ids = self.ids[index]
 
         # list representing size of this sequence
         self.attention_mask = [1 for _ in self.input_ids]
@@ -199,16 +216,43 @@ class Norec(Dataset):
         polarity = []
         target = []
 
-        for r, row  in enumerate(data[0]):  # get each row of data
-            row_expression = []
-            row_holder = []
-            row_polarity = []
-            row_target = []
-            for i, _ in enumerate(row):  # get each token in row
-                row_expression.append(data[0][r][i])
-                row_holder.append(data[1][r][i])
-                row_polarity.append(data[2][r][i])
-                row_target.append(data[4][r][i])  # NOTE [4] for targets, not [3] which is sentences
+        # NOTE expand labels according to new tokenization scheme
+
+        for r, (row, token_row)  in enumerate(zip(data[0], self.tokens)):  # get each row of data
+            # add placeholder for [CLS] token
+            row_expression = [0]  # similar to RACL, use padding token
+            row_holder = [0]  # similar to RACL, use padding token
+            row_polarity = [0]  # similar to RACL, use padding token
+            row_target = [0]  # similar to RACL, use padding token
+
+            e = 0  # count how many expanded tokens so far in row
+
+            for i, token in enumerate(token_row):  # get each token in row
+                if "##" == token[:2]:
+                    # expand in other words, give these labels ignores
+                    row_expression.append(self.IGNORE_ID)
+                    row_holder.append(self.IGNORE_ID)
+                    row_polarity.append(self.IGNORE_ID)
+                    row_target.append(self.IGNORE_ID)
+                    e+=1
+                else:
+                    try:
+                        row_expression.append(data[0][r][i-e])  # indexes 
+                        row_holder.append(data[1][r][i-e])
+                        row_polarity.append(data[2][r][i-e])
+                        row_target.append(data[4][r][i-e])  # NOTE [4] for targets, not [3] which is sentences
+                    except IndexError as ex:
+                        row_expression.append(self.IGNORE_ID)
+                        row_holder.append(self.IGNORE_ID)
+                        row_polarity.append(self.IGNORE_ID)
+                        row_target.append(self.IGNORE_ID)
+
+
+            # add placeholder for [SEP] token
+            row_expression += [0]  # similar to RACL, use padding token
+            row_holder += [0]  # similar to RACL, use padding token
+            row_polarity += [0]  # similar to RACL, use padding token
+            row_target += [0]  # similar to RACL, use padding token
             
             # add to full lists
             expression.append(row_expression)

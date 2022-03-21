@@ -1,4 +1,5 @@
 {
+    "name": "imn-expression",
     "bert_path": "ltgoslo/norbert",
 
     "debug": false,
@@ -15,10 +16,10 @@
 
     "bert_finetune": true,
 
-    "cnn_dim": 768,
+    "cnn_dim": [300, 768, 1000],
     "shared_layers": 2,
     "target_layers": 2, 
     "polarity_layers": 2,
-    "expression_layers": [2,4,6,8],
+    "expression_layers": [10, 15, 20],
     "interactions": 1
 }
