@@ -5,6 +5,8 @@
     
     "dropout": 0.4,
 
+    "loss_weight": 10, 
+
     "optimizer_name": ["adam", "adamw"],
     "weight_decay": [0.5, 0.7, 0.9],
     "warm_up_constant": [5, 20, 50],

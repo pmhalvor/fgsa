@@ -1,0 +1,30 @@
+{
+    "name": "debug-predict",
+
+    "model_name": "imn",
+    
+    "dropout": 0.4,
+
+    "loss_weight": 33, 
+    "bert_polarity": true,
+    "bert_target":false,
+    "metric": "hard",
+
+    "optimizer_name": "adam",
+    "weight_decay": 0.7,
+    "warm_up_constant": 5,
+    "find_scope": [true, false],
+
+    "lr": 1e-9,
+    "expression_lr": 1e-7,
+    "polarity_lr": 1e-7,
+    "target_lr": 1e-7,
+    
+    "cnn_dim": 768,
+    "shared_layers": 1,
+    "target_layers": 1,
+    "polarity_layers": 1,
+    "expression_layers": 1,
+    "interactions": 2,
+    "epochs": 100
+}

@@ -35,7 +35,7 @@ def parse_taskwise_loss(data, get_epochs=True):
                     epochs.append(longest)
                     prev_batches = -1
             
-        if "loss" in line:
+        if "loss:" in line:
             task = line.split("INFO] ")[-1].split('loss:')[0].strip().lower()
             loss = float(line.split('loss:')[-1].split(' ')[0].strip())
             task_loss[task].append(loss)
@@ -137,15 +137,16 @@ def show_study_loss(name, title=None):
     loss_dfs = {}
     metrics_dfs = {}
     
+    header = title
     for i, run in enumerate(runs):
         loss = parse_loss(run)
         metrics = parse_metrics(run)
         
         if title is None:
-            title = name + f" Run:{i}"
+            header = name + f" Run:{i}"
         try:
-            loss_df = show_data(loss, "Loss:{}".format(title))
-            metrics_df = show_data(metrics, "Metrics:{}".format(title))
+            loss_df = show_data(loss, "Loss:{}".format(header))
+            metrics_df = show_data(metrics, "Metrics:{}".format(header))
             plt.show()
             
             loss_dfs[i] = loss_df.T

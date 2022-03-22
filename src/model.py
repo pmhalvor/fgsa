@@ -320,6 +320,7 @@ class BertHead(torch.nn.Module):
         self.device = device
         self.dropout = dropout  # TODO potentially refactor name?
         self.finetune = bert_finetune
+        self.bert_target = True if self.finetune else False
         self.learning_rate = lr
         self.lr_scheduler_factor = lr_scheduler_factor
         self.lr_scheduler_patience = lr_scheduler_patience
@@ -375,12 +376,10 @@ class BertHead(torch.nn.Module):
         weight = self.find("loss_weight", default=label_importance)
 
         if weight is not None:
-            num_labels = 3  # NOTE: Cannot use loss_weight when polarity_labels > 3 (i.e. English datasets)
-            d = 1. + weight*(num_labels - 1) 
-            weight = [1/d] + [
-                weight/d for _ in range(num_labels - 1) 
-            ] 
-            weight = torch.tensor(weight)
+            if isinstance(weight, list):
+                weight = torch.tensor(weight).float()
+            elif isinstance(weight, int):
+                weight = torch.tensor([1., weight, weight])
 
         if loss_function is None:
             loss = torch.nn.CrossEntropyLoss(ignore_index=self.ignore_id)
@@ -585,14 +584,6 @@ class BertHead(torch.nn.Module):
 
         for b, batch in enumerate(loader):
             preds, golds = self.predict(batch)
-            # preds = {task: preds[task].detach().cpu() for task in self.subtasks}
-
-            # true = {
-            #     "expression": batch[2].detach().cpu(), 
-            #     "holder": batch[3].detach().cpu(),
-            #     "polarity": batch[4].detach().cpu(),
-            #     "target": batch[5].detach().cpu(),
-            # }
 
             ### hard score
             hard = {}
@@ -710,6 +701,7 @@ class BertHead(torch.nn.Module):
 
         self.golds = {task: [] for task in self.subtasks}
         self.preds = {task: [] for task in self.subtasks}
+
         true = {
             "expression": batch[2], 
             "holder": batch[3],
@@ -728,7 +720,7 @@ class BertHead(torch.nn.Module):
                         self.golds[task].append(
                             true[task][i][:t].tolist()
                         )
-            break
+                    break
 
         return self.preds, self.golds
         
@@ -809,21 +801,30 @@ class BertHead(torch.nn.Module):
         
         for task in self.subtasks:  # TODO make sure in self.components in others
             lr = task_lrs[task] if task_lrs.get(task) is not None else self.learning_rate
-            optimizers[task] = optimizer(
-                    self.bert.parameters(),  # NOTE all tasks can optimize bert params if need
-                    lr=self.learning_rate  # use main learning rate for bert training
-            ) # TODO test other optimizers?
 
-            if "shared" in self.components.keys():
-                for layer in self.components["shared"]:
+            for i, layer in enumerate(self.components[task]):
+                if i == 0:
+                    optimizers[task] = optimizer(
+                        self.components[task][layer].parameters(),
+                        lr=lr  # use main learning rate for bert training
+                    ) # TODO test other optimizers?
+                    
+                    if "shared" in self.components.keys():
+                        for layer in self.components["shared"]:
+                            optimizers[task].add_param_group(
+                                {"params": self.components["shared"][layer].parameters(), "lr":lr}
+                            )
+
+                    if self.find(f"bert_{task}", default=False) and self.finetune:
+                        optimizers[task].add_param_group(
+                            {"params": self.bert.parameters(), "lr":self.learning_rate}
+                        )
+
+                else:
                     optimizers[task].add_param_group(
-                        {"params": self.components["shared"][layer].parameters(), "lr":lr}
+                        {"params": self.components[task][layer].parameters(), "lr":lr}
                     )
 
-            for layer in self.components[task]:
-                optimizers[task].add_param_group(
-                    {"params": self.components[task][layer].parameters(), "lr":lr}
-                )
 
             # learning rate scheduler to mitigate overfitting
             schedulers[task] = torch.optim.lr_scheduler.ReduceLROnPlateau(
@@ -942,7 +943,6 @@ class IMN(BertHead):
         # overwrite BertHead class default for subtasks
         kwargs["subtasks"] = subtasks
         super(IMN, self).__init__(**kwargs)
-
 
     def init_components(self, subtasks):
         """
@@ -1108,7 +1108,7 @@ class IMN(BertHead):
                 "linear": torch.nn.Sequential(
                     torch.nn.Linear(
                         in_features=cnn_dim,
-                        out_features=1
+                        out_features=2
                     ),
                     torch.nn.Sigmoid()
                 ).to(torch.device(self.device))
@@ -1116,7 +1116,7 @@ class IMN(BertHead):
         })
 
         self.relu = torch.nn.ReLU()
-        self.scope_loss = torch.nn.BCELoss()
+        self.scope_loss = torch.nn.CrossEntropyLoss(ignore_index=self.ignore_id)
         scope_optimizer = self.get_optimizer(optimizer_name)
         self.scope_optimizer = scope_optimizer(
             components["scope"]["linear"].parameters(),
@@ -1138,7 +1138,6 @@ class IMN(BertHead):
         })
 
         return components
-
 
     def forward(self, batch):
         cnn_dim = self.find("cnn_dim", default=768)
@@ -1252,15 +1251,18 @@ class IMN(BertHead):
             queries, keys, values = self.get_attention_inputs(
                 target_cnn_output.permute(2, 0, 1),     # sequence, batch, embedding
                 expression_cnn_output.permute(2, 0, 1), 
-                polarity_cnn_output.permute(2, 0, 1)
+                polarity_cnn_output.permute(2, 0, 1),
+                batch
             )
 
             polarity_output, _ = self.components["polarity"]["attention"](
                 queries,    # query, i.e. polar cnn output w/ weights
-                keys,       # keys, i.e. (polar cnn output).T for self attention
-                values,     # values should include probabilities for B and I tags
+                keys,       # keys, i.e. polar cnn output for self attention
+                values,     # values, i.e polar cnn output w/ probabilities for B and I tags
                 need_weights=False,
-                # TODO: implement attention mask?
+                key_padding_mask=(
+                    (batch[1]*-1)+1  # switch [11100] to [00011]
+                ).bool().to(torch.device(self.device)),
             )
             polarity_output = polarity_output.permute(1, 2, 0)  # batch, embedding, sequence
 
@@ -1286,9 +1288,10 @@ class IMN(BertHead):
 
         return self.output
 
-
-    def get_attention_inputs(self, target, expression, polarity):
+    def get_attention_inputs(self, target, expression, polarity, batch):
         """ """
+        gold_transmission = self.find("gold_transmission", default=False)
+
         query = self.find("query", default=self.find("queries", default="polarity"))
         key = self.find("key", default=self.find("keys", default="polarity"))
         value = self.find("value", default=self.find("values", default="polarity"))
@@ -1318,16 +1321,29 @@ class IMN(BertHead):
         # v
         if "polar" in value:
             values = polarity
+            true_values = batch[4].permute(1,0).to(torch.device(self.device))
         elif "target" in value:
             values = target
+            true_values = batch[5].permute(1,0).to(torch.device(self.device))
         elif "expression" in value:
             values = expression
+            true_values = batch[2].permute(1,0).to(torch.device(self.device))
         else:
             values = polarity
 
+        # BUG: size problem
+        # values is of size [batch, cnn_dim, sequence]
+        # true_values is of size [batch, sequence]
+        if gold_transmission:
+            gold_influence = self.get_prob(self.current_epoch, self.find("warm_up_constant", default=5))
+            values = (  # strengthen signal for true values
+                gold_influence*true_values.bool().float().unsqueeze(-1).expand(values.shape)
+                 + (1-gold_influence)*values
+            ).detach().to(torch.device(self.device))
+            values.requires_grad = True
+
 
         return queries, keys, values
-
 
     def scope_relevance(self, batch, shared_output) -> tuple():
         """
@@ -1344,25 +1360,30 @@ class IMN(BertHead):
 
         self.scope_true = self.relu(
             (labels["expression"] + labels["polarity"] + labels["target"])
-        ).bool().float().to(torch.device(self.device))
+        ).bool().long().to(torch.device(self.device))
         # scope_true.shape = [batch, sequence]
 
         # shared_output.shape = [batch, embedding (768), sequence]
-        self.scope_logits = self.components["scope"]["linear"](shared_output.permute(0, 2, 1)).squeeze(-1)
+        self.scope_logits = self.components["scope"]["linear"](shared_output.permute(0, 2, 1))
 
         # scope_logits.shape = [batch, sequence, 1]
-        self.scope_loss_value = self.scope_loss(self.scope_logits, self.scope_true)
+        self.scope_loss_value = self.scope_loss(self.scope_logits.permute(0, 2, 1), self.scope_true)
         self.scope_loss_value.backward(retain_graph=True)
         self.scope_optimizer.step()
 
         # TODO configurable guided start/warm_up?
         gold_influence = self.get_prob(self.current_epoch, self.find("warm_up_constant", default=5))
-        self.scope_output = (gold_influence*self.scope_true + (1-gold_influence)*self.scope_logits).detach()
+        try:  # FIXME remove this try/catch
+            self.scope_output = (
+                gold_influence*self.scope_true + (1-gold_influence)*self.scope_logits.argmax(-1).squeeze(-1)
+            ).detach()
+        except RuntimeError as e:
+            print(self.scope_true.shape, self.scope_logits.shape, self.scope_logits.argmax(-1).squeeze(-1).shape)
+            raise e
         self.scope_output.requires_grad = True
         
 
         return self.scope_output.to(torch.device(self.device))
-
 
     @staticmethod
     def get_prob(epoch_count, constant=5):
@@ -1379,21 +1400,100 @@ class IMN(BertHead):
         return prob
 
 
-class RACL(BertHead):
+class RACL(IMN):
 
     def init_components(self, subtasks):
+        cnn_dim = self.find("cnn_dim", default=768)
+
         components = torch.nn.ModuleDict({
-            "shared": torch.nn.ModuleDict({
-                # seems only bert is the shared layers for racl
+            "relations": torch.nn.ModuleDict({
+                "target_expression": torch.nn.MultiheadAttention(
+                    embed_dim = cnn_dim,
+                    num_heads = 1,
+                    dropout=self.dropout,
+                    # query: torch.norm(target)
+                    # key: torch.norm(expression)
+                    # values: target
+                    # key_padding_mask: (batch[1]*-1)+1
+
+                    # qk-outputs used in group v-mul later
+                ),
+                "expression_target": torch.nn.MultiheadAttention(
+                    embed_dim = cnn_dim,
+                    num_heads = 1,
+                    dropout=self.dropout,
+                    # query: expression
+                    # key: target
+                    # values: expression
+                    
+                    # qk-outputs used in group v-mul later
+                ),
+                "target_polarity": torch.nn.MultiheadAttention(
+                    embed_dim = cnn_dim,
+                    num_heads = 1,
+                    dropout=self.dropout,
+                    # query: 
+
+
+                    # qk-outputs used in group v-mul later
+                ),
+                "group_attention": torch.nn.MultiheadAttention(
+                    embed_dim = cnn_dim,
+                    num_heads = 1,
+                    dropout=self.dropout,
+                    # qk-outputs from first 2 attentions joined here
+
+                )
             }),
             "target": torch.nn.ModuleDict({
                 # aspect extraction: cnn -> relu -> matmul w/ expression -> attention -> cat -> linear
+                "cnn": torch.nn.Sequential(
+                    torch.nn.Conv1d(
+                        in_channels = int(768),
+                        out_channels = int(cnn_dim), 
+                        kernel_size = 5,
+                        padding=2
+                    ),
+                    torch.nn.ReLU()
+                ).to(torch.device(self.device)),
+                "linear": torch.nn.Sequential(
+                    torch.nn.Linear(
+                    in_features=cnn_dim,
+                    out_features=3
+                    ),
+                    # torch.nn.Sigmoid(),  # TODO activation after linear?
+                ).to(torch.device(self.device)),
             }),
             "expression":torch.nn.ModuleDict({
                 # opinion extraction: cnn -> relu -> matmul w/ target -> attention -> cat -> linear
+                "cnn": torch.nn.Sequential(
+                    torch.nn.Conv1d(
+                        in_channels = int(768),
+                        out_channels = int(cnn_dim), 
+                        kernel_size = 5,
+                        padding=2
+                    ),
+                    torch.nn.ReLU()
+                ).to(torch.device(self.device)),
+                "linear": torch.nn.Sequential(
+                    torch.nn.Linear(
+                    in_features=cnn_dim,
+                    out_features=3
+                    ),
+                    # torch.nn.Sigmoid(),  # TODO activation after linear?
+                ).to(torch.device(self.device)),
             }),
             "polarity":torch.nn.ModuleDict({
                 # polarity classification: cnn -> relu -> matmul w/ (embedding) -> attention -> cat -> dropout -> linear
+                "cnn": torch.nn.Sequential(
+                    torch.nn.Conv1d(
+                        in_channels = int(768),
+                        out_channels = int(cnn_dim), 
+                        kernel_size = 5,
+                        padding=2
+                    ),
+                    torch.nn.ReLU()
+                ).to(torch.device(self.device)),
             }),
             # doc-level skipped for now
         })
@@ -1418,4 +1518,5 @@ class RACL(BertHead):
             pass 
 
         return output
+
 

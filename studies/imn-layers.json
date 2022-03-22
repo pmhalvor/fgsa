@@ -1,0 +1,37 @@
+{
+    "name": "imn-layers",
+
+    "model_name": "imn",
+
+    "dropout": 0.4,
+
+    "loss_weight": 33, 
+    "bert_finetune": true,
+    "bert_polarity": true,
+    "bert_target": true,
+    "metric": "hard",
+
+    "optimizer_name": "adam",
+    "weight_decay": 0.5,
+
+    "lr": 1e-8,
+    "expression_lr": 1e-6,
+    "polarity_lr": 1e-6,
+    "target_lr": 1e-6,
+
+    "query": "polarity",
+    "key": "polarity",
+    "value": "polarity",
+
+    "cnn_dim": 768,
+    "shared_layers": [1, 3, 5, 7],
+    "target_layers": [1, 3, 5, 7],
+    "polarity_layers": [1, 3, 5, 7],
+    "expression_layers": [1, 3, 5, 7],
+    "interactions": [1, 3, 5, 7],    
+
+    "warm_up_constant": 5,
+    "find_scope": [false, true],
+
+    "epochs": [100, 100, 100]
+}
