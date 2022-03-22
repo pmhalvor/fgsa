@@ -1,12 +1,31 @@
 {
-    "name": "imn",
+    "name": "weights-frostbert",
+
     "model_name": "imn",
-    "cnn_dim": 700,
-    "dropout": 0.5,
-    "shared_layers": 2,
+
+    "dropout": 0.4,
+
+    "loss_weight": [33, 37], 
+    "bert_finetune": false,
+    "metric": "hard",
+
+    "optimizer_name": "adam",
+    "weight_decay": [0.5, 0.7],
+
+    "lr": 1e-9,
+    "expression_lr": 1e-7,
+    "polarity_lr": 1e-7,
+    "target_lr": 1e-7,
+
+    "cnn_dim": 768,
+    "shared_layers": 5,
     "target_layers": 2,
-    "polarity_layers": 1,
+    "polarity_layers": 2,
     "expression_layers": 2,
-    "interactions": 2,
-    "epochs": [1, 50]
+    "interactions": 3,    
+
+    "warm_up_constant": 5,
+    "find_scope": [true, false],
+
+    "epochs": 100
 }

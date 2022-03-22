@@ -1,7 +1,7 @@
 {
-    "name": "weights--lr1e-17--task_lr1e-5--polar_lr1e-4",
+    "name": "fgsaLSTM-loss-weight",
 
-    "model_name": "imn",
+    "model_name": "fgsaLSTM",
     
     "dropout": 0.4,
 
@@ -12,19 +12,15 @@
 
     "optimizer_name": "adam",
     "weight_decay": 0.5,
-    "warm_up_constant": 5,
-    "find_scope": true,
 
     "lr": 1e-7,
     "expression_lr": 1e-5,
     "polarity_lr": 1e-4,
     "target_lr": 1e-5,
+
+    "bidirectional": [true, false],
+    "hidden_size": [350, 768, 1500],
+    "num_layers": 3,
     
-    "cnn_dim": 768,
-    "shared_layers": 1,
-    "target_layers": 1,
-    "polarity_layers": 1,
-    "expression_layers": 1,
-    "interactions": 2,
     "epochs": 100
 }
