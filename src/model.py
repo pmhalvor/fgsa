@@ -826,7 +826,7 @@ class BertHead(torch.nn.Module):
                         optimizers[task].add_param_group(
                             {"params": self.bert.parameters(), "lr":self.learning_rate}
                         )
-                        
+
                 else:
                     optimizers[task].add_param_group(
                         {"params": self.components[task][layer].parameters(), "lr":lr}
@@ -1124,7 +1124,7 @@ class IMN(BertHead):
         })
 
         self.relu = torch.nn.ReLU()
-        self.scope_loss = torch.nn.BCELoss()
+        self.scope_loss = torch.nn.CrossEntropyLoss(ignore_index=self.ignore_id)
         scope_optimizer = self.get_optimizer(optimizer_name)
         self.scope_optimizer = scope_optimizer(
             components["scope"]["linear"].parameters(),
@@ -1426,4 +1426,6 @@ class RACL(BertHead):
             pass 
 
         return output
+
+
 
