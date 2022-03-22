@@ -584,14 +584,6 @@ class BertHead(torch.nn.Module):
 
         for b, batch in enumerate(loader):
             preds, golds = self.predict(batch)
-            # preds = {task: preds[task].detach().cpu() for task in self.subtasks}
-
-            # true = {
-            #     "expression": batch[2].detach().cpu(), 
-            #     "holder": batch[3].detach().cpu(),
-            #     "polarity": batch[4].detach().cpu(),
-            #     "target": batch[5].detach().cpu(),
-            # }
 
             ### hard score
             hard = {}
@@ -1259,16 +1251,18 @@ class IMN(BertHead):
             queries, keys, values = self.get_attention_inputs(
                 target_cnn_output.permute(2, 0, 1),     # sequence, batch, embedding
                 expression_cnn_output.permute(2, 0, 1), 
-                polarity_cnn_output.permute(2, 0, 1)
+                polarity_cnn_output.permute(2, 0, 1),
+                batch
             )
 
             polarity_output, _ = self.components["polarity"]["attention"](
                 queries,    # query, i.e. polar cnn output w/ weights
-                keys,       # keys, i.e. (polar cnn output).T for self attention
-                values,     # values should include probabilities for B and I tags
+                keys,       # keys, i.e. polar cnn output for self attention
+                values,     # values, i.e polar cnn output w/ probabilities for B and I tags
                 need_weights=False,
-                # TODO: implement attention mask?
-                key_padding_mask=((batch[1]*-1)+1).bool().to(torch.device(self.device)),
+                key_padding_mask=(
+                    (batch[1]*-1)+1  # switch [11100] to [00011]
+                ).bool().to(torch.device(self.device)),
             )
             polarity_output = polarity_output.permute(1, 2, 0)  # batch, embedding, sequence
 
@@ -1294,8 +1288,10 @@ class IMN(BertHead):
 
         return self.output
 
-    def get_attention_inputs(self, target, expression, polarity):
+    def get_attention_inputs(self, target, expression, polarity, batch):
         """ """
+        gold_transmission = self.find("gold_transmission", default=False)
+
         query = self.find("query", default=self.find("queries", default="polarity"))
         key = self.find("key", default=self.find("keys", default="polarity"))
         value = self.find("value", default=self.find("values", default="polarity"))
@@ -1325,12 +1321,26 @@ class IMN(BertHead):
         # v
         if "polar" in value:
             values = polarity
+            true_values = batch[4].permute(1,0).to(torch.device(self.device))
         elif "target" in value:
             values = target
+            true_values = batch[5].permute(1,0).to(torch.device(self.device))
         elif "expression" in value:
             values = expression
+            true_values = batch[2].permute(1,0).to(torch.device(self.device))
         else:
             values = polarity
+
+        # BUG: size problem
+        # values is of size [batch, cnn_dim, sequence]
+        # true_values is of size [batch, sequence]
+        if gold_transmission:
+            gold_influence = self.get_prob(self.current_epoch, self.find("warm_up_constant", default=5))
+            values = (  # strengthen signal for true values
+                gold_influence*true_values.bool().float().unsqueeze(-1).expand(values.shape)
+                 + (1-gold_influence)*values
+            ).detach().to(torch.device(self.device))
+            values.requires_grad = True
 
 
         return queries, keys, values
@@ -1363,7 +1373,7 @@ class IMN(BertHead):
 
         # TODO configurable guided start/warm_up?
         gold_influence = self.get_prob(self.current_epoch, self.find("warm_up_constant", default=5))
-        try:
+        try:  # FIXME remove this try/catch
             self.scope_output = (
                 gold_influence*self.scope_true + (1-gold_influence)*self.scope_logits.argmax(-1).squeeze(-1)
             ).detach()
@@ -1390,7 +1400,7 @@ class IMN(BertHead):
         return prob
 
 
-class RACL(BertHead):
+class RACL(IMN):
 
     def init_components(self, subtasks):
         cnn_dim = self.find("cnn_dim", default=768)
@@ -1401,6 +1411,38 @@ class RACL(BertHead):
                     embed_dim = cnn_dim,
                     num_heads = 1,
                     dropout=self.dropout,
+                    # query: torch.norm(target)
+                    # key: torch.norm(expression)
+                    # values: target
+                    # key_padding_mask: (batch[1]*-1)+1
+
+                    # qk-outputs used in group v-mul later
+                ),
+                "expression_target": torch.nn.MultiheadAttention(
+                    embed_dim = cnn_dim,
+                    num_heads = 1,
+                    dropout=self.dropout,
+                    # query: expression
+                    # key: target
+                    # values: expression
+                    
+                    # qk-outputs used in group v-mul later
+                ),
+                "target_polarity": torch.nn.MultiheadAttention(
+                    embed_dim = cnn_dim,
+                    num_heads = 1,
+                    dropout=self.dropout,
+                    # query: 
+
+
+                    # qk-outputs used in group v-mul later
+                ),
+                "group_attention": torch.nn.MultiheadAttention(
+                    embed_dim = cnn_dim,
+                    num_heads = 1,
+                    dropout=self.dropout,
+                    # qk-outputs from first 2 attentions joined here
+
                 )
             }),
             "target": torch.nn.ModuleDict({
@@ -1413,7 +1455,14 @@ class RACL(BertHead):
                         padding=2
                     ),
                     torch.nn.ReLU()
-                ).to(torch.device(self.device))
+                ).to(torch.device(self.device)),
+                "linear": torch.nn.Sequential(
+                    torch.nn.Linear(
+                    in_features=cnn_dim,
+                    out_features=3
+                    ),
+                    # torch.nn.Sigmoid(),  # TODO activation after linear?
+                ).to(torch.device(self.device)),
             }),
             "expression":torch.nn.ModuleDict({
                 # opinion extraction: cnn -> relu -> matmul w/ target -> attention -> cat -> linear
@@ -1425,10 +1474,26 @@ class RACL(BertHead):
                         padding=2
                     ),
                     torch.nn.ReLU()
-                ).to(torch.device(self.device))
+                ).to(torch.device(self.device)),
+                "linear": torch.nn.Sequential(
+                    torch.nn.Linear(
+                    in_features=cnn_dim,
+                    out_features=3
+                    ),
+                    # torch.nn.Sigmoid(),  # TODO activation after linear?
+                ).to(torch.device(self.device)),
             }),
             "polarity":torch.nn.ModuleDict({
                 # polarity classification: cnn -> relu -> matmul w/ (embedding) -> attention -> cat -> dropout -> linear
+                "cnn": torch.nn.Sequential(
+                    torch.nn.Conv1d(
+                        in_channels = int(768),
+                        out_channels = int(cnn_dim), 
+                        kernel_size = 5,
+                        padding=2
+                    ),
+                    torch.nn.ReLU()
+                ).to(torch.device(self.device)),
             }),
             # doc-level skipped for now
         })
@@ -1453,20 +1518,5 @@ class RACL(BertHead):
             pass 
 
         return output
-
-    @staticmethod
-    def get_prob(epoch_count, constant=5):
-        """
-        Borrowed directly from https://github.com/ruidan/IMN-E2E-ABSA
-        
-        Compute the probability of using gold opinion labels in prediction transmission
-        (To alleviate the problem of unreliable predictions of opinion labels sent from AE to AS,
-        in the early stage of training, we use gold labels as prediction with probability 
-        that depends on the number of current epoch)
-
-        """
-        prob = constant/(constant+torch.exp(torch.tensor(epoch_count).float()/constant))
-        return prob
-
 
 
