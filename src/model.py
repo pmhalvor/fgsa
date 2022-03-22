@@ -709,6 +709,7 @@ class BertHead(torch.nn.Module):
 
         self.golds = {task: [] for task in self.subtasks}
         self.preds = {task: [] for task in self.subtasks}
+
         true = {
             "expression": batch[2], 
             "holder": batch[3],
@@ -727,7 +728,7 @@ class BertHead(torch.nn.Module):
                         self.golds[task].append(
                             true[task][i][:t].tolist()
                         )
-            break
+                    break
 
         return self.preds, self.golds
         
