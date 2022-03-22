@@ -1116,7 +1116,7 @@ class IMN(BertHead):
                 "linear": torch.nn.Sequential(
                     torch.nn.Linear(
                         in_features=cnn_dim,
-                        out_features=1
+                        out_features=2
                     ),
                     torch.nn.Sigmoid()
                 ).to(torch.device(self.device))
@@ -1359,13 +1359,19 @@ class IMN(BertHead):
         self.scope_logits = self.components["scope"]["linear"](shared_output.permute(0, 2, 1))
 
         # scope_logits.shape = [batch, sequence, 1]
-        self.scope_loss_value = self.scope_loss(self.scope_logits, self.scope_true)
+        self.scope_loss_value = self.scope_loss(self.scope_logits.permute(0, 2, 1), self.scope_true)
         self.scope_loss_value.backward(retain_graph=True)
         self.scope_optimizer.step()
 
         # TODO configurable guided start/warm_up?
         gold_influence = self.get_prob(self.current_epoch, self.find("warm_up_constant", default=5))
-        self.scope_output = (gold_influence*self.scope_true + (1-gold_influence)*self.scope_logits).detach()
+        try:
+            self.scope_output = (
+                gold_influence*self.scope_true + (1-gold_influence)*self.scope_logits.argmax(-1).squeeze(-1)
+            ).detach()
+        except RuntimeError as e:
+            print(self.scope_true.shape, self.scope_logits.shape, self.scope_logits.argmax(-1).squeeze(-1).shape)
+            raise e
         self.scope_output.requires_grad = True
         
 
