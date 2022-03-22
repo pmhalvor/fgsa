@@ -149,7 +149,7 @@ def score(true_aspect, predict_aspect, true_sentiment, predict_sentiment, train_
         predict = predict_aspect[i]
         
         for num in range(len(true_seq)):
-            if true_seq[num] == -1:  # skip ignore id added by pmhalvor
+            if true_seq[num] == -1:  # NOTE skip ignore id added by pmhalvor
                 continue
             # print('num', true_seq[num])
             if true_seq[num] == begin:
@@ -164,7 +164,7 @@ def score(true_aspect, predict_aspect, true_sentiment, predict_sentiment, train_
                     for j in range(num+1, len(true_seq)):  # finds match
                         if true_seq[j] == inside and predict[j] == inside:
                             continue
-                        elif true_seq[j] == -1:  # skip ignore id added by pmhalvor
+                        elif true_seq[j] == -1:  #  NOTE skip ignore id added by pmhalvor
                             continue
                         elif true_seq[j] != inside and predict[j] != inside:
                             break
@@ -186,7 +186,6 @@ def score(true_aspect, predict_aspect, true_sentiment, predict_sentiment, train_
 
                             else:
                                 predicted_conf += 1
-
 
 
         for pred in predict:

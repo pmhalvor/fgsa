@@ -7,6 +7,7 @@ import argparse
 ### LOCAL
 from config import BERT_PATH
 from config import DATA_DIR
+from config import MODEL_DIR
 from config import default_parameters
 from config import log_template
 from dataset import Norec 
@@ -279,8 +280,9 @@ class Study():
         return self.final
 
     def save_model(self):
-        logging.info("Saving model to checkpoints/{}.pt".format(name))
-        torch.save(model, "/checkpoints/" + name + '.pt')
+        save_path = os.path.join(MODEL_DIR, "checkpoints", name + ".pt")
+        logging.info("Saving model to {}".format(save_path))
+        torch.save(model, save_path)
 
 
 if __name__ == "__main__":
@@ -320,6 +322,8 @@ if __name__ == "__main__":
                     if results > best_score:
                         best_hyper = hyper
                         best_score = results
+                        if torch.cuda.is_available():  # only save checkpoints on Fox TODO remove
+                            study.save_model()
                 
                 params[param] = best_hyper
                 print("Best results for {m} metric: {p}={h}".format(m=study.metric, p=param, h=best_hyper))

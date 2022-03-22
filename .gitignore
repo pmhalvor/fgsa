@@ -11,7 +11,7 @@ slurm*
 
 # But allow these!
 !plot-results.ipynb
-!hyper-optimizers.ipynb
+!hyper-*.ipynb
 
 
 
