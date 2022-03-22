@@ -164,7 +164,7 @@ def score(true_aspect, predict_aspect, true_sentiment, predict_sentiment, train_
                     for j in range(num+1, len(true_seq)):  # finds match
                         if true_seq[j] == inside and predict[j] == inside:
                             continue
-                        elif true_seq[num] == -1:  # skip ignore id added by pmhalvor
+                        elif true_seq[j] == -1:  # skip ignore id added by pmhalvor
                             continue
                         elif true_seq[j] != inside and predict[j] != inside:
                             break
