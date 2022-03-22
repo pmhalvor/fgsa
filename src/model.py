@@ -1356,7 +1356,7 @@ class IMN(BertHead):
         # scope_true.shape = [batch, sequence]
 
         # shared_output.shape = [batch, embedding (768), sequence]
-        self.scope_logits = self.components["scope"]["linear"](shared_output.permute(0, 2, 1)).squeeze(-1)
+        self.scope_logits = self.components["scope"]["linear"](shared_output.permute(0, 2, 1))
 
         # scope_logits.shape = [batch, sequence, 1]
         self.scope_loss_value = self.scope_loss(self.scope_logits, self.scope_true)
