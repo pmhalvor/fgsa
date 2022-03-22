@@ -1352,7 +1352,7 @@ class IMN(BertHead):
 
         self.scope_true = self.relu(
             (labels["expression"] + labels["polarity"] + labels["target"])
-        ).bool().float().to(torch.device(self.device))
+        ).bool().long().to(torch.device(self.device))
         # scope_true.shape = [batch, sequence]
 
         # shared_output.shape = [batch, embedding (768), sequence]
