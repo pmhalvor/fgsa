@@ -1268,7 +1268,7 @@ class IMN(BertHead):
                 values,     # values should include probabilities for B and I tags
                 need_weights=False,
                 # TODO: implement attention mask?
-                key_padding_mask=(batch[1]*-1)+1,
+                key_padding_mask=((batch[1]*-1)+1).to(torch.device(self.device)),
             )
             polarity_output = polarity_output.permute(1, 2, 0)  # batch, embedding, sequence
 
