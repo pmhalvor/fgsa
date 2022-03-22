@@ -951,7 +951,6 @@ class IMN(BertHead):
         kwargs["subtasks"] = subtasks
         super(IMN, self).__init__(**kwargs)
 
-
     def init_components(self, subtasks):
         """
         Every component 
@@ -1147,7 +1146,6 @@ class IMN(BertHead):
 
         return components
 
-
     def forward(self, batch):
         cnn_dim = self.find("cnn_dim", default=768)
         interactions = self.find("interactions", default=2)
@@ -1269,6 +1267,7 @@ class IMN(BertHead):
                 values,     # values should include probabilities for B and I tags
                 need_weights=False,
                 # TODO: implement attention mask?
+                key_padding_mask=(batch[1]*-1)+1,
             )
             polarity_output = polarity_output.permute(1, 2, 0)  # batch, embedding, sequence
 
@@ -1293,7 +1292,6 @@ class IMN(BertHead):
             sentence_output = self.components["shared"]["re_encode"](sentence_output).permute(0, 2, 1)  # batch, embedding, sequence
 
         return self.output
-
 
     def get_attention_inputs(self, target, expression, polarity):
         """ """
@@ -1336,7 +1334,6 @@ class IMN(BertHead):
 
         return queries, keys, values
 
-
     def scope_relevance(self, batch, shared_output) -> tuple():
         """
         Return:
@@ -1377,7 +1374,6 @@ class IMN(BertHead):
 
         return self.scope_output.to(torch.device(self.device))
 
-
     @staticmethod
     def get_prob(epoch_count, constant=5):
         """
@@ -1396,15 +1392,39 @@ class IMN(BertHead):
 class RACL(BertHead):
 
     def init_components(self, subtasks):
+        cnn_dim = self.find("cnn_dim", default=768)
+
         components = torch.nn.ModuleDict({
-            "shared": torch.nn.ModuleDict({
-                # seems only bert is the shared layers for racl
+            "relations": torch.nn.ModuleDict({
+                "target_expression": torch.nn.MultiheadAttention(
+                    embed_dim = cnn_dim,
+                    num_heads = 1,
+                    dropout=self.dropout,
+                )
             }),
             "target": torch.nn.ModuleDict({
                 # aspect extraction: cnn -> relu -> matmul w/ expression -> attention -> cat -> linear
+                "cnn": torch.nn.Sequential(
+                    torch.nn.Conv1d(
+                        in_channels = int(768),
+                        out_channels = int(cnn_dim), 
+                        kernel_size = 5,
+                        padding=2
+                    ),
+                    torch.nn.ReLU()
+                ).to(torch.device(self.device))
             }),
             "expression":torch.nn.ModuleDict({
                 # opinion extraction: cnn -> relu -> matmul w/ target -> attention -> cat -> linear
+                "cnn": torch.nn.Sequential(
+                    torch.nn.Conv1d(
+                        in_channels = int(768),
+                        out_channels = int(cnn_dim), 
+                        kernel_size = 5,
+                        padding=2
+                    ),
+                    torch.nn.ReLU()
+                ).to(torch.device(self.device))
             }),
             "polarity":torch.nn.ModuleDict({
                 # polarity classification: cnn -> relu -> matmul w/ (embedding) -> attention -> cat -> dropout -> linear
@@ -1432,6 +1452,20 @@ class RACL(BertHead):
             pass 
 
         return output
+
+    @staticmethod
+    def get_prob(epoch_count, constant=5):
+        """
+        Borrowed directly from https://github.com/ruidan/IMN-E2E-ABSA
+        
+        Compute the probability of using gold opinion labels in prediction transmission
+        (To alleviate the problem of unreliable predictions of opinion labels sent from AE to AS,
+        in the early stage of training, we use gold labels as prediction with probability 
+        that depends on the number of current epoch)
+
+        """
+        prob = constant/(constant+torch.exp(torch.tensor(epoch_count).float()/constant))
+        return prob
 
 
 
