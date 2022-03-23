@@ -1555,16 +1555,10 @@ class RACL(IMN):
 
         
         for i in range(stack_count):
-            print("Stack run", i)
-            print(target_inputs[-1].shape, self.components["target"]["cnn"])
-
             # target & expression convolution
             target_cnn = self.components["target"]["cnn"](target_inputs[-1])
             expression_cnn = self.components["expression"]["cnn"](expression_inputs[-1])
 
-            print(target_cnn.shape, expression_cnn.shape)
-
-            
             # Relation R1  # TODO remove weights expression_at_target (not needed)
             target_attn, target_at_expression = self.components["relations"]["target_at_expression"](
                 # expects shape: [seq, batch, cnn_dim]
@@ -1575,11 +1569,7 @@ class RACL(IMN):
                 need_weights=True
             )
 
-            print("after attention")
-            print(target_cnn.shape, target_attn.shape)
-
             target_inter = torch.cat((target_cnn.permute(0, 2, 1), target_attn.permute(1,0,2)), dim=-1)
-            print(target_inter.shape, self.components["target"]["linear"])
             target_logits = self.components["target"]["linear"](target_inter)
 
             # TODO remove weights expression_at_target (not needed)
@@ -1608,7 +1598,6 @@ class RACL(IMN):
             else:
                 expression_propagate = expression_attn
 
-            print("polar_cnn:", polarity_inputs[-1].shape, self.components["polarity"]["cnn"])
             # polarity convolution
             polarity_cnn = self.components["polarity"]["cnn"](polarity_inputs[-1])
 
@@ -1631,9 +1620,9 @@ class RACL(IMN):
             polarity_logits = self.components["polarity"]["linear"](polarity_inter.permute(0, 2, 1))
 
             # stacking
-            target_outputs.append(target_logits)
-            polarity_outputs.append(polarity_logits)
-            expression_outputs.append(expression_logits)
+            target_outputs.append(target_logits.unsqueeze(-1))
+            polarity_outputs.append(polarity_logits.unsqueeze(-1))
+            expression_outputs.append(expression_logits.unsqueeze(-1))
 
             # dropout
             target_inter = self.components["target"]["re_encode"](target_inter).permute(0, 2, 1)
@@ -1647,9 +1636,9 @@ class RACL(IMN):
 
 
         output = {  # concat across all predictions, take mean of each for the 3 possible labels
-            "expression": torch.mean(torch.cat(expression_outputs, dim=-1), dim=-1),
-            "polarity": torch.mean(torch.cat(polarity_outputs, dim=-1), dim=-1),
-            "target": torch.mean(torch.cat(target_outputs, dim=-1), dim=-1),
+            "expression": torch.mean(torch.cat(expression_outputs, dim=-1), dim=-1).permute(0, 2, 1),  # batch, labels, sequence
+            "polarity": torch.mean(torch.cat(polarity_outputs, dim=-1), dim=-1).permute(0, 2, 1),  # batch, labels, sequence
+            "target": torch.mean(torch.cat(target_outputs, dim=-1), dim=-1).permute(0, 2, 1),  # batch, labels, sequence
         }
 
         return output
