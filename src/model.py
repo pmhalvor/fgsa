@@ -1441,12 +1441,8 @@ class RACL(IMN):
             "target": torch.nn.ModuleDict({
                 # aspect extraction: cnn -> relu -> matmul w/ expression -> attention -> cat -> linear
                 "cnn": torch.nn.Sequential(
-                    torch.nn.Linear(
-                        in_features=768,
-                        out_features=int(cnn_dim)
-                    ),
                     torch.nn.Conv1d(
-                        in_channels = int(cnn_dim),
+                        in_channels = int(768),
                         out_channels = int(cnn_dim), 
                         kernel_size = 5,
                         padding=2
@@ -1462,8 +1458,8 @@ class RACL(IMN):
                 ).to(torch.device(self.device)),
                 "re_encode": torch.nn.Sequential(
                     torch.nn.Linear(
-                        in_features=cnn_dim*2, 
-                        out_features=cnn_dim
+                        in_features=int(cnn_dim*2), 
+                        out_features=int(768)
                     ),
                     # torch.nn.ReLU(),  # TODO activate like l2 norm or nah?
                     torch.nn.AlphaDropout(
@@ -1474,12 +1470,8 @@ class RACL(IMN):
             "expression":torch.nn.ModuleDict({
                 # opinion extraction: cnn -> relu -> matmul w/ target -> attention -> cat -> linear
                 "cnn": torch.nn.Sequential(
-                    torch.nn.Linear(
-                        in_features=768,
-                        out_features=int(cnn_dim)
-                    ),
                     torch.nn.Conv1d(
-                        in_channels = int(cnn_dim),
+                        in_channels = int(768),
                         out_channels = int(cnn_dim), 
                         kernel_size = 5,
                         padding=2
@@ -1495,8 +1487,8 @@ class RACL(IMN):
                 ).to(torch.device(self.device)),
                 "re_encode": torch.nn.Sequential(
                     torch.nn.Linear(
-                        in_features=cnn_dim*2, 
-                        out_features=cnn_dim
+                        in_features=int(cnn_dim*2), 
+                        out_features=int(768)
                     ),
                     # torch.nn.ReLU(),  # TODO activate like l2 norm or nah?
                     torch.nn.AlphaDropout(
@@ -1523,10 +1515,10 @@ class RACL(IMN):
                     # torch.nn.Sigmoid(),  # TODO activation after linear?
                 ).to(torch.device(self.device)),
                 "re_encode": torch.nn.Sequential(
-                    # torch.nn.Linear(  # TODO delete
-                    #     in_features=cnn_dim*2, 
-                    #     out_features=cnn_dim
-                    # ),
+                    torch.nn.Linear(  # TODO delete
+                        in_features=int(cnn_dim), 
+                        out_features=768
+                    ),
                     # torch.nn.ReLU(),  # TODO activate like l2 norm or nah?
                     torch.nn.AlphaDropout(
                         self.dropout,
@@ -1645,7 +1637,7 @@ class RACL(IMN):
 
             # dropout
             target_inter = self.components["target"]["re_encode"](target_inter).permute(0, 2, 1)
-            polarity_inter = self.components["polarity"]["re_encode"](polarity_inter)
+            polarity_inter = self.components["polarity"]["re_encode"](polarity_inter.permute(0, 2, 1)).permute(0, 2, 1)
             expression_inter = self.components["expression"]["re_encode"](expression_inter).permute(0, 2, 1)
 
             # store learning info for next stack
