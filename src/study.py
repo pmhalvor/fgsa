@@ -191,6 +191,8 @@ class Study():
             self.logger.info("... from new {} object.".format(self.model_name))
         return model
 
+        return model
+
     def get_model_class(self, model_name=None):
         model = None
         
@@ -200,6 +202,8 @@ class Study():
             model = BertHead
         elif model_name.lower() == "imn":
           model = IMN
+        elif model_name.lower() == "racl":
+          model = RACL
         # elif model_name.lower() == "next":
         #   model = Next
 
@@ -323,7 +327,8 @@ if __name__ == "__main__":
                     if results > best_score:
                         best_hyper = hyper
                         best_score = results
-                        if torch.cuda.is_available():  # only save checkpoints on Fox TODO remove
+                        if torch.cuda.is_available():  # only save when running on gpu TODO remove
+                            # only save checkpoints for best model 
                             study.save_model()
                 
                 params[param] = best_hyper
