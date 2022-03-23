@@ -76,7 +76,7 @@ class Study():
         self.load_dataloaders()
 
         ###### init model #####
-        self.init_model(model_path=model_path)
+        self.model = self.init_model(model_path=model_path)
 
         ###### log plots ######
         self.study_param = study_param
@@ -177,18 +177,19 @@ class Study():
         """
         self.logger.info("Initializing model..")
         if self.load_checkpoint and os.path.exists("/checkpoints/{}.pt".format(self.name)):
-            self.model = torch.load("/checkpoints/" + self.name + '.pt', map_location=torch.device(self.device))
+            model = torch.load("/checkpoints/" + self.name + '.pt', map_location=torch.device(self.device))
             self.logger.info("... from checkpoint/{}.pt".format(self.name))
         elif model_path is not None and os.path.exists(model_path):
-            self.model = torch.load(model_path, map_location=torch.device(self.device))
+            model = torch.load(model_path, map_location=torch.device(self.device))
             self.logger.info("... from {}".format(model_path))
         if self.model_path is not None and os.path.exists(self.model_path):
-            self.model = torch.load(self.model_path, map_location=torch.device(self.device))
-            self.logging.info("... from {}".format(self.model_path))
+            model = torch.load(self.model_path, map_location=torch.device(self.device))
+            self.logger.info("... from {}".format(self.model_path))
         else:
             model_class = self.get_model_class(self.model_name)
-            self.model = model_class(**self.params())
+            model = model_class(**self.params())
             self.logger.info("... from new {} object.".format(self.model_name))
+        return model
 
     def get_model_class(self, model_name=None):
         model = None
@@ -280,9 +281,9 @@ class Study():
         return self.final
 
     def save_model(self):
-        save_path = os.path.join(MODEL_DIR, "checkpoints", name + ".pt")
-        logging.info("Saving model to {}".format(save_path))
-        torch.save(model, save_path)
+        save_path = os.path.join(MODEL_DIR, "checkpoints", self.name + ".pt")
+        self.logger.info("Saving model to {}".format(save_path))
+        torch.save(self.model, save_path)
 
 
 if __name__ == "__main__":
