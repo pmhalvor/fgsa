@@ -1407,49 +1407,46 @@ class RACL(IMN):
 
         components = torch.nn.ModuleDict({
             "relations": torch.nn.ModuleDict({
-                "target_expression": torch.nn.MultiheadAttention(
+                "target_at_expression": torch.nn.MultiheadAttention(
                     embed_dim = cnn_dim,
                     num_heads = 1,
                     dropout=self.dropout,
-                    # query: torch.norm(target)
-                    # key: torch.norm(expression)
+                    # query: torch.norm(expression)  # NOTE L2 norm
+                    # key: torch.norm(target)
                     # values: target
                     # key_padding_mask: (batch[1]*-1)+1
 
                     # qk-outputs used in group v-mul later
                 ),
-                "expression_target": torch.nn.MultiheadAttention(
+                "expression_at_target": torch.nn.MultiheadAttention(
                     embed_dim = cnn_dim,
                     num_heads = 1,
                     dropout=self.dropout,
-                    # query: expression
-                    # key: target
+                    # query: torch.norm(target)  # NOTE L2 norm
+                    # key: torch.norm(expression)
                     # values: expression
-                    
-                    # qk-outputs used in group v-mul later
+                    # key_padding_mask: (batch[1]*-1)+1
                 ),
-                "target_polarity": torch.nn.MultiheadAttention(
+                "shared_at_polarity": torch.nn.MultiheadAttention(
                     embed_dim = cnn_dim,
                     num_heads = 1,
                     dropout=self.dropout,
-                    # query: 
-
-
-                    # qk-outputs used in group v-mul later
+                    # query: shared_hidden_state
+                    # key: torch.norm(polarity_cnn_output)
+                    # after softmax, keys joined w/ target_at_expression & (expression_probs expanded to cnn_dim)
+                    # value: polarity
+                    # key_padding_mask: (batch[1]*-1)+1
                 ),
-                "group_attention": torch.nn.MultiheadAttention(
-                    embed_dim = cnn_dim,
-                    num_heads = 1,
-                    dropout=self.dropout,
-                    # qk-outputs from first 2 attentions joined here
-
-                )
             }),
             "target": torch.nn.ModuleDict({
                 # aspect extraction: cnn -> relu -> matmul w/ expression -> attention -> cat -> linear
                 "cnn": torch.nn.Sequential(
+                    torch.nn.Linear(
+                        in_features=768,
+                        out_features=int(cnn_dim)
+                    ),
                     torch.nn.Conv1d(
-                        in_channels = int(768),
+                        in_channels = int(cnn_dim),
                         out_channels = int(cnn_dim), 
                         kernel_size = 5,
                         padding=2
@@ -1458,17 +1455,31 @@ class RACL(IMN):
                 ).to(torch.device(self.device)),
                 "linear": torch.nn.Sequential(
                     torch.nn.Linear(
-                    in_features=cnn_dim,
+                    in_features=cnn_dim*2,  # TODO this will be doubled..?
                     out_features=3
                     ),
                     # torch.nn.Sigmoid(),  # TODO activation after linear?
                 ).to(torch.device(self.device)),
+                "re_encode": torch.nn.Sequential(
+                    torch.nn.Linear(
+                        in_features=cnn_dim*2, 
+                        out_features=cnn_dim
+                    ),
+                    # torch.nn.ReLU(),  # TODO activate like l2 norm or nah?
+                    torch.nn.AlphaDropout(
+                        self.dropout,
+                    ).to(torch.device(self.device)),
+                )
             }),
             "expression":torch.nn.ModuleDict({
                 # opinion extraction: cnn -> relu -> matmul w/ target -> attention -> cat -> linear
                 "cnn": torch.nn.Sequential(
+                    torch.nn.Linear(
+                        in_features=768,
+                        out_features=int(cnn_dim)
+                    ),
                     torch.nn.Conv1d(
-                        in_channels = int(768),
+                        in_channels = int(cnn_dim),
                         out_channels = int(cnn_dim), 
                         kernel_size = 5,
                         padding=2
@@ -1477,11 +1488,21 @@ class RACL(IMN):
                 ).to(torch.device(self.device)),
                 "linear": torch.nn.Sequential(
                     torch.nn.Linear(
-                    in_features=cnn_dim,
+                    in_features=cnn_dim*2,
                     out_features=3
                     ),
                     # torch.nn.Sigmoid(),  # TODO activation after linear?
                 ).to(torch.device(self.device)),
+                "re_encode": torch.nn.Sequential(
+                    torch.nn.Linear(
+                        in_features=cnn_dim*2, 
+                        out_features=cnn_dim
+                    ),
+                    # torch.nn.ReLU(),  # TODO activate like l2 norm or nah?
+                    torch.nn.AlphaDropout(
+                        self.dropout,
+                    ).to(torch.device(self.device)),
+                )
             }),
             "polarity":torch.nn.ModuleDict({
                 # polarity classification: cnn -> relu -> matmul w/ (embedding) -> attention -> cat -> dropout -> linear
@@ -1494,15 +1515,32 @@ class RACL(IMN):
                     ),
                     torch.nn.ReLU()
                 ).to(torch.device(self.device)),
+                "linear": torch.nn.Sequential(
+                    torch.nn.Linear(
+                    in_features=cnn_dim, # TODO double?
+                    out_features=3
+                    ),
+                    # torch.nn.Sigmoid(),  # TODO activation after linear?
+                ).to(torch.device(self.device)),
+                "re_encode": torch.nn.Sequential(
+                    # torch.nn.Linear(  # TODO delete
+                    #     in_features=cnn_dim*2, 
+                    #     out_features=cnn_dim
+                    # ),
+                    # torch.nn.ReLU(),  # TODO activate like l2 norm or nah?
+                    torch.nn.AlphaDropout(
+                        self.dropout,
+                    ).to(torch.device(self.device)),
+                )
             }),
-            # doc-level skipped for now
         })
-
 
         return components
 
     def forward(self, batch):
-        raise NotImplementedError
+        gold_transmission = self.find("gold_transmission", default=False)
+        stack_count = self.find("stack_count", default=2)
+
         input_ids = batch[0].to(torch.device(self.device))
         attention_mask = batch[1].to(torch.device(self.device))
 
@@ -1510,13 +1548,137 @@ class RACL(IMN):
             input_ids = input_ids,
             attention_mask = attention_mask,
         ).last_hidden_state
-        embeddings = self.bert_dropout(embeddings)
+        embeddings = self.bert_dropout(embeddings).permute(0, 2, 1)
+
+        # store inputs along the way 
+        expression_inputs = [embeddings]
+        polarity_inputs = [embeddings]
+        target_inputs = [embeddings]
+        shared_query = [embeddings]
+
+        # store outputs along the way 
+        expression_outputs = []
+        polarity_outputs = []
+        target_outputs = []
+
+        
+        for i in range(stack_count):
+            print("Stack run", i)
+            print(target_inputs[-1].shape, self.components["target"]["cnn"])
+
+            # target & expression convolution
+            target_cnn = self.components["target"]["cnn"](target_inputs[-1])
+            expression_cnn = self.components["expression"]["cnn"](expression_inputs[-1])
+
+            print(target_cnn.shape, expression_cnn.shape)
+
+            
+            # Relation R1  # TODO remove weights expression_at_target (not needed)
+            target_attn, target_at_expression = self.components["relations"]["target_at_expression"](
+                # expects shape: [seq, batch, cnn_dim]
+                query=torch.nn.functional.normalize(expression_cnn, p=2, dim=-1).permute(2, 0, 1),
+                key=torch.nn.functional.normalize(target_cnn, p=2, dim=-1).permute(2, 0, 1),
+                value=target_cnn.permute(2, 0, 1),
+                key_padding_mask=((batch[1]*-1)+1).bool(),
+                need_weights=True
+            )
+
+            print("after attention")
+            print(target_cnn.shape, target_attn.shape)
+
+            target_inter = torch.cat((target_cnn.permute(0, 2, 1), target_attn.permute(1,0,2)), dim=-1)
+            print(target_inter.shape, self.components["target"]["linear"])
+            target_logits = self.components["target"]["linear"](target_inter)
+
+            # TODO remove weights expression_at_target (not needed)
+            expression_attn, expression_at_target = self.components["relations"]["expression_at_target"](
+                # expects shape: [seq, batch, cnn_dim]
+                query=torch.nn.functional.normalize(expression_cnn, p=2, dim=-1).permute(2, 0, 1),
+                key=torch.nn.functional.normalize(target_cnn, p=2, dim=-1).permute(2, 0, 1),
+                value=expression_cnn.permute(2, 0, 1),
+                key_padding_mask=(batch[1]*-1)+1,
+                need_weights=False
+            )
+            expression_inter = torch.cat((expression_cnn.permute(0, 2, 1), expression_attn.permute(1,0,2)), dim=-1)
+            expression_logits = self.components["expression"]["linear"](expression_inter)
+
+            # TODO gold transmission of expressions
+            if gold_transmission:
+                raise NotImplementedError  # not exactly complete, come back and check
+                expression_confidence = self.get_confidence(
+                    expression_logits, 
+                    batch,
+                    self.current_epoch
+                )
+                expression_propagate = expression_at_target*(  # expand confidence to shape of attention weights
+                    expression_confidence.unsqueeze(-1).expand(expression_at_target.shape)
+                )
+            else:
+                expression_propagate = expression_attn
+
+            print("polar_cnn:", polarity_inputs[-1].shape, self.components["polarity"]["cnn"])
+            # polarity convolution
+            polarity_cnn = self.components["polarity"]["cnn"](polarity_inputs[-1])
+
+            # print(
+            #     "polarity key",
+            #     torch.nn.functional.normalize(polarity_cnn, p=2, dim=-1).permute(2, 0, 1).shape, "+",
+            #     target_attn.shape, "+",
+            #     expression_attn.shape
+            # )
+
+            # shared-polarity attention
+            polarity_attn, _ = self.components["relations"]["shared_at_polarity"](
+                query=torch.nn.functional.normalize(shared_query[-1]).permute(2, 0, 1),
+                key=(
+                    # key needs some information sharing from target and expression 
+                    torch.nn.functional.normalize(polarity_cnn, p=2, dim=-1).permute(2, 0, 1)
+                    + target_attn + expression_propagate  # FIXME size problem permute?
+                ),
+                value=polarity_cnn.permute(2, 0, 1),
+                key_padding_mask=(batch[1]*-1)+1,
+                need_weights=False
+            )
+            polarity_inter = shared_query[-1] + polarity_attn.permute(1, 2, 0)
+            shared_query.append(polarity_inter)
+
+            # polarity output
+            polarity_logits = self.components["polarity"]["linear"](polarity_inter.permute(0, 2, 1))
+
+            # stacking
+            target_outputs.append(target_logits)
+            polarity_outputs.append(polarity_logits)
+            expression_outputs.append(expression_logits)
+
+            # dropout
+            target_inter = self.components["target"]["re_encode"](target_inter).permute(0, 2, 1)
+            polarity_inter = self.components["polarity"]["re_encode"](polarity_inter)
+            expression_inter = self.components["expression"]["re_encode"](expression_inter).permute(0, 2, 1)
+
+            # store learning info for next stack
+            target_inputs.append(target_inter)
+            polarity_inputs.append(polarity_inter)
+            expression_inputs.append(expression_inter)
 
 
-        output = {}
-        for task in self.subtasks:
-            pass 
+        output = {  # concat across all predictions, take mean of each for the 3 possible labels
+            "expression": torch.mean(torch.cat(expression_outputs, dim=-1), dim=-1),
+            "polarity": torch.mean(torch.cat(polarity_outputs, dim=-1), dim=-1),
+            "target": torch.mean(torch.cat(target_outputs, dim=-1), dim=-1),
+        }
 
         return output
 
+    @staticmethod
+    def get_confidence(expression_logits, batch, current_epoch):
+        gold_influence = self.get_prob(self.current_epoch, self.find("warm_up_constant", default=5))
 
+        true_expression = batch[2]
+
+        expression_confidence = (  # strengthen signal for true expression_logits
+            gold_influence*true_expression.bool().float()
+                + (1-gold_influence)*expression_logits.argmax(-1)
+        ).detach().to(torch.device(self.device))
+        expression_confidence.requires_grad = True
+        
+        return expression_confidence  # shape: [batch, sequence]
