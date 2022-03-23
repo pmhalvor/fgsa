@@ -1424,7 +1424,7 @@ class RACL(IMN):
                     # key_padding_mask: (batch[1]*-1)+1
 
                     # qk-outputs used in group v-mul later
-                ),
+                ).to(torch.device(self.device)),
                 "expression_at_target": torch.nn.MultiheadAttention(
                     embed_dim = cnn_dim,
                     num_heads = 1,
@@ -1433,7 +1433,7 @@ class RACL(IMN):
                     # key: torch.norm(expression)
                     # values: expression
                     # key_padding_mask: (batch[1]*-1)+1
-                ),
+                ).to(torch.device(self.device)),
                 "shared_at_polarity": torch.nn.MultiheadAttention(
                     embed_dim = cnn_dim,
                     num_heads = 1,
@@ -1443,7 +1443,7 @@ class RACL(IMN):
                     # after softmax, keys joined w/ target_at_expression & (expression_probs expanded to cnn_dim)
                     # value: polarity
                     # key_padding_mask: (batch[1]*-1)+1
-                ),
+                ).to(torch.device(self.device)),
             }),
             "target": torch.nn.ModuleDict({
                 # aspect extraction: cnn -> relu -> matmul w/ expression -> attention -> cat -> linear
@@ -1472,7 +1472,7 @@ class RACL(IMN):
                     torch.nn.AlphaDropout(
                         self.dropout,
                     ).to(torch.device(self.device)),
-                )
+                ).to(torch.device(self.device))
             }),
             "expression":torch.nn.ModuleDict({
                 # opinion extraction: cnn -> relu -> matmul w/ target -> attention -> cat -> linear
@@ -1500,8 +1500,8 @@ class RACL(IMN):
                     # torch.nn.ReLU(),  # TODO activate like l2 norm or nah?
                     torch.nn.AlphaDropout(
                         self.dropout,
-                    ).to(torch.device(self.device)),
-                )
+                    ),
+                ).to(torch.device(self.device))
             }),
             "polarity":torch.nn.ModuleDict({
                 # polarity classification: cnn -> relu -> matmul w/ (embedding) -> attention -> cat -> dropout -> linear
@@ -1530,7 +1530,7 @@ class RACL(IMN):
                     torch.nn.AlphaDropout(
                         self.dropout,
                     ).to(torch.device(self.device)),
-                )
+                ).to(torch.device(self.device))
             }),
         })
 
@@ -1572,7 +1572,7 @@ class RACL(IMN):
                 query=torch.nn.functional.normalize(expression_cnn, p=2, dim=-1).permute(2, 0, 1),
                 key=torch.nn.functional.normalize(target_cnn, p=2, dim=-1).permute(2, 0, 1),
                 value=target_cnn.permute(2, 0, 1),
-                key_padding_mask=((batch[1]*-1)+1).bool(),
+                key_padding_mask=((batch[1]*-1)+1).bool().to(torch.device(self.device)),
                 need_weights=True
             )
 
@@ -1585,7 +1585,7 @@ class RACL(IMN):
                 query=torch.nn.functional.normalize(expression_cnn, p=2, dim=-1).permute(2, 0, 1),
                 key=torch.nn.functional.normalize(target_cnn, p=2, dim=-1).permute(2, 0, 1),
                 value=expression_cnn.permute(2, 0, 1),
-                key_padding_mask=(batch[1]*-1)+1,
+                key_padding_mask=((batch[1]*-1)+1).bool().to(torch.device(self.device)),
                 need_weights=False
             )
             expression_inter = torch.cat((expression_cnn.permute(0, 2, 1), expression_attn.permute(1,0,2)), dim=-1)
@@ -1617,7 +1617,7 @@ class RACL(IMN):
                     + target_attn + expression_propagate  # FIXME size problem permute?
                 ),
                 value=polarity_cnn.permute(2, 0, 1),
-                key_padding_mask=(batch[1]*-1)+1,
+                key_padding_mask=((batch[1]*-1)+1).bool().to(torch.device(self.device)),
                 need_weights=False
             )
             polarity_inter = shared_query[-1] + polarity_attn.permute(1, 2, 0)
