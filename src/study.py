@@ -199,6 +199,8 @@ class Study():
             model = BertHead
         elif model_name.lower() == "imn":
           model = IMN
+        elif model_name.lower() == "racl":
+          model = RACL
         # elif model_name.lower() == "next":
         #   model = Next
 
