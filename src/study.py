@@ -324,7 +324,8 @@ if __name__ == "__main__":
                     if results > best_score:
                         best_hyper = hyper
                         best_score = results
-                        if torch.cuda.is_available():  # only save checkpoints on Fox TODO remove
+                        if torch.cuda.is_available():  # only save when running on gpu TODO remove
+                            # only save checkpoints for best model 
                             study.save_model()
                 
                 params[param] = best_hyper
