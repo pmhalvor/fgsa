@@ -199,6 +199,8 @@ class Study():
             model = BertHead
         elif model_name.lower() == "imn":
           model = IMN
+        elif model_name.lower() == "racl":
+          model = RACL
         # elif model_name.lower() == "next":
         #   model = Next
 
@@ -280,7 +282,7 @@ class Study():
         return self.final
 
     def save_model(self):
-        save_path = os.path.join(MODEL_DIR, "checkpoints", name + ".pt")
+        save_path = os.path.join(MODEL_DIR, "checkpoints", self.name + ".pt")
         logging.info("Saving model to {}".format(save_path))
         torch.save(model, save_path)
 
