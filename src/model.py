@@ -1620,13 +1620,6 @@ class RACL(IMN):
             # polarity convolution
             polarity_cnn = self.components["polarity"]["cnn"](polarity_inputs[-1])
 
-            # print(
-            #     "polarity key",
-            #     torch.nn.functional.normalize(polarity_cnn, p=2, dim=-1).permute(2, 0, 1).shape, "+",
-            #     target_attn.shape, "+",
-            #     expression_attn.shape
-            # )
-
             # shared-polarity attention
             polarity_attn, _ = self.components["relations"]["shared_at_polarity"](
                 query=torch.nn.functional.normalize(shared_query[-1]).permute(2, 0, 1),
