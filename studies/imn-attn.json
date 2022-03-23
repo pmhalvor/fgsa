@@ -1,5 +1,5 @@
 {
-    "name": "imn-attn",
+    "name": "imn-attn-higher-lrs",
 
     "model_name": "imn",
 
@@ -20,10 +20,10 @@
     "value": "polarity",
     "gold_transmission":true,
 
-    "lr": [1e-8, 1e-7],
-    "expression_lr": 1e-6,
-    "polarity_lr": 1e-6,
-    "target_lr": 1e-6,
+    "lr": [1e-7, 1e-6, 1e-5],
+    "expression_lr": 1e-5,
+    "polarity_lr": 1e-5,
+    "target_lr": 1e-5,
 
     "cnn_dim": 768,
     "shared_layers": 1,
