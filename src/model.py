@@ -24,9 +24,11 @@ import config
 
 class BertSimple(torch.nn.Module):
     """
-    First model built for fgsa on norec_fine. 
+    Our first model built for fgsa on norec_fine. 
+    A very simplified multitask system, w/ shared Bert embeddings
 
-    Expects one-hot encoded dataset, classifying num_labels outputs, w/ BertForTokenClassification
+    Expects joint-labeled dataset ([B-Target, O, B-Expression, I-Expression]) 
+    Classifies num_labels outputs via BertForTokenClassification
     """
     def __init__(
         self, 
@@ -288,10 +290,12 @@ class BertSimple(torch.nn.Module):
 
 class BertHead(torch.nn.Module):
     """
-    Abstract class that uses a BertHead w/ linear output. 
-    Basically BertSimple, but able to be easily changed for more complex downstream 
-    multitasking. 
+    Base flexible multitask learner model developed for this experiment.
+    Uses a Bert head w/ linear output. 
+    Basically BertSimple, except labels are expected split into subtasks.
+    Easily changeable for more complex downstream subtasks
     
+    Prediction outputs dictionary of subtask label predictions.
     """
     def __init__(
         self, 
@@ -867,6 +871,12 @@ class BertHead(torch.nn.Module):
 
 
 class FgsaLSTM(BertHead):
+    """
+    Simple iteration on BertHead, replacing linear output w/ LSTMs.
+    Increase complexity as simply as possible (testing flexability).
+
+    Prediction outputs dictionary of subtask label predictions.
+    """
 
     def init_components(self, subtasks):
         """
@@ -930,7 +940,7 @@ class FgsaLSTM(BertHead):
 
 class IMN(BertHead):
     """
-    Similar to the original IMN structure, just implemented in pytorch.
+    Similar to the original IMN structure, just built on a BertHead (in PyTorch).
 
     Parameters:
         interactions (int, default=2)
@@ -1352,6 +1362,8 @@ class IMN(BertHead):
             scope_logits: scope predictions after shared layers
             scope_true: true scope for current batch
         """
+        gold_transmission = self.find("gold_transmission", default=False)
+
         labels = {
             "expression": batch[2],
             "polarity": batch[4],
@@ -1371,17 +1383,12 @@ class IMN(BertHead):
         self.scope_loss_value.backward(retain_graph=True)
         self.scope_optimizer.step()
 
-        # TODO configurable guided start/warm_up?
-        gold_influence = self.get_prob(self.current_epoch, self.find("warm_up_constant", default=5))
-        try:  # FIXME remove this try/catch
+        if gold_transmission:
+            gold_influence = self.get_prob(self.current_epoch, self.find("warm_up_constant", default=5))
             self.scope_output = (
                 gold_influence*self.scope_true + (1-gold_influence)*self.scope_logits.argmax(-1).squeeze(-1)
             ).detach()
-        except RuntimeError as e:
-            print(self.scope_true.shape, self.scope_logits.shape, self.scope_logits.argmax(-1).squeeze(-1).shape)
-            raise e
-        self.scope_output.requires_grad = True
-        
+            self.scope_output.requires_grad = True
 
         return self.scope_output.to(torch.device(self.device))
 
