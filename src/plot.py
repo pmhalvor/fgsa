@@ -4,7 +4,10 @@ import matplotlib.pyplot as plt
 
 def show_data(data, title=None):
     """ data dict to pandas df w/ plot """
-    df = pd.DataFrame.from_dict(data)
+    try:
+        df = pd.DataFrame.from_dict(data)
+    except ValueError:
+        df = pd.DataFrame()
     df.plot(title=title, figsize=(15,5))
     return df.T
 
