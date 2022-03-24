@@ -109,7 +109,7 @@ def flatten(item):
     return flat_item
 
 
-def score(true_aspect, predict_aspect, true_sentiment, predict_sentiment, train_op):
+def score(true_aspect, predict_aspect, true_sentiment, predict_sentiment, train_op, no_neutral=True, eps=1e-8):
     """
     Evaluation metric used in IMN and RACL. 
     Takes batch of inputs as lists. 
@@ -148,6 +148,7 @@ def score(true_aspect, predict_aspect, true_sentiment, predict_sentiment, train_
         true_seq = true_aspect[i]
         predict = predict_aspect[i]
         
+        # recall loop
         for num in range(len(true_seq)):
             if true_seq[num] == -1:  # NOTE skip ignore id added by pmhalvor
                 continue
@@ -187,15 +188,15 @@ def score(true_aspect, predict_aspect, true_sentiment, predict_sentiment, train_
                             else:
                                 predicted_conf += 1
 
-
+        # precision loop
         for pred in predict:
             if pred == begin:
                 predicted += 1
 
-    p_aspect = correct / (predicted + 1e-6)
-    r_aspect = correct / (relevant + 1e-6)
+    p_aspect = correct / (predicted + eps)
+    r_aspect = correct / (relevant + eps)
     # F1 score for aspect (opinion) extraction
-    f_aspect = 2 * p_aspect * r_aspect / (p_aspect + r_aspect + 1e-6)
+    f_aspect = 2 * p_aspect * r_aspect / (p_aspect + r_aspect + eps)
 
     acc_s, f_s, f_absa = 0, 0, 0
 
@@ -204,32 +205,35 @@ def score(true_aspect, predict_aspect, true_sentiment, predict_sentiment, train_
         num_correct_aspect = rel_count['pos']+rel_count['neg']+rel_count['neu']
         num_total = total_count['pos']+total_count['neg']+total_count['neu']
 
-        acc_s = num_correct_overall/(num_correct_aspect+1e-6)
+        acc_s = num_correct_overall/(num_correct_aspect+eps)
        
-        p_pos = correct_count['pos'] / (pred_count['pos']+1e-6)
-        r_pos = correct_count['pos'] / (rel_count['pos']+1e-6)
+        p_pos = correct_count['pos'] / (pred_count['pos']+eps)
+        r_pos = correct_count['pos'] / (rel_count['pos']+eps)
         
-        p_neg = correct_count['neg'] / (pred_count['neg']+1e-6)
-        r_neg = correct_count['neg'] / (rel_count['neg']+1e-6)
+        p_neg = correct_count['neg'] / (pred_count['neg']+eps)
+        r_neg = correct_count['neg'] / (rel_count['neg']+eps)
 
-        p_neu = correct_count['neu'] / (pred_count['neu']+1e-6)
-        r_neu= correct_count['neu'] / (rel_count['neu']+1e-6)
+        p_neu = correct_count['neu'] / (pred_count['neu']+eps)
+        r_neu= correct_count['neu'] / (rel_count['neu']+eps)
 
         # For calculating the F1 Score for SC, RACL developers discussed w/ Ruidan at https://github.com/ruidan/IMN-E2E-ABSA/issues?q=is%3Aissue+is%3Aclosed.
-        f_pos = 2*p_pos*r_pos /(p_pos+r_pos+1e-6)
-        f_neg = 2*p_neg*r_neg /(p_neg+r_neg+1e-6)
-        f_neu = 2*p_neu*r_neu /(p_neu+r_neu+1e-6)
-        f_s = (f_pos+f_neg+f_neu)/3.0
+        f_pos = 2*p_pos*r_pos /(p_pos+r_pos+eps)
+        f_neg = 2*p_neg*r_neg /(p_neg+r_neg+eps)
+        f_neu = 2*p_neu*r_neu /(p_neu+r_neu+eps)
+        if no_neutral:
+            f_s = (f_pos+f_neg)/2.0
+        else:
+            f_s = (f_pos+f_neg+f_neu)/3.0
 
         # # F1 score for SC only (in IMN)
         # pr_s = (p_pos+p_neg+p_neu)/3.0
         # re_s = (r_pos+r_neg+r_neu)/3.0
-        # f_s = 2*pr_s*re_s/(pr_s+re_s+1e-6)
+        # f_s = 2*pr_s*re_s/(pr_s+re_s+eps)
 
-        precision_absa = num_correct_overall/(predicted+1e-6 - predicted_conf)
-        recall_absa = num_correct_overall/(num_total+1e-6)
+        precision_absa = num_correct_overall/(predicted+eps - predicted_conf)
+        recall_absa = num_correct_overall/(num_total+eps)
         # F1 score of the end-to-end task
-        f_absa = 2*precision_absa*recall_absa/(precision_absa+recall_absa+1e-6)
+        f_absa = 2*precision_absa*recall_absa/(precision_absa+recall_absa+eps)
 
         #the only score im really caring about here is the overall f_absa
     return f_aspect, acc_s, f_s, f_absa
@@ -261,7 +265,7 @@ def weighted_macro(true_labels, predict_labels, num_labels):
     return total/(len(true_labels) + 1e-10)
 
 
-def span_f1(gold, pred):
+def span_f1(gold, pred, eps=1e-8):
     """
     Borrowed from: https://github.com/jerbarnes/sentiment_graphs
     """
@@ -277,14 +281,14 @@ def span_f1(gold, pred):
             #FN
             if gold_label > 0 and pred_label != gold_label:
                 fn += 1
-    prec = tp / (tp + fp + 1e-6)
-    rec = tp / (tp + fn + 1e-6)
-    f1 = 2 * prec * rec / (prec + rec + 1e-6)
+    prec = tp / (tp + fp + eps)
+    rec = tp / (tp + fn + eps)
+    f1 = 2 * prec * rec / (prec + rec + eps)
     # return prec, rec, f1
     return f1
 
 
-def proportional_f1(true_labels, predict_labels, num_labels):
+def proportional_f1(true_labels, predict_labels, num_labels, eps=1e-8):
     """
     F1-score for _any_ correctly guessed label. Much more lenient than score() from RACL (above).
 
@@ -304,10 +308,10 @@ def proportional_f1(true_labels, predict_labels, num_labels):
             average='micro',
             zero_division=1,  # set score to 1 when all labels and predictions are 0
         )
-    return total/(len(true_labels) + 1e-10)
+    return total/(len(true_labels) + eps)
 
 
-def binary_f1(golds, preds, eps=1e-7):
+def binary_f1(golds, preds, eps=1e-8):
     """
     Needs to read in a single batch at a time (currently expects full data_loader)
     """
