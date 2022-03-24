@@ -184,11 +184,12 @@ class Study():
             self.logger.info("... from {}".format(model_path))
         if self.model_path is not None and os.path.exists(self.model_path):
             model = torch.load(self.model_path, map_location=torch.device(self.device))
-            self.logging.info("... from {}".format(self.model_path))
+            self.logger.info("... from {}".format(self.model_path))
         else:
             model_class = self.get_model_class(self.model_name)
             model = model_class(**self.params())
             self.logger.info("... from new {} object.".format(self.model_name))
+        return model
 
         return model
 
@@ -285,7 +286,7 @@ class Study():
 
     def save_model(self):
         save_path = os.path.join(MODEL_DIR, "checkpoints", self.name + ".pt")
-        logging.info("Saving model to {}".format(save_path))
+        self.logger.info("Saving model to {}".format(save_path))
         torch.save(self.model, save_path)
 
 
@@ -327,9 +328,13 @@ if __name__ == "__main__":
                         best_hyper = hyper
                         best_score = results
                         if torch.cuda.is_available():  # only save when running on gpu TODO remove
-                            # only save checkpoints for best model 
-                            study.save_model()
-                
+                            try:
+                                # only save checkpoints for best model 
+                                study.save_model()
+                            except Exception as ex:
+                                print("FAILED TO SAVE MODEL {} DUE TO FOLLOW EXCEPTION".format(study.name))
+                                print(e)
+        
                 params[param] = best_hyper
                 print("Best results for {m} metric: {p}={h}".format(m=study.metric, p=param, h=best_hyper))
     
