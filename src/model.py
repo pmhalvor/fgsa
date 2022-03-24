@@ -597,7 +597,8 @@ class BertHead(torch.nn.Module):
                     predict_aspect = preds["target"], 
                     true_sentiment = golds["polarity"], 
                     predict_sentiment = preds["polarity"], 
-                    train_op = False
+                    train_op = False,
+                    no_neutral = True  # NOTE change me when using English data w/ neutral polarities 
                 ) 
 
                 hard["target"] = f_target
@@ -615,7 +616,8 @@ class BertHead(torch.nn.Module):
                     predict_aspect = preds["expression"], 
                     true_sentiment = golds["polarity"], 
                     predict_sentiment = preds["polarity"], 
-                    train_op = True
+                    train_op = True,
+                    no_neutral = True  # NOTE change me when using English data w/ neutral polarities 
                 )
 
                 hard["expression"] = f_expression
@@ -628,7 +630,8 @@ class BertHead(torch.nn.Module):
                     predict_aspect = preds["holder"], 
                     true_sentiment = golds["polarity"], 
                     predict_sentiment = preds["polarity"], 
-                    train_op = True
+                    train_op = True,
+                    no_neutral = True  # NOTE change me when using English data w/ neutral polarities 
                 )
 
                 hard["holder"] = f_holder
@@ -655,8 +658,7 @@ class BertHead(torch.nn.Module):
                 logging.debug("{task:10}         span: {score}".format(task=task, score=s))
                 logging.debug("{task:10}        macro: {score}".format(task=task, score=m))
 
-
-            # to find average f1 over entire dev set
+            # NOTE add average f1 over score per subtask to totals
             absa_total_over_batches += f_absa
             binary_total_over_batches += (sum([binary[task] for task in self.subtasks])/len(self.subtasks))
             proportional_total_over_batches += (sum([proportional[task] for task in self.subtasks])/len(self.subtasks))
@@ -692,7 +694,8 @@ class BertHead(torch.nn.Module):
 
     def predict(self, batch):
         """
-        :param batch: tensor containing batch of dev/test data 
+        Parameters:
+            batch: tuple of batch tensors (size 6) w/ dev/test data 
         """
         self.eval()
 
@@ -713,13 +716,18 @@ class BertHead(torch.nn.Module):
             "target": batch[5],
         }
 
+
+        relu = torch.nn.ReLU()
         # strip away padding
         for i, row in enumerate(batch[0]):
             for t, token in enumerate(row):
                 if token.item() == 0:  # padding id is 0
                     for task in self.subtasks:
+                        # self.preds[task].append(
+                        #     prediction_tensors[task][i][:t].tolist()
+                        # )
                         self.preds[task].append(
-                            prediction_tensors[task][i][:t].tolist()
+                            relu(true[task][i][:t]).tolist()
                         )
                         self.golds[task].append(
                             true[task][i][:t].tolist()
@@ -729,6 +737,10 @@ class BertHead(torch.nn.Module):
         return self.preds, self.golds
         
     def score(self, X, y):
+        """
+        NOTE Made for GridSearch, but never used
+        TODO Delete? or Use?
+        """
         absa, easy, hard = self.evaluate(X)
         s = absa if y == "absa" else None
         s = easy if y == "easy" else None
@@ -1389,6 +1401,8 @@ class IMN(BertHead):
                 gold_influence*self.scope_true + (1-gold_influence)*self.scope_logits.argmax(-1).squeeze(-1)
             ).detach()
             self.scope_output.requires_grad = True
+        else:
+            self.scope_output = self.scope_logits.argmax(-1).squeeze(-1).detach()
 
         return self.scope_output.to(torch.device(self.device))
 
