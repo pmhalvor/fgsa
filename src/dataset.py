@@ -134,7 +134,7 @@ class Norec(Dataset):
 
         # BUG: part of the double tokenizing preprocessing error
         with open(data_path+'/sentence.txt', encoding='utf-8') as f:  # only needs tokens as strings
-            sentence = [line for line in f.readlines()]
+            sentence = [line.strip() for line in f.readlines()]
 
         with open(data_path+'/target.txt') as f:
             target = [[int(ele) for ele in line.strip().split(' ')] for line in f.readlines()]
@@ -220,10 +220,10 @@ class Norec(Dataset):
 
         for r, (row, token_row)  in enumerate(zip(data[0], self.tokens)):  # get each row of data
             # add placeholder for [CLS] token
-            row_expression = [0]  # similar to RACL, use padding token
-            row_holder = [0]  # similar to RACL, use padding token
-            row_polarity = [0]  # similar to RACL, use padding token
-            row_target = [0]  # similar to RACL, use padding token
+            row_expression = [self.IGNORE_ID]  # ignore this token during evaluation
+            row_holder = [self.IGNORE_ID]  # ignore this token during evaluation
+            row_polarity = [self.IGNORE_ID]  # ignore this token during evaluation
+            row_target = [self.IGNORE_ID]  # ignore this token during evaluation
 
             e = 0  # count how many expanded tokens so far in row
 
@@ -249,10 +249,10 @@ class Norec(Dataset):
 
 
             # add placeholder for [SEP] token
-            row_expression += [0]  # similar to RACL, use padding token
-            row_holder += [0]  # similar to RACL, use padding token
-            row_polarity += [0]  # similar to RACL, use padding token
-            row_target += [0]  # similar to RACL, use padding token
+            row_expression += [self.IGNORE_ID]  # ignore this token during evaluation
+            row_holder += [self.IGNORE_ID]  # ignore this token during evaluation
+            row_polarity += [self.IGNORE_ID]  # ignore this token during evaluation
+            row_target += [self.IGNORE_ID]  # ignore this token during evaluation
             
             # add to full lists
             expression.append(row_expression)
