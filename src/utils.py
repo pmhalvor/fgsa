@@ -188,8 +188,6 @@ def score(true_aspect, predict_aspect, true_sentiment, predict_sentiment, train_
                             else:
                                 predicted_conf += 1
 
-                        # TODO How is matches counted when training opinion?
-
         # precision loop
         for pred in predict:
             if pred == begin:
