@@ -8,7 +8,7 @@ import torch
 BERT_PATH = "ltgoslo/norbert2"
 DATA_DIR = "/fp/homes01/u01/ec-pmhalvor/data/norec_fine/"  # TODO hide personal info
 NOREC_DIR = "/fp/homes01/u01/ec-pmhalvor/nlp/msc/norec_fine"
-MODEL_DIR = "/fp/homes01/u01/ec-pmhalvor/nlp/msc/models/"
+MODEL_DIR = "/fp/projects01/ec37/models/"
 
 
 default_parameters = {

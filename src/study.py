@@ -328,9 +328,13 @@ if __name__ == "__main__":
                         best_hyper = hyper
                         best_score = results
                         if torch.cuda.is_available():  # only save when running on gpu TODO remove
-                            # only save checkpoints for best model 
-                            study.save_model()
-                
+                            try:
+                                # only save checkpoints for best model 
+                                study.save_model()
+                            except Exception as ex:
+                                print("FAILED TO SAVE MODEL {} DUE TO FOLLOW EXCEPTION".format(study.name))
+                                print(e)
+        
                 params[param] = best_hyper
                 print("Best results for {m} metric: {p}={h}".format(m=study.metric, p=param, h=best_hyper))
     
