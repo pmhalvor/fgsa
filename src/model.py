@@ -353,6 +353,14 @@ class BertHead(torch.nn.Module):
         # optimizers
         self.optimizers, self.schedulers = self.init_optimizer()  # creates same number of optimizers as output layers
 
+        # sanity check that subtasks only contain 4 expected
+        for task in self.subtasks:
+            if task in ["expression", "holder", "polarity", "target"]:
+                continue
+            else:
+                print(f"Oh no! There is an unexpected subtask: {task}! This messes up metrics")
+                raise KeyError
+
         # log model 
         logging.info("Subtasks: {}".format(self.subtasks))
         logging.info("Components: {}".format(self.components))
