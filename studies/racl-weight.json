@@ -4,11 +4,11 @@
     "model_name": "racl",
     
     "cnn_dim": 768,
-    "stack_count": [1, 2, 3],
+    "stack_count": 1,
 
     "dropout": 0.4,
 
-    "loss_weight": 33, 
+    "loss_weight": [1, 10, 33, 50], 
     "bert_finetune": true,
     "bert_polarity": true,
     "bert_target": true,
