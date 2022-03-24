@@ -103,7 +103,6 @@ def parse_data(data, interactive=False):
                 expression = encode_expression(text, tokens, opinion, expression)
 
                 # encode holder
-                # TODO Implement holder
                 holder = encode_holder(text, tokens, opinion, holder)
 
                 # encode polarity

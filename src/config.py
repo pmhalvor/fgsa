@@ -3,14 +3,19 @@ import os
 import datetime
 import torch
 
-# TODO download from git automagically
-# BERT_PATH = "ltgoslo/norbert"
+
+# TODO hide personal info
+HOME = "E:/pmhalvor/" if os.path.exists("E:/pmhalvor/") else "/fp/homes01/u01/ec-pmhalvor/"
+
+# TODO download from git automagically for Travis
 BERT_PATH = "ltgoslo/norbert2"
-DATA_DIR = "/fp/homes01/u01/ec-pmhalvor/data/norec_fine/"  # TODO hide personal info
-NOREC_DIR = "/fp/homes01/u01/ec-pmhalvor/nlp/msc/norec_fine"
-MODEL_DIR = "/fp/projects01/ec37/models/"
+DATA_DIR = HOME + "data/norec_fine/"
+LOG_DIR = HOME + "nlp/msc/log/" if "E:" in HOME else "/fp/projects01/ec37/log/"
+MODEL_DIR = HOME + "nlp/msc/models/" if "E:" in HOME else "/fp/projects01/ec37/models/" 
+NOREC_DIR = HOME + "/nlp/msc/norec_fine"
 
 
+# TODO Use or delete?
 default_parameters = {
         "debug": False,
         "epochs": 50,
@@ -44,7 +49,7 @@ def log_template(level=logging.INFO, name='', job='train'):
     name = '-'+name if name != '' else name
 
     today = datetime.date.today()
-    log_dir = '../log/' + today.strftime("%Y-%m-%d")
+    log_dir = LOG_DIR + today.strftime("%Y-%m-%d")
     try:
         os.mkdir(log_dir)
     except:

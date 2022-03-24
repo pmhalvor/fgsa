@@ -164,7 +164,7 @@ def show_study_loss(name, title=None):
     
     return loss_dfs, metrics_dfs
 
-def show_same_smoothed(same, stop_at=1, header="smoothed"):
+def show_same_smoothed(same, stop_at=1, header="smoothed", show_df=True):
     """
     Plots as many runs as in first study in same. 
 
@@ -179,6 +179,7 @@ def show_same_smoothed(same, stop_at=1, header="smoothed"):
 
             if run >= stop_at:
                 break
+    return average.T
 
 ### DEPRECATED BELOW ------------------------------------------------------
 ### Batch-wise loss 
