@@ -164,6 +164,21 @@ def show_study_loss(name, title=None):
     
     return loss_dfs, metrics_dfs
 
+def show_same_smoothed(same, stop_at=1, header="smoothed"):
+    """
+    Plots as many runs as in first study in same. 
+
+    Parameters:
+        same: list of studies w/ exact same parameter configurations
+    """
+
+    for plot, title in enumerate(["Loss", "Metrics"]):
+        for run in same[0][plot]:
+            average = sum([study[plot][run] for study in same])/len(same)
+            average.plot(title=title + ": " + header, figsize=(15,5))
+
+            if run >= stop_at:
+                break
 
 ### DEPRECATED BELOW ------------------------------------------------------
 ### Batch-wise loss 
