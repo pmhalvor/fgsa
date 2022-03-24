@@ -717,17 +717,13 @@ class BertHead(torch.nn.Module):
         }
 
 
-        relu = torch.nn.ReLU()
         # strip away padding
         for i, row in enumerate(batch[0]):
             for t, token in enumerate(row):
                 if token.item() == 0:  # padding id is 0
                     for task in self.subtasks:
-                        # self.preds[task].append(
-                        #     prediction_tensors[task][i][:t].tolist()
-                        # )
                         self.preds[task].append(
-                            relu(true[task][i][:t]).tolist()
+                            prediction_tensors[task][i][:t].tolist()
                         )
                         self.golds[task].append(
                             true[task][i][:t].tolist()
