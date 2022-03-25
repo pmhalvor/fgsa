@@ -1,5 +1,5 @@
 {
-    "name": "RACL-lr",
+    "name": "RACL-lr-absa",
 
     "model_name": "racl",
     
@@ -12,7 +12,7 @@
     "bert_finetune": true,
     "bert_polarity": true,
     "bert_target": true,
-    "metric": "hard",
+    "metric": "absa",
 
     "optimizer_name": "adam",
     "weight_decay": 0.5,
