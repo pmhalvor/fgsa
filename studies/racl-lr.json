@@ -8,7 +8,7 @@
 
     "dropout": 0.4,
 
-    "loss_weight": 33, 
+    "loss_weight": 9, 
     "bert_finetune": true,
     "bert_polarity": true,
     "bert_target": true,
