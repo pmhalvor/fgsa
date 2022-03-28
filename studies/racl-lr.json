@@ -1,10 +1,10 @@
 {
-    "name": "RACL-stack-absa",
+    "name": "RACL-lr-absa",
 
     "model_name": "racl",
     
     "cnn_dim": 768,
-    "stack_count": [1, 2, 3],
+    "stack_count": 1,
 
     "dropout": 0.4,
 
@@ -17,7 +17,7 @@
     "optimizer_name": "adam",
     "weight_decay": 0.5,
 
-    "lr": 1e-8,
+    "lr": [1e-8, 1e-7, 1e-6],
     "expression_lr": 1e-6,
     "polarity_lr": 1e-6,
     "target_lr": 1e-6,
