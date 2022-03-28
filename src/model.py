@@ -353,6 +353,14 @@ class BertHead(torch.nn.Module):
         # optimizers
         self.optimizers, self.schedulers = self.init_optimizer()  # creates same number of optimizers as output layers
 
+        # sanity check that subtasks only contain 4 expected
+        for task in self.subtasks:
+            if task in ["expression", "holder", "polarity", "target"]:
+                continue
+            else:
+                print(f"Oh no! There is an unexpected subtask: {task}! This messes up metrics")
+                raise KeyError
+
         # log model 
         logging.info("Subtasks: {}".format(self.subtasks))
         logging.info("Components: {}".format(self.components))
@@ -797,46 +805,40 @@ class BertHead(torch.nn.Module):
         """
         Changes with task specific architectures to optimize uniquely per subtask.
         """
+        other_components = self.find("other_components", default={
+            component: {"lr": self.learning_rate, "tasks": []}
+            if component not in self.subtasks else {}
+            for component in self.components
+        })
+        optimizer_name = self.find("optimizer_name", default=self.find("optimizer"))
+        bert_tuners = {  # subtasks to train bert on
+            task: self.find(f"bert_{task}", default=False)
+            for task in self.subtasks
+        }
+        task_lrs = { # subtask specific learning rates
+            task: self.find(task+"_learning_rate", default=self.find(task+"_lr")) 
+            for task in self.subtasks
+        }
+
         optimizers = {}
         schedulers = {}
 
         # single optimizer type for all subtasks for simplicity
-        optimizer = self.get_optimizer(
-            self.find("optimizer_name", default=self.find("optimizer"))
-        )
-
-        # check if task specific learning rates are provided
-        task_lrs = {
-            task: self.find(task+"_learning_rate", default=self.find(task+"_lr")) 
-            for task in self.subtasks
-        }
+        optimizer = self.get_optimizer(optimizer_name)
         
-        for task in self.subtasks:  # TODO make sure in self.components in others
+        for task in self.subtasks:
             lr = task_lrs[task] if task_lrs.get(task) is not None else self.learning_rate
 
-            for i, layer in enumerate(self.components[task]):
-                if i == 0:
-                    optimizers[task] = optimizer(
-                        self.components[task][layer].parameters(),
-                        lr=lr  # use main learning rate for bert training
-                    ) # TODO test other optimizers?
-                    
-                    if "shared" in self.components.keys():
-                        for layer in self.components["shared"]:
-                            optimizers[task].add_param_group(
-                                {"params": self.components["shared"][layer].parameters(), "lr":lr}
-                            )
+            optimizers[task] = optimizer(
+                self.components[task].parameters(),
+                lr=lr 
+            )
 
-                    if self.find(f"bert_{task}", default=False) and self.finetune:
-                        optimizers[task].add_param_group(
-                            {"params": self.bert.parameters(), "lr":self.learning_rate}
-                        )
-
-                else:
-                    optimizers[task].add_param_group(
-                        {"params": self.components[task][layer].parameters(), "lr":lr}
-                    )
-
+            if bert_tuners[task] and self.finetune:
+                optimizers[task].add_param_group(
+                    # use main learning rate for bert training
+                    {"params": self.bert.parameters(), "lr":self.learning_rate}
+                )
 
             # learning rate scheduler to mitigate overfitting
             schedulers[task] = torch.optim.lr_scheduler.ReduceLROnPlateau(
@@ -847,6 +849,46 @@ class BertHead(torch.nn.Module):
                 verbose=True,
                 eps=1e-10,
             )
+
+        # make sure non-single-task-specific components are added to optimizers
+        if other_components is not None:
+            for component in other_components:
+                if other_components[component] is not {}:
+                    lr = other_components[component].get("lr")
+                    lr = lr if lr is not None else self.learning_rate
+
+                    # IMN architecture
+                    if component == "shared":
+                        tasks = other_components[component].get("tasks")
+                        tasks = tasks if tasks is not None else []
+
+                        for task in tasks:
+                            optimizers[task].add_param_group(
+                                {"params": self.components[component].parameters(), "lr":lr}
+                            )
+                   
+                    # RACL architecture
+                    elif component == "relations":
+                        for layer in self.components["relations"]:
+                            for task in self.subtasks:
+                                if task in layer:
+                                    print("adding {} to optimizer {}".format(layer, task))
+                                    optimizers[task].add_param_group(
+                                        {"params": self.components[component][layer].parameters(), "lr":lr}
+                                    )
+
+                                    # only passes this if when layer=shared_at_polarity
+                                    if "shared" in layer:
+                                        print("adding {} to optimizer {}".format(layer, task))
+
+                                        optimizers["target"].add_param_group(
+                                            {"params": self.components[component][layer].parameters(), "lr":lr}
+                                        )
+                                        optimizers["expression"].add_param_group(
+                                            {"params": self.components[component][layer].parameters(), "lr":lr}
+                                        )
+
+
         return optimizers, schedulers
 
     def forward(self, batch):
@@ -1031,6 +1073,14 @@ class IMN(BertHead):
                     padding=2,
                 ).to(torch.device(self.device))
             components["shared"].update(layer)
+
+        self.other_components = {
+            "shared": {
+                "lr": self.learning_rate,
+                "tasks": self.subtasks
+
+            }
+        }
 
         #######################################
         # Task-specific CNN layers
@@ -1543,6 +1593,12 @@ class RACL(IMN):
                 ).to(torch.device(self.device))
             }),
         })
+
+        self.other_components = {
+            "relations": {
+                "lr": self.learning_rate
+            }
+        }
 
         return components
 
