@@ -872,12 +872,22 @@ class BertHead(torch.nn.Module):
                         for layer in self.components["relations"]:
                             for task in self.subtasks:
                                 if task in layer:
-                                    try:
-                                        optimizers[task].add_param_group(
-                                            {"params": self.components[component].parameters(), "lr":lr}
+                                    print("adding {} to optimizer {}".format(layer, task))
+                                    optimizers[task].add_param_group(
+                                        {"params": self.components[component][layer].parameters(), "lr":lr}
+                                    )
+
+                                    # only passes this if when layer=shared_at_polarity
+                                    if "shared" in layer:
+                                        print("adding {} to optimizer {}".format(layer, task))
+
+                                        optimizers["target"].add_param_group(
+                                            {"params": self.components[component][layer].parameters(), "lr":lr}
                                         )
-                                    except ValueError:
-                                        "already added this param to this optimizer"
+                                        optimizers["expression"].add_param_group(
+                                            {"params": self.components[component][layer].parameters(), "lr":lr}
+                                        )
+
 
         return optimizers, schedulers
 
