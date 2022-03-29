@@ -1475,41 +1475,6 @@ class RACL(IMN):
         stack_count = self.find("stack_count", default=1)
 
         components = torch.nn.ModuleDict({
-            "relations": torch.nn.ModuleDict({
-                f"stack_{i}": torch.nn.ModuleDict({
-                    "target_at_expression": torch.nn.MultiheadAttention(
-                        embed_dim = cnn_dim,
-                        num_heads = 1,
-                        dropout=self.dropout,
-                        # query: torch.norm(expression)  # NOTE L2 norm
-                        # key: torch.norm(target)
-                        # values: target
-                        # key_padding_mask: (batch[1]*-1)+1
-
-                        # qk-outputs used in group v-mul later
-                    ).to(torch.device(self.device)),
-                    "expression_at_target": torch.nn.MultiheadAttention(
-                        embed_dim = cnn_dim,
-                        num_heads = 1,
-                        dropout=self.dropout,
-                        # query: torch.norm(target)  # NOTE L2 norm
-                        # key: torch.norm(expression)
-                        # values: expression
-                        # key_padding_mask: (batch[1]*-1)+1
-                    ).to(torch.device(self.device)),
-                    "shared_at_polarity": torch.nn.MultiheadAttention(
-                        embed_dim = cnn_dim,
-                        num_heads = 1,
-                        dropout=self.dropout,
-                        # query: shared_hidden_state
-                        # key: torch.norm(polarity_cnn_output)
-                        # after softmax, keys joined w/ target_at_expression & (expression_probs expanded to cnn_dim)
-                        # value: polarity
-                        # key_padding_mask: (batch[1]*-1)+1
-                    ).to(torch.device(self.device)),
-                })
-                for i in range(stack_count)
-            }),
             "target": torch.nn.ModuleDict({
                 # aspect extraction: cnn -> relu -> matmul w/ expression -> attention -> cat -> linear
                 "cnn": torch.nn.Sequential(
@@ -1598,6 +1563,48 @@ class RACL(IMN):
                 ).to(torch.device(self.device))
             }),
         })
+
+
+        ######################################
+        # Shared relation components
+        ######################################
+        components.update(torch.nn.ModuleDict({
+            "relations": torch.nn.ModuleDict({
+                f"stack_{i}": torch.nn.ModuleDict({
+                    "target_at_expression": torch.nn.MultiheadAttention(
+                        embed_dim = cnn_dim,
+                        num_heads = 1,
+                        dropout=self.dropout,
+                        # query: torch.norm(expression)  # NOTE L2 norm
+                        # key: torch.norm(target)
+                        # values: target
+                        # key_padding_mask: (batch[1]*-1)+1
+
+                        # qk-outputs used in group v-mul later
+                    ).to(torch.device(self.device)),
+                    "expression_at_target": torch.nn.MultiheadAttention(
+                        embed_dim = cnn_dim,
+                        num_heads = 1,
+                        dropout=self.dropout,
+                        # query: torch.norm(target)  # NOTE L2 norm
+                        # key: torch.norm(expression)
+                        # values: expression
+                        # key_padding_mask: (batch[1]*-1)+1
+                    ).to(torch.device(self.device)),
+                    "shared_at_polarity": torch.nn.MultiheadAttention(
+                        embed_dim = cnn_dim,
+                        num_heads = 1,
+                        dropout=self.dropout,
+                        # query: shared_hidden_state
+                        # key: torch.norm(polarity_cnn_output)
+                        # after softmax, keys joined w/ target_at_expression & (expression_probs expanded to cnn_dim)
+                        # value: polarity
+                        # key_padding_mask: (batch[1]*-1)+1
+                    ).to(torch.device(self.device)),
+                })
+                for i in range(stack_count)
+            }),
+        }))
 
         self.other_components = {
             "relations": {
@@ -1734,3 +1741,90 @@ class RACL(IMN):
         expression_confidence.requires_grad = True
         
         return expression_confidence  # shape: [batch, sequence]
+
+
+class FgFlex(BertHead):
+    def init_components(self, subtasks):
+        cnn_dim = self.find("cnn_dim", default=768)
+        stack_count = self.find("stack_count", default=1)
+
+        # only way to make this truly flexible
+        attention_relations = []
+        for first in subtasks:
+            for second in subtasks:
+                if first != second:
+                    attention_relations.append([first, second])
+        attention_relations = self.find("attention_relations", default=attention_relations)
+
+
+        components = torch.nn.ModuleDict({
+            task: torch.nn.ModuleDict({
+                "cnn": torch.nn.Sequential(
+                    torch.nn.Conv1d(
+                        in_channels = int(768),
+                        out_channels = int(cnn_dim), 
+                        kernel_size = 5,
+                        padding=2
+                    ),
+                    torch.nn.ReLU()
+                ).to(torch.device(self.device)),
+                "linear": torch.nn.Sequential(
+                    torch.nn.Linear(
+                    in_features=cnn_dim*2,
+                    out_features=3
+                    ),
+                    torch.nn.Sigmoid(),
+                ).to(torch.device(self.device)),
+                "re_encode": torch.nn.Sequential(
+                    torch.nn.Linear(
+                        in_features=int(cnn_dim*2), 
+                        out_features=int(768)
+                    ),
+                    # torch.nn.ReLU(),  # TODO activation? drop this, just use L2 norm in forward
+                    torch.nn.AlphaDropout(
+                        self.dropout,
+                    ).to(torch.device(self.device)),
+                ).to(torch.device(self.device))
+            })
+            for task in subtasks
+        })
+
+
+        ######################################
+        # Shared relation components
+        ######################################
+        components.update(torch.nn.ModuleDict({
+            "relations": torch.nn.ModuleDict({
+                f"stack_{i}": torch.nn.ModuleDict({
+                    f"{rel[0]}_at_{rel[1]}": torch.nn.MultiheadAttention(
+                        embed_dim = cnn_dim,
+                        num_heads = 1,
+                        dropout=self.dropout,
+                    ).to(torch.device(self.device))
+                    for rel in attention_relations
+                })
+                for i in range(stack_count)
+            }),
+        }))
+
+        self.other_tasks = {
+            "relations" : {
+                "lr": self.learning_rate
+            }
+        }
+
+        return components
+
+    def forward(self, batch):
+        
+        input_ids = batch[0].to(torch.device(self.device))
+        attention_mask = batch[1].to(torch.device(self.device))
+
+        embeddings = self.bert(
+            input_ids = input_ids,
+            attention_mask = attention_mask,
+        ).last_hidden_state
+        embeddings = self.bert_dropout(embeddings).permute(0, 2, 1)
+
+
+        return 
