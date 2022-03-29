@@ -869,24 +869,25 @@ class BertHead(torch.nn.Module):
                    
                     # RACL architecture
                     elif component == "relations":
-                        for layer in self.components["relations"]:
-                            for task in self.subtasks:
-                                if task in layer:
-                                    print("adding {} to optimizer {}".format(layer, task))
-                                    optimizers[task].add_param_group(
-                                        {"params": self.components[component][layer].parameters(), "lr":lr}
-                                    )
-
-                                    # only passes this if when layer=shared_at_polarity
-                                    if "shared" in layer:
+                        for stack in self.components["relations"]:
+                            for layer in self.components["relations"][stack]:
+                                for task in self.subtasks:
+                                    if task in layer:
                                         print("adding {} to optimizer {}".format(layer, task))
+                                        optimizers[task].add_param_group(
+                                            {"params": self.components[component][stack][layer].parameters(), "lr":lr}
+                                        )
 
-                                        optimizers["target"].add_param_group(
-                                            {"params": self.components[component][layer].parameters(), "lr":lr}
-                                        )
-                                        optimizers["expression"].add_param_group(
-                                            {"params": self.components[component][layer].parameters(), "lr":lr}
-                                        )
+                                        # only passes this if when layer=shared_at_polarity
+                                        if "shared" in layer:
+                                            print("adding {} to optimizer {}".format(layer, task))
+
+                                            optimizers["target"].add_param_group(
+                                                {"params": self.components[component][stack][layer].parameters(), "lr":lr}
+                                            )
+                                            optimizers["expression"].add_param_group(
+                                                {"params": self.components[component][stack][layer].parameters(), "lr":lr}
+                                            )
 
 
         return optimizers, schedulers
@@ -1471,39 +1472,43 @@ class RACL(IMN):
 
     def init_components(self, subtasks):
         cnn_dim = self.find("cnn_dim", default=768)
+        stack_count = self.find("stack_count", default=1)
 
         components = torch.nn.ModuleDict({
             "relations": torch.nn.ModuleDict({
-                "target_at_expression": torch.nn.MultiheadAttention(
-                    embed_dim = cnn_dim,
-                    num_heads = 1,
-                    dropout=self.dropout,
-                    # query: torch.norm(expression)  # NOTE L2 norm
-                    # key: torch.norm(target)
-                    # values: target
-                    # key_padding_mask: (batch[1]*-1)+1
+                f"stack_{i}": torch.nn.ModuleDict({
+                    "target_at_expression": torch.nn.MultiheadAttention(
+                        embed_dim = cnn_dim,
+                        num_heads = 1,
+                        dropout=self.dropout,
+                        # query: torch.norm(expression)  # NOTE L2 norm
+                        # key: torch.norm(target)
+                        # values: target
+                        # key_padding_mask: (batch[1]*-1)+1
 
-                    # qk-outputs used in group v-mul later
-                ).to(torch.device(self.device)),
-                "expression_at_target": torch.nn.MultiheadAttention(
-                    embed_dim = cnn_dim,
-                    num_heads = 1,
-                    dropout=self.dropout,
-                    # query: torch.norm(target)  # NOTE L2 norm
-                    # key: torch.norm(expression)
-                    # values: expression
-                    # key_padding_mask: (batch[1]*-1)+1
-                ).to(torch.device(self.device)),
-                "shared_at_polarity": torch.nn.MultiheadAttention(
-                    embed_dim = cnn_dim,
-                    num_heads = 1,
-                    dropout=self.dropout,
-                    # query: shared_hidden_state
-                    # key: torch.norm(polarity_cnn_output)
-                    # after softmax, keys joined w/ target_at_expression & (expression_probs expanded to cnn_dim)
-                    # value: polarity
-                    # key_padding_mask: (batch[1]*-1)+1
-                ).to(torch.device(self.device)),
+                        # qk-outputs used in group v-mul later
+                    ).to(torch.device(self.device)),
+                    "expression_at_target": torch.nn.MultiheadAttention(
+                        embed_dim = cnn_dim,
+                        num_heads = 1,
+                        dropout=self.dropout,
+                        # query: torch.norm(target)  # NOTE L2 norm
+                        # key: torch.norm(expression)
+                        # values: expression
+                        # key_padding_mask: (batch[1]*-1)+1
+                    ).to(torch.device(self.device)),
+                    "shared_at_polarity": torch.nn.MultiheadAttention(
+                        embed_dim = cnn_dim,
+                        num_heads = 1,
+                        dropout=self.dropout,
+                        # query: shared_hidden_state
+                        # key: torch.norm(polarity_cnn_output)
+                        # after softmax, keys joined w/ target_at_expression & (expression_probs expanded to cnn_dim)
+                        # value: polarity
+                        # key_padding_mask: (batch[1]*-1)+1
+                    ).to(torch.device(self.device)),
+                })
+                for i in range(stack_count)
             }),
             "target": torch.nn.ModuleDict({
                 # aspect extraction: cnn -> relu -> matmul w/ expression -> attention -> cat -> linear
@@ -1604,7 +1609,7 @@ class RACL(IMN):
 
     def forward(self, batch):
         gold_transmission = self.find("gold_transmission", default=False)
-        stack_count = self.find("stack_count", default=2)
+        stack_count = self.find("stack_count", default=1)
 
         input_ids = batch[0].to(torch.device(self.device))
         attention_mask = batch[1].to(torch.device(self.device))
@@ -1633,7 +1638,7 @@ class RACL(IMN):
             expression_cnn = self.components["expression"]["cnn"](expression_inputs[-1])
 
             # Relation R1  # TODO remove weights expression_at_target (not needed)
-            target_attn, target_at_expression = self.components["relations"]["target_at_expression"](
+            target_attn, target_at_expression = self.components["relations"][f"stack_{i}"]["target_at_expression"](
                 # expects shape: [seq, batch, cnn_dim]
                 query=torch.nn.functional.normalize(expression_cnn, p=2, dim=-1).permute(2, 0, 1),
                 key=torch.nn.functional.normalize(target_cnn, p=2, dim=-1).permute(2, 0, 1),
@@ -1646,7 +1651,7 @@ class RACL(IMN):
             target_logits = self.components["target"]["linear"](target_inter)
 
             # TODO remove weights expression_at_target (not needed)
-            expression_attn, expression_at_target = self.components["relations"]["expression_at_target"](
+            expression_attn, expression_at_target = self.components["relations"][f"stack_{i}"]["expression_at_target"](
                 # expects shape: [seq, batch, cnn_dim]
                 query=torch.nn.functional.normalize(expression_cnn, p=2, dim=-1).permute(2, 0, 1),
                 key=torch.nn.functional.normalize(target_cnn, p=2, dim=-1).permute(2, 0, 1),
@@ -1675,7 +1680,7 @@ class RACL(IMN):
             polarity_cnn = self.components["polarity"]["cnn"](polarity_inputs[-1])
 
             # shared-polarity attention
-            polarity_attn, _ = self.components["relations"]["shared_at_polarity"](
+            polarity_attn, _ = self.components["relations"][f"stack_{i}"]["shared_at_polarity"](
                 query=torch.nn.functional.normalize(shared_query[-1]).permute(2, 0, 1),
                 key=(
                     # key needs some information sharing from target and expression 
