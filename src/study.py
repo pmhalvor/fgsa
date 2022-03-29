@@ -204,6 +204,8 @@ class Study():
           model = IMN
         elif model_name.lower() == "racl":
           model = RACL
+        elif model_name.lower() == "fgflex":
+          model = FgFlex
         # elif model_name.lower() == "next":
         #   model = Next
 
