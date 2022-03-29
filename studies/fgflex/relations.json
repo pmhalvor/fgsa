@@ -1,0 +1,43 @@
+{
+    "name": "fgflex-stack",
+
+    "model_name": "fgflex",
+    
+    "cnn_dim": 768,
+    "stack_count": [1, 2, 3],
+    "attention_relations": [
+        ["target", "polarity"],
+        ["target", "expression"],
+        ["target", "holder"],
+        ["polarity", "target"],
+        ["polarity", "expression"],
+        ["polarity", "holder"],
+        ["expression", "target"],
+        ["expression", "polarity"],
+        ["expression", "holder"],
+        ["holder", "target"],
+        ["holder", "polarity"],
+        ["holder", "expression"]
+    ],
+
+    "dropout": 0.4,
+
+    "loss_weight": 7, 
+    "bert_finetune": true,
+    "bert_polarity": true,
+    "bert_target": true,
+    "metric": "absa",
+
+    "optimizer_name": "adam",
+    "weight_decay": 0.5,
+
+    "lr": 1e-7,
+    "expression_lr": 1e-6,
+    "polarity_lr": 1e-6,
+    "target_lr": 1e-6,
+
+    "warm_up_constant": 5,
+    "find_scope": false,
+
+    "epochs": [150, 150, 150]
+}
