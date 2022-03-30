@@ -181,6 +181,16 @@ def show_same_smoothed(same, stop_at=1, header="smoothed", show_df=True):
                 break
     return average.T
 
+def smooth(study, runs, header=""):
+    loss, metric = study
+
+    avg_loss = sum([loss[i] for i in runs])/len(runs)
+    avg_metric = sum([metric[i] for i in runs])/len(runs)
+
+    avg_loss.plot(title="Loss "+header, figsize=(15,5))
+    avg_metric.plot(title="Metric "+header, figsize=(15,5))
+
+
 ### DEPRECATED BELOW ------------------------------------------------------
 ### Batch-wise loss 
 def parse_batchwise_loss(data):
