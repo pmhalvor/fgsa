@@ -1,10 +1,11 @@
 {
-    "name": "fgflex-stack",
+    "name": "fgflex-expanding-cnn",
 
     "model_name": "fgflex",
     
     "cnn_dim": 768,
-    "stack_count": [0, 1, 2, 3],
+    "expanding_cnn": [0, 2, 3, 4],
+    "stack_count": 1,
 
     "dropout": 0.4,
 

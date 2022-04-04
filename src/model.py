@@ -1975,12 +1975,11 @@ class FgFlex(BertHead):
                 task_output = task_inputs[task]
                 if "cnn" in self.components[task].keys():
                     cnn_outputs[task] = self.components[task]["cnn"](task_output)
-                    # TODO take into account this guy?
+                    # TODO take into account embeddings like in IMN? Then would need to expand linear in init_comp
                     # task_output = torch.cat((embeddings, cnn_outputs[task]), dim=1)  # cat embedding dim
                 else:
                     cnn_outputs[task] = task_output
 
-                # TODO check that task_layer 0, 1, 2 all work here
                 outputs[task].append(self.components[task]["linear"](task_output.permute(0, 2, 1)))
 
             ######################################

@@ -1,17 +1,12 @@
 {
-    "name": "fgflex-relations",
+    "name": "fgflex-base",
 
     "model_name": "fgflex",
     
     "cnn_dim": 768,
-    "stack_count": 1,
+    "expanding_cnn": [0, 2, 3, 4],
+    "stack_count": [1, 2, 3],
     "attention_relations": [
-        [
-            ["target", "expression"],
-            ["expression", "target"],
-            ["expression", "polarity"],
-            ["holder", "polarity"]
-        ],
         [
             ["expression", "expression"],
             ["holder", "holder"],
@@ -36,7 +31,7 @@
 
     "dropout": 0.4,
 
-    "loss_weight": 7, 
+    "loss_weight": [1, 5, 10], 
     "bert_finetune": true,
     "bert_polarity": true,
     "bert_target": true,
@@ -46,10 +41,12 @@
     "weight_decay": 0.5,
 
     "lr": 1e-7,
+    "attn_lr": 1e-6,
     "expression_lr": 1e-6,
     "holder_lr": 1e-6,
     "polarity_lr": 1e-6,
     "target_lr": 1e-6,
+    "shared_lr": 1e-6,
 
     "warm_up_constant": 5,
     "find_scope": false,

@@ -1,14 +1,15 @@
 {
-    "name": "fgflex-stack",
+    "name": "fgflex-loss-weight",
 
     "model_name": "fgflex",
     
     "cnn_dim": 768,
-    "stack_count": [0, 1, 2, 3],
+    "expanding_cnn": 0,
+    "stack_count": 1,
 
     "dropout": 0.4,
 
-    "loss_weight": 7, 
+    "loss_weight": [1, 5, 10], 
     "bert_finetune": true,
     "bert_polarity": true,
     "bert_target": true,
