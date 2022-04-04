@@ -1469,6 +1469,12 @@ class IMN(BertHead):
 
 
 class RACL(IMN):
+    """
+    Similar to original RACL architecture, just built on a BertHead (in PyTorch).
+
+    Parameters:
+        TODO fill in parameters used in self.find()
+    """
 
     def init_components(self, subtasks):
         cnn_dim = self.find("cnn_dim", default=768)
@@ -1744,78 +1750,185 @@ class RACL(IMN):
 
 
 class FgFlex(BertHead):
+    """
+    A combination of the IMN and RACL setup w/ component flexability.
+    Allows experimenter to test different alterations of these setups.
+
+    Parameters:
+        TODO Fill in parameters used in self.find()
+    """
+    def expanding_cnn_block(self, in_channels, out_channels, kernel_size=5, m=2):
+        """
+        Expands cnn size to m times the original in_channels size, 
+        before reducing back down to size out_channels
+        """
+        return torch.nn.Sequential(
+            torch.nn.Dropout(self.dropout),
+            torch.nn.Conv1d(
+                in_channels = in_channels,
+                out_channels = in_channels*m, 
+                kernel_size = kernel_size,
+                padding = kernel_size//2,
+            ),
+            torch.nn.Conv1d(
+                in_channels = in_channels*m,
+                out_channels = out_channels, 
+                kernel_size = kernel_size,
+                padding = kernel_size//2,
+            ),
+            torch.nn.ReLU()            
+        ).to(torch.device(self.device))
+
+    def cnn_block(self, in_channels, out_channels, kernel_size=5):
+        return torch.nn.Sequential(
+            torch.nn.Dropout(self.dropout),
+            torch.nn.Conv1d(
+                in_channels = in_channels,
+                out_channels = out_channels, 
+                kernel_size = kernel_size,
+                padding = kernel_size//2,
+            ),
+            torch.nn.ReLU()            
+        ).to(torch.device(self.device))
+
+    def attn_block(self, embed_dim):
+        return torch.nn.MultiheadAttention(
+            embed_dim = embed_dim,
+            num_heads = 1,
+            dropout=self.dropout,
+        ).to(torch.device(self.device))
+
+    def linear_block(self, in_features, out_features):
+        return torch.nn.Sequential(
+            torch.nn.Dropout(self.dropout),
+            torch.nn.Linear(
+                in_features=in_features,
+                out_features=out_features
+            ), 
+            torch.nn.Softmax(dim=-1)
+        ).to(torch.device(self.device))
+
     def init_components(self, subtasks):
+        #######################################
+        # Potentially unset model params
+        #######################################
+        # cnn related params 
         cnn_dim = self.find("cnn_dim", default=768)
+        expanding_cnn = self.find("expanding_cnn", default=False)
+        kernel_size = self.find("kernel_size", default=5)
+        
+        # configurable expanding cnn block
+        cnn_block = self.cnn_block if not expanding_cnn else partial(self.expanding_cnn_block, m=expanding_cnn)
+        
+        # layers
+        shared_layers = self.find("shared_layers", default=1)
+        # task-wise layers found during for-loop in "Task-specific CNN layers"
+
+        # learning rates
+        attn_lr = self.find("attn_lr", default=self.learning_rate)
+        shared_lr = self.find("shared_lr", default=self.learning_rate)
+        # relation params        
         stack_count = self.find("stack_count", default=1)
+        attention_relations = self.find("attention_relations", 
+            default=[
+                (first, second)
+                for first in subtasks
+                for second in subtasks
+            ]
+        )
 
-        # only way to make this truly flexible
-        attention_relations = []
-        for first in subtasks:
-            for second in subtasks:
-                if first != second:
-                    attention_relations.append([first, second])
-        attention_relations = self.find("attention_relations", default=attention_relations)
 
-
+        #######################################
+        # Base components
+        #######################################
         components = torch.nn.ModuleDict({
             task: torch.nn.ModuleDict({
-                "cnn": torch.nn.Sequential(
-                    torch.nn.Conv1d(
-                        in_channels = int(768),
-                        out_channels = int(cnn_dim), 
-                        kernel_size = 5,
-                        padding=2
-                    ),
-                    torch.nn.ReLU()
-                ).to(torch.device(self.device)),
-                "linear": torch.nn.Sequential(
-                    torch.nn.Linear(
-                    in_features=cnn_dim*2,
-                    out_features=3
-                    ),
-                    torch.nn.Sigmoid(),
-                ).to(torch.device(self.device)),
-                "re_encode": torch.nn.Sequential(
-                    torch.nn.Linear(
-                        in_features=int(cnn_dim*2), 
-                        out_features=int(768)
-                    ),
-                    # torch.nn.ReLU(),  # TODO activation? drop this, just use L2 norm in forward
-                    torch.nn.AlphaDropout(
-                        self.dropout,
-                    ).to(torch.device(self.device)),
-                ).to(torch.device(self.device))
+                # final outputs for each task
+                "linear": self.linear_block(in_features=cnn_dim, out_features=3),
+
+                # map subtask information back to shared hidden state size
+                "re_encode": self.linear_block(
+                    in_features=cnn_dim,  # update according to forward
+                    out_features=cnn_dim
+                )
             })
             for task in subtasks
         })
 
 
+        #######################################
+        # Task-specific CNN layers
+        #######################################
+        for task in self.subtasks:
+            components[task].update(
+                {"cnn": torch.nn.Sequential(*[
+                    cnn_block(cnn_dim, cnn_dim)
+                    for layer in range(self.find(task+"_layers", default=1))
+                ])
+            })
+
+
         ######################################
         # Shared relation components
         ######################################
+
+        # similar to IMN setup
+        shared = torch.nn.ModuleDict({
+            "cnn_0": self.cnn_block(
+                in_channels=768, 
+                out_channels=cnn_dim, 
+                kernel_size=kernel_size
+            )
+        })
+        for layer in range(1, shared_layers):
+            shared.update({
+                f"cnn_{layer}": self.cnn_block(
+                    in_channels=cnn_dim, 
+                    out_channels=cnn_dim, 
+                    kernel_size=kernel_size
+                )
+            })
         components.update(torch.nn.ModuleDict({
-            "relations": torch.nn.ModuleDict({
-                f"stack_{i}": torch.nn.ModuleDict({
-                    f"{rel[0]}_at_{rel[1]}": torch.nn.MultiheadAttention(
-                        embed_dim = cnn_dim,
-                        num_heads = 1,
-                        dropout=self.dropout,
-                    ).to(torch.device(self.device))
-                    for rel in attention_relations
-                })
-                for i in range(stack_count)
-            }),
+            "shared": shared
         }))
 
-        self.other_tasks = {
+        # similar to RACL setup
+        relations = torch.nn.ModuleDict({
+            f"stack_{i}": torch.nn.ModuleDict({
+                f"{rel[0]}_at_{rel[1]}": self.attn_block(cnn_dim)
+                for rel in attention_relations
+            })
+            for i in range(stack_count)
+        })
+        components.update(torch.nn.ModuleDict({
+            "relations": relations,
+        }))
+
+        if stack_count > 0:
+            prev_task = None
+            for task in self.subtasks:
+                for relation in components["relations"]["stack_0"]:
+                    if relation.startswith(task) and (task != prev_task):
+                        components[task]["attn_linear"] = self.linear_block(cnn_dim*2, 3)
+                        prev_task = task
+
+
+        # needed to update optimizers w/ interacting components 
+        self.other_components = {
             "relations" : {
-                "lr": self.learning_rate
+                "lr": attn_lr
+            },
+            "shared":{
+                "lr": shared_lr
             }
         }
 
         return components
 
     def forward(self, batch):
+        gold_transmission = self.find("gold_transmission", default=False)
+        stack_count = self.find("stack_count", default=1)
+        shared_layers = self.find("shared_layers", default=1)
         
         input_ids = batch[0].to(torch.device(self.device))
         attention_mask = batch[1].to(torch.device(self.device))
@@ -1825,6 +1938,84 @@ class FgFlex(BertHead):
             attention_mask = attention_mask,
         ).last_hidden_state
         embeddings = self.bert_dropout(embeddings).permute(0, 2, 1)
+        sentence_output = embeddings.clone()
 
+        ######################################
+        # Shared CNN layers
+        ######################################
+        shared = self.components["shared"]
+        for i in range(shared_layers):
+            sentence_output = shared[f"cnn_{i}"](sentence_output)
 
-        return 
+            # update word embeddings with shared features learned from this cnn layer
+            embeddings = torch.cat((embeddings, sentence_output), dim=1) # cat embedding dim
+
+        # only the information learned from shared cnn(s), no embeddings
+        initial_shared_features = sentence_output
+
+        task_inputs = {
+            task: initial_shared_features
+            for task in self.subtasks
+        }
+        outputs = {
+            task: []
+            for task in self.subtasks
+        }
+        attn_outputs = {}
+        cnn_outputs = {}
+        for stack in range(stack_count):
+            ### subtask cnns mimic IMN setup
+            for task in self.subtasks:
+                task_output = task_inputs[task]
+                if "cnn" in self.components[task].keys():
+                    cnn_outputs[task] = self.components[task]["cnn"](task_output)
+                    # task_output = torch.cat((embeddings, cnn_outputs[task]), dim=1)  # cat embedding dim
+                else:
+                    cnn_outputs[task] = task_output
+
+                # # TODO check that task_layer 0, 1, 2 all work here
+                outputs[task].append(self.components[task]["linear"](task_output.permute(0, 2, 1)))
+
+            ### relations between subtasks mimic RACL setup
+            prev_first = None
+            same_task = []
+            for relation in self.components["relations"][f"stack_{stack}"]:
+                interacting_tasks = relation.split("_at_")
+                first_task = interacting_tasks[0]
+                second_task = interacting_tasks[1]
+
+                query = torch.nn.functional.normalize(cnn_outputs[second_task], p=2, dim=-1).permute(2, 0, 1)
+                key = torch.nn.functional.normalize(cnn_outputs[first_task], p=2, dim=-1).permute(2, 0, 1)
+                value = torch.nn.functional.normalize(cnn_outputs[first_task], p=2, dim=-1).permute(2, 0, 1)  
+
+                mask = ((batch[1]*-1)+1).bool().to(torch.device(self.device))
+
+                relation_attn, weights = self.components["relations"][f"stack_{i}"][relation](
+                    # expects shape: [seq, batch, cnn_dim]
+                    query=query,
+                    key=key,
+                    value=value,
+                    key_padding_mask=mask,
+                    need_weights=True
+                )
+
+                attn_inter = torch.cat((cnn_outputs[first_task].permute(0, 2, 1), relation_attn.permute(1,0,2)), dim=-1)
+                attn_logits = self.components[first_task]["attn_linear"](attn_inter)
+
+                # store task inputs for next stack, considering multiple relations for first task
+                if first_task == prev_first or prev_first is None:
+                    same_task.append(attn_inter)
+                else:
+                    same_task = [attn_inter]
+
+                task_inputs[task] = torch.stack(same_task).mean(dim=0)      
+
+                # stack outputs for this relation (averaged after all stacks complete)
+                outputs[first_task].append(attn_logits)
+
+        final_output = {
+            task: torch.stack(outputs[task]).mean(dim=0).permute(0, 2, 1)
+            for task in self.subtasks
+        }
+
+        return final_output
