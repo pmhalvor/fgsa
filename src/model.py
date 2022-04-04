@@ -1953,6 +1953,9 @@ class FgFlex(BertHead):
         # only the information learned from shared cnn(s), no embeddings
         initial_shared_features = sentence_output
 
+        ######################################
+        # Stacked relation interactions
+        ######################################
         task_inputs = {
             task: initial_shared_features
             for task in self.subtasks
@@ -1963,20 +1966,26 @@ class FgFlex(BertHead):
         }
         attn_outputs = {}
         cnn_outputs = {}
+
         for stack in range(stack_count):
-            ### subtask cnns mimic IMN setup
+            ######################################
+            # Subtask CNN that mimic IMN setup
+            ######################################
             for task in self.subtasks:
                 task_output = task_inputs[task]
                 if "cnn" in self.components[task].keys():
                     cnn_outputs[task] = self.components[task]["cnn"](task_output)
+                    # TODO take into account this guy?
                     # task_output = torch.cat((embeddings, cnn_outputs[task]), dim=1)  # cat embedding dim
                 else:
                     cnn_outputs[task] = task_output
 
-                # # TODO check that task_layer 0, 1, 2 all work here
+                # TODO check that task_layer 0, 1, 2 all work here
                 outputs[task].append(self.components[task]["linear"](task_output.permute(0, 2, 1)))
 
-            ### relations between subtasks mimic RACL setup
+            ######################################
+            # Subtask relations mimic RACL setup
+            ######################################
             prev_first = None
             same_task = []
             for relation in self.components["relations"][f"stack_{stack}"]:
@@ -1990,7 +1999,7 @@ class FgFlex(BertHead):
 
                 mask = ((batch[1]*-1)+1).bool().to(torch.device(self.device))
 
-                relation_attn, weights = self.components["relations"][f"stack_{i}"][relation](
+                relation_attn, weights = self.components["relations"][f"stack_{stack}"][relation](
                     # expects shape: [seq, batch, cnn_dim]
                     query=query,
                     key=key,
@@ -2012,6 +2021,16 @@ class FgFlex(BertHead):
 
                 # stack outputs for this relation (averaged after all stacks complete)
                 outputs[first_task].append(attn_logits)
+
+            # TODO what about gold transmission?
+
+        # in case no interactions desired
+        if stack_count == 0:
+            for task in self.subtasks:
+                task_output = task_inputs[task]
+                if "cnn" in self.components[task].keys():
+                    task_output = self.components[task]["cnn"](task_output)
+                outputs[task] = [self.components[task]["linear"](task_output.permute(0, 2, 1))]
 
         final_output = {
             task: torch.stack(outputs[task]).mean(dim=0).permute(0, 2, 1)
