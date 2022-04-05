@@ -1,5 +1,5 @@
 {
-    "name": "fgflex-base",
+    "name": "fgflex-racl",
 
     "model_name": "fgflex",
     
@@ -31,7 +31,7 @@
     "weight_decay": 0.5,
 
     "lr": 1e-7,
-    "attn_lr": 1e-6,
+    "attn_lr": 1e-8,
     "expression_lr": 1e-6,
     "holder_lr": 1e-6,
     "polarity_lr": 1e-6,
@@ -39,7 +39,6 @@
     "shared_lr": 1e-6,
 
     "warm_up_constant": 5,
-    "find_scope": false,
 
     "epochs": [150, 150, 150]
 }
