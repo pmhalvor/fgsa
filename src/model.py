@@ -1926,12 +1926,18 @@ class FgFlex(BertHead):
         return components
 
     def forward(self, batch):
-        gold_transmission = self.find("gold_transmission", default=False)
+        gold_transmission = self.find("gold_transmission", default=True)
         stack_count = self.find("stack_count", default=1)
         shared_layers = self.find("shared_layers", default=1)
         
         input_ids = batch[0].to(torch.device(self.device))
         attention_mask = batch[1].to(torch.device(self.device))
+        true_labels = {
+            "expression": batch[2],
+            "holder": batch[3],
+            "polarity": batch[4],
+            "target": batch[5],
+        }
 
         embeddings = self.bert(
             input_ids = input_ids,
@@ -1998,6 +2004,18 @@ class FgFlex(BertHead):
 
                 mask = ((batch[1]*-1)+1).bool().to(torch.device(self.device))
 
+                # logits transmission
+                if gold_transmission:
+                    first_transmission = self.transmission(outputs[first_task][-1], true_labels[first_task])
+                    second_transmission = self.transmission(outputs[second_task][-1], true_labels[second_task])
+
+                    # reshape to match query/key shapes
+                    first_transmission = first_transmission.permute(1, 0).unsqueeze(-1).expand(key.shape)
+                    second_transmission = second_transmission.permute(1, 0).unsqueeze(-1).expand(query.shape)
+
+                    query = query * second_transmission
+                    key = key * first_transmission
+
                 relation_attn, weights = self.components["relations"][f"stack_{stack}"][relation](
                     # expects shape: [seq, batch, cnn_dim]
                     query=query,
@@ -2021,8 +2039,6 @@ class FgFlex(BertHead):
                 # stack outputs for this relation (averaged after all stacks complete)
                 outputs[first_task].append(attn_logits)
 
-            # TODO what about gold transmission?
-
         # in case no interactions desired
         if stack_count == 0:
             for task in self.subtasks:
@@ -2037,3 +2053,34 @@ class FgFlex(BertHead):
         }
 
         return final_output
+
+    @staticmethod
+    def get_prob(epoch_count, constant=5):
+        """
+        Borrowed directly from https://github.com/ruidan/IMN-E2E-ABSA
+        
+        Compute the probability of using gold opinion labels in opinion transmission
+        (To alleviate the problem of unreliable predictions of opinion labels sent from AE to AS,
+        in the early stage of training, we use gold labels as prediction with probability 
+        that depends on the number of current epoch)
+
+        """
+        prob = constant/(constant+torch.exp(torch.tensor(epoch_count).float()/constant))
+        return prob
+
+    def transmission(self, logits, true):
+        """
+        To help guide the attention mechanisms on which tokens to focus more on,
+        given logits from individual subtask. 
+        """
+        # decide how much true labels should influence attention based on current epoch
+        gold_influence = self.get_prob(self.current_epoch, self.find("warm_up_constant", default=5))
+
+        focus_scope = (  # strengthen signal from true logits
+            gold_influence*true.bool().float()
+                + (1-gold_influence)*logits.argmax(-1)
+        ).detach().to(torch.device(self.device))
+        focus_scope.requires_grad = True
+        
+        return focus_scope  # shape: [batch, sequence]
+
