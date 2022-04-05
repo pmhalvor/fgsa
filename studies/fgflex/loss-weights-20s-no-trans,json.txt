@@ -1,15 +1,16 @@
 {
-    "name": "fgflex-loss-weight-20s",
+    "name": "fgflex-loss-weight-20s-no-trans",
 
     "model_name": "fgflex",
     
     "cnn_dim": 768,
     "expanding_cnn": 0,
     "stack_count": 1,
-
+    
     "dropout": 0.4,
-
+    
     "loss_weight": [17, 20, 23, 25, 27], 
+    "gold_transmission": [false, true],
     "bert_finetune": true,
     "bert_polarity": true,
     "bert_target": true,
