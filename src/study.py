@@ -337,6 +337,11 @@ if __name__ == "__main__":
                                 print("FAILED TO SAVE MODEL {} DUE TO FOLLOW EXCEPTION".format(study.name))
                                 print(e)
         
+                    # free up memory again
+                    del study.model
+                    del study 
+                    torch.cuda.empty_cache()
+
                 params[param] = best_hyper
                 print("Best results for {m} metric: {p}={h}".format(m=study.metric, p=param, h=best_hyper))
     
