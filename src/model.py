@@ -1933,10 +1933,10 @@ class FgFlex(BertHead):
         input_ids = batch[0].to(torch.device(self.device))
         attention_mask = batch[1].to(torch.device(self.device))
         true_labels = {
-            "expression": batch[2],
-            "holder": batch[3],
-            "polarity": batch[4],
-            "target": batch[5],
+            "expression": batch[2].to(torch.device(self.device)),
+            "holder": batch[3].to(torch.device(self.device)),
+            "polarity": batch[4].to(torch.device(self.device)),
+            "target": batch[5].to(torch.device(self.device)),
         }
 
         embeddings = self.bert(
