@@ -1,5 +1,5 @@
 {
-    "name": "fgflex-loss-weight",
+    "name": "fgflex-lr-ept",
 
     "model_name": "fgflex",
     
@@ -9,7 +9,7 @@
 
     "dropout": 0.4,
 
-    "loss_weight": [10, 30, 50, 70], 
+    "loss_weight": 30, 
     "bert_finetune": true,
     "bert_polarity": true,
     "bert_target": true,
@@ -20,10 +20,10 @@
 
     "lr": 1e-7,
     "attn_lr": 1e-6,
-    "expression_lr": 1e-6,
+    "expression_lr": [1e-5, 1e-4],
     "holder_lr": 1e-6,
-    "polarity_lr": 1e-6,
-    "target_lr": 1e-6,
+    "polarity_lr": [1e-5, 1e-4],
+    "target_lr": [1e-5, 1e-4],
     "shared_lr": 1e-6,
 
     "warm_up_constant": 5,
