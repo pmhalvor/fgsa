@@ -9,9 +9,9 @@
     "stack_count": 1,
     "attention_relations": [
         [
-            ["expression", "expression"],
+            ["target", "expression"],
+            ["expression", "target"],
             ["polarity", "polarity"],
-            ["target", "target"],
             ["target", "polarity"],
             ["expression", "polarity"]
         ]
