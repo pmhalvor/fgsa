@@ -4,9 +4,9 @@
     "model_name": "fgflex",
     
     "cnn_dim": 768,
-    "expanding_cnn": [0, 2, 3, 4],
+    "expanding_cnn": 0,
     "gold_transmission": true,
-    "stack_count": [1, 2, 3],
+    "stack_count": 1,
     "attention_relations": [
         [
             ["expression", "expression"],
@@ -20,8 +20,9 @@
 
     "dropout": 0.4,
 
-    "loss_weight": [1, 5, 10], 
+    "loss_weight": [9, 10, 11], 
     "bert_finetune": true,
+    "bert_expression": true,
     "bert_polarity": true,
     "bert_target": true,
     "metric": "absa",
