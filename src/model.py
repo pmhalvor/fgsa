@@ -889,7 +889,7 @@ class BertHead(torch.nn.Module):
                                     print("Whoops! Not sure how to optimize for first task in layer", layer)
 
                                 
-                                if second_task in optimizers.keys() and first_task != second_task:
+                                if second_task in optimizers.keys() and first_task != second_task and first_task != "shared":
                                     print("adding {} to optimizer {}".format(layer, second_task))
                                     optimizers[second_task].add_param_group(
                                         {"params": self.components[component][stack][layer].parameters(), "lr":lr}
