@@ -14,7 +14,7 @@
 
     "dropout": 0.4,
 
-    "loss_weight": 30, 
+    "loss_weight": 27, 
     "bert_finetune": true,
     "bert_polarity": true,
     "bert_target": true,

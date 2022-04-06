@@ -29,9 +29,8 @@
     "optimizer_name": "adam",
     "weight_decay": 0.5,
 
-    "lr": 1e-7,
+    "lr": 1e-5,
     "target_lr": 1e-4,
-    "polarity_lr": 1e-5,
 
     "warm_up_constant": 5,
     "find_scope": false,
