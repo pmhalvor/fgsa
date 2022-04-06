@@ -1,0 +1,32 @@
+{
+    "name": "fgflex-lr-sync",
+
+    "model_name": "fgflex",
+    
+    "cnn_dim": 768,
+    "expanding_cnn": 0,
+    "stack_count": 1,
+    "attention_relations": [
+        [
+            ["shared", "all"]
+        ]
+    ],
+
+    "dropout": 0.4,
+
+    "loss_weight": 30, 
+    "bert_finetune": true,
+    "bert_polarity": true,
+    "bert_target": true,
+    "metric": "absa",
+
+    "optimizer_name": "adam",
+    "weight_decay": 0.5,
+
+    "lr": [1e-3, 1e-4, 1e-5, 1e-6, 1e-7, 1e-8],
+
+    "warm_up_constant": 5,
+    "find_scope": false,
+
+    "epochs": 50
+}
