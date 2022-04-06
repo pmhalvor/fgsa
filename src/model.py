@@ -1878,7 +1878,8 @@ class FgFlex(BertHead):
                 in_channels=768, 
                 out_channels=cnn_dim, 
                 kernel_size=kernel_size
-            )
+            ),
+            "attn_linear": self.linear_block(cnn_dim*2, 3)
         })
         for layer in range(1, shared_layers):
             shared.update({
@@ -1971,7 +1972,7 @@ class FgFlex(BertHead):
             for task in self.subtasks
         }
         attn_outputs = {}
-        cnn_outputs = {}
+        cnn_outputs = {"shared": initial_shared_features}
 
         for stack in range(stack_count):
             ######################################
@@ -1987,6 +1988,8 @@ class FgFlex(BertHead):
                     cnn_outputs[task] = task_output
 
                 outputs[task].append(self.components[task]["linear"](task_output.permute(0, 2, 1)))
+
+            cnn_outputs["all"] = sum([cnn_outputs[task] for task in self.subtasks])
 
             ######################################
             # Subtask relations mimic RACL setup
@@ -2005,7 +2008,7 @@ class FgFlex(BertHead):
                 mask = ((batch[1]*-1)+1).bool().to(torch.device(self.device))
 
                 # logits transmission
-                if gold_transmission:
+                if gold_transmission and ("all" not in relation) and ("shared" not in relation):
                     first_transmission = self.transmission(outputs[first_task][-1], true_labels[first_task])
                     second_transmission = self.transmission(outputs[second_task][-1], true_labels[second_task])
 
@@ -2026,18 +2029,22 @@ class FgFlex(BertHead):
                 )
 
                 attn_inter = torch.cat((cnn_outputs[first_task].permute(0, 2, 1), relation_attn.permute(1,0,2)), dim=-1)
-                attn_logits = self.components[first_task]["attn_linear"](attn_inter)
+                attn_logits = self.components[first_task]["attn_linear"](attn_inter) 
 
                 # store task inputs for next stack, considering multiple relations for first task
-                if first_task == prev_first or prev_first is None:
+                if (first_task == prev_first) or (first_task == "shared") or (prev_first is None):
                     same_task.append(attn_inter)
                 else:
                     same_task = [attn_inter]
 
-                task_inputs[task] = torch.stack(same_task).mean(dim=0)      
+                task_inputs[first_task] = torch.stack(same_task).mean(dim=0)      
 
                 # stack outputs for this relation (averaged after all stacks complete)
-                outputs[first_task].append(attn_logits)
+                if first_task == "shared":
+                    for task in self.subtasks:
+                        outputs[task].append(attn_logits)
+                else:
+                    outputs[first_task].append(attn_logits)
 
         # in case no interactions desired
         if stack_count == 0:
