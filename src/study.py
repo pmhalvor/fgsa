@@ -340,7 +340,6 @@ if __name__ == "__main__":
                     # free up memory again
                     metric = str(study.metric)
                     del study.model
-                    del study 
                     torch.cuda.empty_cache()
 
                 params[param] = best_hyper

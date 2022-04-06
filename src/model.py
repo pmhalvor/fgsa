@@ -871,23 +871,61 @@ class BertHead(torch.nn.Module):
                     elif component == "relations":
                         for stack in self.components["relations"]:
                             for layer in self.components["relations"][stack]:
-                                for task in self.subtasks:
-                                    if task in layer:
+                                first_task = layer.split("_at_")[0]
+                                second_task = layer.split("_at_")[1]
+
+                                if first_task in optimizers.keys():
+                                    print("adding {} to optimizer {}".format(layer, first_task))
+                                    optimizers[first_task].add_param_group(
+                                        {"params": self.components[component][stack][layer].parameters(), "lr":lr}
+                                    )
+                                elif first_task == "shared":
+                                    for task in self.subtasks:
                                         print("adding {} to optimizer {}".format(layer, task))
                                         optimizers[task].add_param_group(
                                             {"params": self.components[component][stack][layer].parameters(), "lr":lr}
                                         )
+                                else:
+                                    print("Whoops! Not sure how to optimize for first task in layer", layer)
 
-                                        # only passes this if when layer=shared_at_polarity
-                                        if "shared" in layer:
+                                
+                                if second_task in optimizers.keys() and first_task != second_task:
+                                    print("adding {} to optimizer {}".format(layer, second_task))
+                                    optimizers[second_task].add_param_group(
+                                        {"params": self.components[component][stack][layer].parameters(), "lr":lr}
+                                    )
+                                elif second_task == "shared":
+                                    for task in self.subtasks:
+                                        if task != first_task:  # avoid error of adding params to same optimizer twice
                                             print("adding {} to optimizer {}".format(layer, task))
+                                            optimizers[task].add_param_group(
+                                                {"params": self.components[component][stack][layer].parameters(), "lr":lr}
+                                            )
+                                elif first_task == second_task:
+                                    pass  # parameters already added, skip
+                                else:
+                                    print("Whoops! Not sure how to optimize for second task in layer", layer)
 
-                                            optimizers["target"].add_param_group(
-                                                {"params": self.components[component][stack][layer].parameters(), "lr":lr}
-                                            )
-                                            optimizers["expression"].add_param_group(
-                                                {"params": self.components[component][stack][layer].parameters(), "lr":lr}
-                                            )
+                                # # FIXME what happens when shared_at_all is being used?
+                                # for task in self.subtasks:
+                                #     if task in layer:
+                                #         print("adding {} to optimizer {}".format(layer, task))
+                                #         optimizers[task].add_param_group(
+                                #             {"params": self.components[component][stack][layer].parameters(), "lr":lr}
+                                #         )
+
+                                #         # only passes this if when layer=shared_at_polarity
+                                #         if "shared" in layer:
+                                #             print("adding {} to optimizer {}".format(layer, task))
+
+                                #             # FIXME why are we calling target and expression specifically?
+                                #             # they could very well not be in subtasks..?
+                                #             optimizers["target"].add_param_group(
+                                #                 {"params": self.components[component][stack][layer].parameters(), "lr":lr}
+                                #             )
+                                #             optimizers["expression"].add_param_group(
+                                #                 {"params": self.components[component][stack][layer].parameters(), "lr":lr}
+                                #             )
 
 
         return optimizers, schedulers
