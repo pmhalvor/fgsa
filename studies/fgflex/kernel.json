@@ -9,13 +9,18 @@
     "stack_count": 1,
     "attention_relations": [
         [
+            ["target", "expression"],
+            ["expression", "target"],
+            ["target", "polarity"],
+            ["polarity", "target"],
+            ["shared", "polarity"],
             ["shared", "all"]
         ]
     ],
 
     "dropout": 0.4,
 
-    "loss_weight": 30, 
+    "loss_weight": 27, 
     "bert_finetune": true,
     "bert_polarity": true,
     "bert_target": true,
@@ -25,6 +30,8 @@
     "weight_decay": 0.5,
 
     "lr": 1e-7,
+    "target_lr": 1e-4,
+    "polarity_lr": 1e-5,
 
     "warm_up_constant": 5,
     "find_scope": false,
