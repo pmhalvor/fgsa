@@ -887,6 +887,7 @@ class BertHead(torch.nn.Module):
                                         )
                                 else:
                                     print("Whoops! Not sure how to optimize for first task in layer", layer)
+                                    logging.warning("Whoops! Not sure how to optimize for first task in layer {}".format(layer))
 
                                 
                                 if second_task in optimizers.keys() and first_task != second_task and first_task != "shared":
@@ -901,10 +902,11 @@ class BertHead(torch.nn.Module):
                                             optimizers[task].add_param_group(
                                                 {"params": self.components[component][stack][layer].parameters(), "lr":lr}
                                             )
-                                elif first_task == second_task:
+                                elif first_task == second_task or (first_task == "shared"):
                                     pass  # parameters already added, skip
                                 else:
                                     print("Whoops! Not sure how to optimize for second task in layer", layer)
+                                    logging.warning("Whoops! Not sure how to optimize for second task in layer {}".format(layer))
 
                                 # # FIXME what happens when shared_at_all is being used?
                                 # for task in self.subtasks:
