@@ -1,0 +1,33 @@
+{
+    "name": "fgflex-kernel-size",
+
+    "model_name": "fgflex",
+    
+    "kernel_size": [3, 5, 7],
+    "cnn_dim": [768, 1536],
+    "expanding_cnn": 0,
+    "stack_count": 1,
+    "attention_relations": [
+        [
+            ["shared", "all"]
+        ]
+    ],
+
+    "dropout": 0.4,
+
+    "loss_weight": 30, 
+    "bert_finetune": true,
+    "bert_polarity": true,
+    "bert_target": true,
+    "metric": "absa",
+
+    "optimizer_name": "adam",
+    "weight_decay": 0.5,
+
+    "lr": 1e-7,
+
+    "warm_up_constant": 5,
+    "find_scope": false,
+
+    "epochs": 50
+}
