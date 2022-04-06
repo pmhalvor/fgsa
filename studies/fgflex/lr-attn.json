@@ -8,16 +8,20 @@
     "stack_count": 1,
     "attention_relations": [
         [
+            ["expression", "expression"],
+            ["expression", "polarity"],
+            ["expression", "target"],
+            ["holder", "polarity"],
+            ["polarity", "polarity"],
             ["target", "expression"],
             ["target", "polarity"],
-            ["expression", "polarity"],
-            ["holder", "polarity"]
+            ["target", "target"]
         ]
     ],
 
     "dropout": 0.4,
 
-    "loss_weight": 30, 
+    "loss_weight": 27, 
     "bert_finetune": true,
     "bert_polarity": true,
     "bert_target": true,
@@ -27,15 +31,15 @@
     "weight_decay": 0.5,
 
     "lr": 1e-8,
-    "attn_lr": [1e-8, 1e-9],
+    "attn_lr": [1e-6, 1e-5],
     "expression_lr": 1e-5,
     "holder_lr": 1e-6,
-    "polarity_lr": 1e-6,
-    "target_lr": 1e-6,
+    "polarity_lr": 1e-5,
+    "target_lr": 1e-4,
     "shared_lr": 1e-6,
 
     "warm_up_constant": 5,
     "find_scope": false,
 
-    "epochs": 50
+    "epochs": 150
 }
