@@ -12,15 +12,15 @@
             ["target", "expression"],
             ["expression", "target"],
             ["polarity", "polarity"],
-            ["target", "polarity"],
-            ["expression", "polarity"]
+            ["shared", "all"],
+            ["polarity", "shared"]
         ]
     ],
     "subtasks": ["expression", "target", "polarity"],
 
     "dropout": 0.4,
 
-    "loss_weight": [9, 10, 11], 
+    "loss_weight": [23, 27, 31], 
     "bert_finetune": true,
     "bert_expression": true,
     "bert_polarity": true,
@@ -40,5 +40,5 @@
 
     "warm_up_constant": 5,
 
-    "epochs": [150, 150, 150]
+    "epochs": [100, 100]
 }
