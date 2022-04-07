@@ -19,6 +19,8 @@
 
     "loss_weight": 30, 
     "bert_finetune": true,
+    "bert_expression": true,
+    "bert_holder": true,
     "bert_polarity": true,
     "bert_target": true,
     "metric": "absa",

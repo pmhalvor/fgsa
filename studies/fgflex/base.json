@@ -16,12 +16,13 @@
             ["expression", "polarity"]
         ]
     ],
-    "subtasks": ["expression", "target", "polarity"],
 
     "dropout": 0.4,
 
     "loss_weight": [1, 5, 10], 
     "bert_finetune": true,
+    "bert_expression": true,
+    "bert_holder": true,
     "bert_polarity": true,
     "bert_target": true,
     "metric": "absa",
@@ -29,16 +30,9 @@
     "optimizer_name": "adam",
     "weight_decay": 0,
 
-    "lr": 1e-7,
-    "attn_lr": 1e-6,
-    "expression_lr": 1e-6,
-    "holder_lr": 1e-6,
-    "polarity_lr": 1e-6,
-    "target_lr": 1e-6,
-    "shared_lr": 1e-6,
+    "lr": 1e-5,
 
     "warm_up_constant": 5,
-    "find_scope": false,
 
-    "epochs": [150, 150, 150]
+    "epochs": [50, 50, 50]
 }
