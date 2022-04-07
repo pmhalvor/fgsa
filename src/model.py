@@ -296,6 +296,8 @@ class BertHead(torch.nn.Module):
     Easily changeable for more complex downstream subtasks
     
     Prediction outputs dictionary of subtask label predictions.
+
+    Parameters: TODO write all parameters possible to use here..
     """
     def __init__(
         self, 
@@ -969,6 +971,16 @@ class FgsaLSTM(BertHead):
     Prediction outputs dictionary of subtask label predictions.
     """
 
+    def linear_block(self, in_features, out_features):
+        return torch.nn.Sequential(
+            torch.nn.Dropout(self.dropout),
+            torch.nn.Linear(
+                in_features=in_features,
+                out_features=out_features
+            ), 
+            torch.nn.Softmax(dim=-1)
+        )
+
     def init_components(self, subtasks):
         """
         Parameters:
@@ -981,19 +993,14 @@ class FgsaLSTM(BertHead):
         hidden_size = self.find("hidden_size", default=768)
         num_layers = self.find("num_layers", default=3)
         dropout = self.find("dropout", default=0.1)
+        lstm_tasks = {
+            task: self.find(f"{task}_lstm", default=True)
+            for task in self.subtasks
+        }
 
         components = torch.nn.ModuleDict({
             task: torch.nn.ModuleDict({
-                # cannot use nn.Sequential since LSTM outputs a tuple of last hidden layer and final cell states
-                "lstm": torch.nn.LSTM(
-                    input_size=768,
-                    hidden_size=hidden_size,  # Following BERT paper
-                    num_layers=num_layers,
-                    batch_first=True,
-                    dropout=dropout,
-                    bidirectional=bidirectional, 
-                ).to(torch.device(self.device)),
-                "linear": torch.nn.Linear(
+                "linear": self.linear_block(
                     in_features=hidden_size*2 if bidirectional else hidden_size,
                     out_features=3,
                 ).to(torch.device(self.device))
@@ -1001,8 +1008,32 @@ class FgsaLSTM(BertHead):
             for task in subtasks
         })
 
+        # make lstm tasks configurable via json
+        for task in self.subtasks:
+            if lstm_tasks[task]:
+                # add lstm to subtask's components
+                components[task].update({
+                    "lstm": torch.nn.LSTM(
+                        input_size=768,
+                        hidden_size=hidden_size, 
+                        num_layers=num_layers,
+                        batch_first=True,
+                        dropout=dropout,
+                        bidirectional=bidirectional, 
+                    ).to(torch.device(self.device)),
+                })
+            else:
+                # replace linear to ensure correct in_features size (if bidirectional)
+                components[task] = torch.nn.ModuleDict({
+                    "linear": self.linear_block(
+                        in_features=768,
+                        out_features=3,
+                    ).to(torch.device(self.device))
+                })
+
         return components
-    
+
+
     def forward(self, batch):
         """
         One forward step of training for our model.
@@ -1023,8 +1054,13 @@ class FgsaLSTM(BertHead):
         # task-specific forwards
         output = {}
         for task in self.subtasks:
-            hidden, _ = self.components[task]["lstm"](embeddings)
-            output[task] = self.components[task]["linear"](hidden).permute(0, 2, 1)
+            states = embeddings
+
+            if "lstm" in self.components[task].keys():
+                states, _ = self.components[task]["lstm"](embeddings)
+                
+            output[task] = self.components[task]["linear"](states).permute(0, 2, 1)
+
 
         return output
 

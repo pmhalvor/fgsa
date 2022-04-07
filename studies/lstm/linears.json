@@ -1,0 +1,31 @@
+{
+    "name": "lstm-linears",
+
+    "model_name": "fgsaLSTM",
+    
+    "dropout": 0.4,
+
+    "hidden_size": 768,
+    "expression_lstm": [false, true],
+    "holder_lstm": [false, true],
+    "polarity_lstm": [false, true],
+    "target_lstm": [false, true],
+    "bidirectional": [false, true],
+    "num_layers": 1,
+
+
+    "loss_weight": [1,2,3], 
+    "bert_finetune": true,
+    "bert_expression": true,
+    "bert_holder": true,
+    "bert_polarity": true,
+    "bert_target": true,
+
+    "optimizer_name": "adam",
+    "weight_decay": 0.5,
+
+    "lr": 1e-5,
+    
+    "metric": "absa",
+    "epochs": 50
+}
