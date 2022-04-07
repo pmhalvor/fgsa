@@ -972,8 +972,8 @@ class FgsaLSTM(BertHead):
     """
 
     def linear_block(self, in_features, out_features):
-        use_linear_softmax = self.find("use_linear_softmax", default=True)
-        use_linear_dropout = self.find("use_linear_dropout", default=True)
+        use_linear_softmax = self.find("use_linear_softmax", default=False)
+        use_linear_dropout = self.find("use_linear_dropout", default=False)
 
         layers = []
 
@@ -1847,34 +1847,52 @@ class FgFlex(BertHead):
         Expands cnn size to m times the original in_channels size, 
         before reducing back down to size out_channels
         """
-        return torch.nn.Sequential(
-            torch.nn.Dropout(self.dropout),
-            torch.nn.Conv1d(
-                in_channels = in_channels,
-                out_channels = in_channels*m, 
-                kernel_size = kernel_size,
-                padding = kernel_size//2,
-            ),
-            torch.nn.Conv1d(
-                in_channels = in_channels*m,
-                out_channels = out_channels, 
-                kernel_size = kernel_size,
-                padding = kernel_size//2,
-            ),
-            torch.nn.ReLU()            
-        ).to(torch.device(self.device))
+        use_cnn_dropout = self.find("use_cnn_dropout", default=False)
+        use_cnn_activation = self.find("use_cnn_activation", default=False)
+
+        layers = []
+
+        if use_cnn_dropout: 
+            layers.append(torch.nn.Dropout(self.dropout))
+
+        layers.append(torch.nn.Conv1d(
+            in_channels = in_channels,
+            out_channels = in_channels*m, 
+            kernel_size = kernel_size,
+            padding = kernel_size//2,
+        ))
+        layers.append(torch.nn.Conv1d(
+            in_channels = in_channels*m,
+            out_channels = out_channels, 
+            kernel_size = kernel_size,
+            padding = kernel_size//2,
+        ))
+
+        if use_cnn_activation:
+            layers.append(torch.nn.ReLU())
+
+        return torch.nn.Sequential(*layers).to(torch.device(self.device))
 
     def cnn_block(self, in_channels, out_channels, kernel_size=5):
-        return torch.nn.Sequential(
-            torch.nn.Dropout(self.dropout),
-            torch.nn.Conv1d(
-                in_channels = in_channels,
-                out_channels = out_channels, 
-                kernel_size = kernel_size,
-                padding = kernel_size//2,
-            ),
-            torch.nn.ReLU()            
-        ).to(torch.device(self.device))
+        use_cnn_dropout = self.find("use_cnn_dropout", default=False)
+        use_cnn_activation = self.find("use_cnn_activation", default=False)
+
+        layers = []
+
+        if use_cnn_dropout: 
+            layers.append(torch.nn.Dropout(self.dropout))
+
+        layers.append(torch.nn.Conv1d(
+            in_channels = in_channels,
+            out_channels = out_channels, 
+            kernel_size = kernel_size,
+            padding = kernel_size//2,
+        ))
+
+        if use_cnn_activation:
+            layers.append(torch.nn.ReLU())
+
+        return torch.nn.Sequential(*layers).to(torch.device(self.device))
 
     def attn_block(self, embed_dim):
         return torch.nn.MultiheadAttention(
@@ -1884,14 +1902,23 @@ class FgFlex(BertHead):
         ).to(torch.device(self.device))
 
     def linear_block(self, in_features, out_features):
-        return torch.nn.Sequential(
-            torch.nn.Dropout(self.dropout),
-            torch.nn.Linear(
-                in_features=in_features,
-                out_features=out_features
-            ), 
-            torch.nn.Softmax(dim=-1)
-        ).to(torch.device(self.device))
+        use_linear_activation = self.find("use_linear_activation", default=False)
+        use_linear_dropout = self.find("use_linear_dropout", default=False)
+
+        layers = []
+
+        if use_linear_dropout:
+            layers.append(torch.nn.Dropout(self.dropout))
+        
+        layers.append(torch.nn.Linear(
+            in_features=in_features,
+            out_features=out_features
+        ))
+
+        if use_linear_activation:
+            layers.append(torch.nn.Softmax(dim=-1))
+
+        return torch.nn.Sequential(*layers).to(torch.device(self.device))
 
     def init_components(self, subtasks):
         #######################################
