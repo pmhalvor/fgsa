@@ -4,19 +4,9 @@
     "model_name": "fgflex",
     
     "kernel_size": [3, 5, 7],
-    "cnn_dim": [768, 1536],
+    "cnn_dim": [768, 1536, 384],
     "expanding_cnn": 0,
     "stack_count": 1,
-    "attention_relations": [
-        [
-            ["target", "expression"],
-            ["expression", "target"],
-            ["target", "polarity"],
-            ["polarity", "target"],
-            ["shared", "polarity"],
-            ["shared", "all"]
-        ]
-    ],
 
     "dropout": 0.4,
 
@@ -37,5 +27,5 @@
     "warm_up_constant": 5,
     "find_scope": false,
 
-    "epochs": 50
+    "epochs": 25
 }

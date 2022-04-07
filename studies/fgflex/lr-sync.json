@@ -6,11 +6,6 @@
     "cnn_dim": 768,
     "expanding_cnn": 0,
     "stack_count": 1,
-    "attention_relations": [
-        [
-            ["shared", "all"]
-        ]
-    ],
 
     "dropout": 0.4,
 
