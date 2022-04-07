@@ -1,0 +1,26 @@
+{
+    "name": "lstm-hidden-size",
+
+    "model_name": "fgsaLSTM",
+    
+    "dropout": 0.4,
+
+    "loss_weight": 10, 
+    "bert_finetune": true,
+    "bert_expression": true,
+    "bert_holder": true,
+    "bert_polarity": true,
+    "bert_target": true,
+
+    "optimizer_name": "adam",
+    "weight_decay": 0.5,
+
+    "lr": 1e-5,
+
+    "hidden_size": [384, 768, 1536],
+    "bidirectional": [false, true],
+    "num_layers": [1,2,3],
+    
+    "metric": "absa",
+    "epochs": 50
+}
