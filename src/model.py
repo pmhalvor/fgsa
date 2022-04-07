@@ -972,14 +972,23 @@ class FgsaLSTM(BertHead):
     """
 
     def linear_block(self, in_features, out_features):
-        return torch.nn.Sequential(
-            torch.nn.Dropout(self.dropout),
-            torch.nn.Linear(
-                in_features=in_features,
-                out_features=out_features
-            ), 
-            torch.nn.Softmax(dim=-1)
-        )
+        use_linear_softmax = self.find("use_linear_softmax", default=True)
+        use_linear_dropout = self.find("use_linear_dropout", default=True)
+
+        layers = []
+
+        if use_linear_dropout:
+            layers.append(torch.nn.Dropout(self.dropout))
+        
+        layers.append(torch.nn.Linear(
+            in_features=in_features,
+            out_features=out_features
+        ))
+
+        if use_linear_softmax:
+            layers.append(torch.nn.Softmax(dim=-1))
+
+        return torch.nn.Sequential(*layers)
 
     def init_components(self, subtasks):
         """
