@@ -301,7 +301,11 @@ class BertHead(torch.nn.Module):
     """
     def __init__(
         self, 
-        bert_finetune=True,         # TODO tune
+        bert_finetune=True,
+        bert_expression=True,
+        bert_holder=True,
+        bert_polarity=True,
+        bert_target=True,
         bert_path=config.BERT_PATH,  
         device="cuda" if torch.cuda.is_available() else "cpu",
         dropout=0.1,                # TODO tune
