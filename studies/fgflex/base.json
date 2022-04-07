@@ -6,6 +6,7 @@
     "cnn_dim": 768,
     "expanding_cnn": [0, 2, 3, 4],
     "gold_transmission": true,
+    "kernel_size": 5,
     "stack_count": [1, 2, 3],
     "attention_relations": [
         [

@@ -5,24 +5,21 @@
     
     "cnn_dim": 768,
     "expanding_cnn": 0,
+    "gold_transmission": true,
+    "kernel_size": 5,
     "stack_count": 1,
-
+    
     "dropout": 0.4,
-
     "loss_weight": [10, 30, 50, 70], 
-    "bert_finetune": true,
-    "bert_expression": true,
-    "bert_holder": true,
-    "bert_polarity": true,
-    "bert_target": true,
-    "metric": "absa",
-
     "optimizer_name": "adam",
     "weight_decay": 0,
+    "warm_up_constant": 5,
+    "use_cnn_dropout": true,
+    "use_linear_dropout": true,
 
     "lr": 1e-5,
-
-    "warm_up_constant": 5,
+    
+    "metric": "absa",
 
     "epochs": 25
 }

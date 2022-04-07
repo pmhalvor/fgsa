@@ -16,6 +16,6 @@
     "bert_target": true,
     "metric": "absa",
 
-    "epochs": 50
+    "epochs": [25]
 
 }

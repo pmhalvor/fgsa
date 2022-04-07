@@ -32,5 +32,5 @@
     "lr": 1e-5,
     
     "metric": "absa",
-    "epochs": [25]]
+    "epochs": [25]
 }
