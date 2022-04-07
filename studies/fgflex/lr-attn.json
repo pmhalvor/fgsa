@@ -3,19 +3,18 @@
 
     "model_name": "fgflex",
     
+    "kernel_size": 5,
     "cnn_dim": 768,
     "expanding_cnn": 0,
     "stack_count": 1,
     "attention_relations": [
         [
-            ["expression", "expression"],
-            ["expression", "polarity"],
-            ["expression", "target"],
-            ["holder", "polarity"],
-            ["polarity", "polarity"],
             ["target", "expression"],
+            ["expression", "target"],
             ["target", "polarity"],
-            ["target", "target"]
+            ["polarity", "target"],
+            ["shared", "polarity"],
+            ["shared", "all"]
         ]
     ],
 
@@ -23,6 +22,8 @@
 
     "loss_weight": 27, 
     "bert_finetune": true,
+    "bert_expression": true,
+    "bert_holder": true,
     "bert_polarity": true,
     "bert_target": true,
     "metric": "absa",
@@ -30,16 +31,11 @@
     "optimizer_name": "adam",
     "weight_decay": 0.5,
 
-    "lr": 1e-8,
-    "attn_lr": [1e-6, 1e-5],
-    "expression_lr": 1e-5,
-    "holder_lr": 1e-6,
-    "polarity_lr": 1e-5,
-    "target_lr": 1e-4,
-    "shared_lr": 1e-6,
+    "lr": 1e-5,
+    "attn_lr": [0.1, 0.01, 0.001, 0.0001],
 
     "warm_up_constant": 5,
     "find_scope": false,
 
-    "epochs": 150
+    "epochs": 50
 }
