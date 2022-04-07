@@ -1,5 +1,5 @@
 {
-    "name": "weights--lr1e-17--task_lr1e-5--polar_lr1e-4",
+    "name": "weights",
 
     "model_name": "imn",
     
@@ -15,10 +15,7 @@
     "warm_up_constant": 5,
     "find_scope": true,
 
-    "lr": 1e-7,
-    "expression_lr": 1e-5,
-    "polarity_lr": 1e-4,
-    "target_lr": 1e-5,
+    "lr": 1e-5,
     
     "cnn_dim": 768,
     "shared_layers": 5,
@@ -26,5 +23,5 @@
     "polarity_layers": 2,
     "expression_layers": 2,
     "interactions": 3,
-    "epochs": 100
+    "epochs": [25]
 }

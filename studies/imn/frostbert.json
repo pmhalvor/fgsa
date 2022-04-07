@@ -27,5 +27,5 @@
     "warm_up_constant": 5,
     "find_scope": [true, false],
 
-    "epochs": 100
+    "epochs": [25]
 }

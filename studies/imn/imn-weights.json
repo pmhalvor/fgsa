@@ -1,11 +1,11 @@
 {
-    "name": "imn-attn",
+    "name": "imn-weights",
 
     "model_name": "imn",
 
     "dropout": 0.4,
 
-    "loss_weight": [27, 30, 33], 
+    "loss_weight": [10, 13, 17, 20, 23], 
     "bert_finetune": true,
     "bert_expression": true,
     "bert_polarity": true,
@@ -20,7 +20,7 @@
     "value": "polarity",
     "gold_transmission":true,
 
-    "lr": [1e-7, 1e-6, 1e-5],
+    "lr": 1e-7,
     "expression_lr": 1e-5,
     "polarity_lr": 1e-5,
     "target_lr": 1e-5,
@@ -35,5 +35,5 @@
     "warm_up_constant": 5,
     "find_scope": false,
 
-    "epochs": [100, 100, 100]
+    "epochs": [25]
 }

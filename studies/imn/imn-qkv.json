@@ -16,5 +16,5 @@
     "expression_layers": 8,
     "interactions": 2,
 
-    "epochs": 100
+    "epochs": [25]
 }

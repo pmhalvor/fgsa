@@ -1,0 +1,26 @@
+{
+    "name": "imn-interactions",
+    "model_name": "imn",
+    
+    "shared_layers": 1,
+    "target_layers": 1,
+    "polarity_layers": 1,
+    "expression_layers": 1,
+    "interactions": [1, 2, 3, 4, 5],
+
+    "cnn_dim": 768,
+    "dropout": 0.1,
+    "loss_weight": [1, 5, 10], 
+    "bert_finetune": true,
+    "bert_expression": true,
+    "bert_holder": true,
+    "bert_polarity": true,
+    "bert_target": true,
+    
+    "lr": 1e-5,
+    "lr_scheduler_patience":25,
+    
+    "metric": "absa",
+
+    "epochs": [25]
+}

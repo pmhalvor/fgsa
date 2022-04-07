@@ -1,0 +1,26 @@
+{
+    "name": "fgsaLSTM-base",
+    
+    "model_name": "fgsaLSTM",
+
+    "bidirectional": [true, false],
+    "hidden_size": 768,
+    "num_layers": 1,
+    "use_linear_dropout": false,
+    "use_linear_softmax": false, 
+    "expression_lstm": false,
+    "holder_lstm": false,
+    "polarity_lstm": false,
+    "target_lstm": false,
+    
+    "dropout": 0.4,
+
+    "lr": 1e-5,
+    "loss_weight": 10, 
+    "optimizer_name": "adam",
+    "weight_decay": 0,
+    
+    "metric": "absa",
+    
+    "epochs": [25]
+}

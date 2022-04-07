@@ -12,5 +12,5 @@
     "polarity_layers": 2,
     "expression_layers": 2,
     "interactions": 2,
-    "epochs": [50]
+    "epochs": [25]
 }
