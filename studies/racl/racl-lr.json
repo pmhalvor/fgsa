@@ -15,7 +15,7 @@
     "metric": "absa",
 
     "optimizer_name": "adam",
-    "weight_decay": 0.5,
+    "weight_decay": 0,
 
     "lr": [1e-8, 1e-7, 1e-6],
     "expression_lr": 1e-6,

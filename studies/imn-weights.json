@@ -13,7 +13,7 @@
     "metric": "hard",
 
     "optimizer_name": "adam",
-    "weight_decay": 0.5,
+    "weight_decay": 0,
     
     "query": "expression",
     "key": "polarity",

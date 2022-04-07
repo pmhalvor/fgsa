@@ -12,7 +12,7 @@
     "metric": "hard",
 
     "optimizer_name": "adam",
-    "weight_decay": 0.5,
+    "weight_decay": 0,
 
     "lr": 1e-8,
     "expression_lr": 1e-6,
