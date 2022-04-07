@@ -21,8 +21,10 @@
     "bert_polarity": true,
     "bert_target": true,
 
+    "use_linear_dropout": false,
+    "use_linear_softmax": false, 
     "optimizer_name": "adam",
-    "weight_decay": 0.5,
+    "weight_decay": 0,
 
     "lr": 1e-5,
     
