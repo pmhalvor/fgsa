@@ -1,8 +1,0 @@
-{
-
-    "name": "study-num_layer",
-    "num_layers": [1,3,5,7,9],
-    
-    "metric": "easy"
-
-}
