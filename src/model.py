@@ -1589,19 +1589,15 @@ class RACL(IMN):
                     ),
                     torch.nn.ReLU()
                 ).to(torch.device(self.device)),
-                "linear": torch.nn.Sequential(
-                    torch.nn.Linear(
-                    in_features=cnn_dim*2,  # TODO this will be doubled..?
+                "linear": self.linear_block(
+                    in_features=cnn_dim*2, 
                     out_features=3
-                    ),
-                    # torch.nn.Sigmoid(),  # TODO activation after linear?
                 ).to(torch.device(self.device)),
                 "re_encode": torch.nn.Sequential(
                     torch.nn.Linear(
                         in_features=int(cnn_dim*2), 
                         out_features=int(768)
                     ),
-                    # torch.nn.ReLU(),  # TODO activate like l2 norm or nah?
                     torch.nn.AlphaDropout(
                         self.dropout,
                     ).to(torch.device(self.device)),
@@ -1609,28 +1605,20 @@ class RACL(IMN):
             }),
             "expression":torch.nn.ModuleDict({
                 # opinion extraction: cnn -> relu -> matmul w/ target -> attention -> cat -> linear
-                "cnn": torch.nn.Sequential(
-                    torch.nn.Conv1d(
+                "cnn": self.cnn_block(
                         in_channels = int(768),
                         out_channels = int(cnn_dim), 
                         kernel_size = 5,
-                        padding=2
-                    ),
-                    torch.nn.ReLU()
                 ).to(torch.device(self.device)),
-                "linear": torch.nn.Sequential(
-                    torch.nn.Linear(
+                "linear": self.linear_block(
                     in_features=cnn_dim*2,
                     out_features=3
-                    ),
-                    # torch.nn.Sigmoid(),  # TODO activation after linear?
                 ).to(torch.device(self.device)),
                 "re_encode": torch.nn.Sequential(
                     torch.nn.Linear(
                         in_features=int(cnn_dim*2), 
                         out_features=int(768)
                     ),
-                    # torch.nn.ReLU(),  # TODO activate like l2 norm or nah?
                     torch.nn.AlphaDropout(
                         self.dropout,
                     ),
@@ -1638,28 +1626,20 @@ class RACL(IMN):
             }),
             "polarity":torch.nn.ModuleDict({
                 # polarity classification: cnn -> relu -> matmul w/ (embedding) -> attention -> cat -> dropout -> linear
-                "cnn": torch.nn.Sequential(
-                    torch.nn.Conv1d(
+                "cnn": self.cnn_block(
                         in_channels = int(768),
                         out_channels = int(cnn_dim), 
                         kernel_size = 5,
-                        padding=2
-                    ),
-                    torch.nn.ReLU()
                 ).to(torch.device(self.device)),
-                "linear": torch.nn.Sequential(
-                    torch.nn.Linear(
+                "linear": self.linear_block(
                     in_features=cnn_dim, # TODO double?
                     out_features=3
-                    ),
-                    # torch.nn.Sigmoid(),  # TODO activation after linear?
                 ).to(torch.device(self.device)),
                 "re_encode": torch.nn.Sequential(
-                    torch.nn.Linear(  # TODO delete
+                    torch.nn.Linear( 
                         in_features=int(cnn_dim), 
                         out_features=768
                     ),
-                    # torch.nn.ReLU(),  # TODO activate like l2 norm or nah?
                     torch.nn.AlphaDropout(
                         self.dropout,
                     ).to(torch.device(self.device)),
@@ -1772,16 +1752,10 @@ class RACL(IMN):
             expression_inter = torch.cat((expression_cnn.permute(0, 2, 1), expression_attn.permute(1,0,2)), dim=-1)
             expression_logits = self.components["expression"]["linear"](expression_inter)
 
-            # TODO gold transmission of expressions
             if gold_transmission:
-                raise NotImplementedError  # not exactly complete, come back and check
-                expression_confidence = self.get_confidence(
+                expression_propagate = self.transmission(
                     expression_logits, 
-                    batch,
-                    self.current_epoch
-                )
-                expression_propagate = expression_at_target*(  # expand confidence to shape of attention weights
-                    expression_confidence.unsqueeze(-1).expand(expression_at_target.shape)
+                    batch[2].to(torch.device(self.device)),
                 )
             else:
                 expression_propagate = expression_attn
@@ -1808,7 +1782,7 @@ class RACL(IMN):
             polarity_logits = self.components["polarity"]["linear"](polarity_inter.permute(0, 2, 1))
 
             # stacking
-            target_outputs.append(target_logits.unsqueeze(-1))
+            target_outputs.append(target_logits.unsqueeze(-1))  # FIXME explain why we need to unsqueeze?
             polarity_outputs.append(polarity_logits.unsqueeze(-1))
             expression_outputs.append(expression_logits.unsqueeze(-1))
 
@@ -1832,7 +1806,7 @@ class RACL(IMN):
         return output
 
     @staticmethod
-    def get_confidence(expression_logits, batch, current_epoch):
+    def get_prob(expression_logits, batch, current_epoch):
         gold_influence = self.get_prob(self.current_epoch, self.find("warm_up_constant", default=5))
 
         true_expression = batch[2]
@@ -1844,6 +1818,23 @@ class RACL(IMN):
         expression_confidence.requires_grad = True
         
         return expression_confidence  # shape: [batch, sequence]
+    
+    def transmission(self, logits, true):
+        """
+        To help guide the attention mechanisms on which tokens to focus more on,
+        given logits from individual subtask. 
+        """
+        # decide how much true labels should influence attention based on current epoch
+        gold_influence = self.get_prob(self.current_epoch, self.find("warm_up_constant", default=5))
+
+        focus_scope = (  # strengthen signal from true logits
+            gold_influence*true.bool().float()
+                + (1-gold_influence)*logits.argmax(-1)
+        ).detach().to(torch.device(self.device))
+        focus_scope.requires_grad = True
+        
+        return focus_scope  # shape: [batch, sequence]
+
 
 
 class FgFlex(BertHead):
