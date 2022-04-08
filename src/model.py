@@ -2019,7 +2019,8 @@ class FgFlex(BertHead):
         # Shared CNN layers
         ######################################
         shared = self.components["shared"]
-        for i in range(shared_layers):
+        sentence_output = shared[f"cnn_0"](sentence_output)
+        for i in range(1, shared_layers):
             sentence_output = shared[f"cnn_{i}"](sentence_output)
 
             # update word embeddings with shared features learned from this cnn layer
