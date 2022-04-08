@@ -5,7 +5,7 @@
     
     "dropout": 0.4,
 
-    "loss_weight": [10, 30, 50], 
+    "loss_weight": [1, 5, 10, 15, 20], 
     "bert_polarity": true,
     "bert_target":false,
     "metric": "hard",

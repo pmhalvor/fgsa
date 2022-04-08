@@ -13,7 +13,7 @@
     "bidirectional": [false, true],
     "num_layers": 1,
     "use_linear_dropout": false,
-    "use_linear_softmax": false, 
+    "use_linear_activation": false, 
 
 
     "loss_weight": [1,2,3], 

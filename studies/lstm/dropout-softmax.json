@@ -7,7 +7,7 @@
 
     "hidden_size": 768,
     "use_linear_dropout": [false, true],
-    "use_linear_softmax": [false, true], 
+    "use_linear_activation": [false, true], 
     "expression_lstm": [false, true],
     "holder_lstm": [false, true],
     "polarity_lstm": [false, true],

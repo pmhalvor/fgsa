@@ -7,7 +7,7 @@
     "hidden_size": 768,
     "num_layers": 1,
     "use_linear_dropout": false,
-    "use_linear_softmax": false, 
+    "use_linear_activation": false, 
     "expression_lstm": false,
     "holder_lstm": false,
     "polarity_lstm": false,
