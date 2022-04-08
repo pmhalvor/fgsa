@@ -36,5 +36,5 @@
 
     "metric": "absa",
 
-    "epochs": 50
+    "epochs": 20
 }
