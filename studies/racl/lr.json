@@ -1,5 +1,5 @@
 {
-    "name": "racl-base",
+    "name": "racl-lr",
 
     "model_name": "racl",
     
@@ -12,7 +12,7 @@
     "weight_decay": 0,
     "warm_up_constant": 5,
     
-    "lr": 1e-5,
+    "lr": [1e-4, 1e-5, 1e-6, 1e-7, 1e-8],
     
     "metric": "absa",
 

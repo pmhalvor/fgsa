@@ -1,10 +1,10 @@
 {
-    "name": "racl-base",
+    "name": "racl-stack",
 
     "model_name": "racl",
     
     "cnn_dim": 768,
-    "stack_count": 1,
+    "stack_count": [1, 2, 3],
 
     "dropout": 0.4,
     "loss_weight": 1, 

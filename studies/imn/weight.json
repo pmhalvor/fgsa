@@ -1,0 +1,24 @@
+{
+    "name": "imn-weights",
+
+    "model_name": "imn",
+    
+    "cnn_dim": 768,
+    "shared_layers": 5,
+    "target_layers": 2,
+    "polarity_layers": 2,
+    "expression_layers": 2,
+    "interactions": 3,
+
+    "dropout": 0.4,
+    "loss_weight": [1, 3, 5, 7, 10], 
+    "optimizer_name": "adam",
+    "weight_decay": 0,
+    "warm_up_constant": 5,
+
+    "lr": 1e-5,
+
+    "metric": "hard",
+
+    "epochs": [25]
+}
