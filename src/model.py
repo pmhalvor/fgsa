@@ -993,27 +993,6 @@ class BertHead(torch.nn.Module):
                                     print("Whoops! Not sure how to optimize for second task in layer", layer)
                                     logging.warning("Whoops! Not sure how to optimize for second task in layer {}".format(layer))
 
-                                # # FIXME what happens when shared_at_all is being used?
-                                # for task in self.subtasks:
-                                #     if task in layer:
-                                #         print("adding {} to optimizer {}".format(layer, task))
-                                #         optimizers[task].add_param_group(
-                                #             {"params": self.components[component][stack][layer].parameters(), "lr":lr}
-                                #         )
-
-                                #         # only passes this if when layer=shared_at_polarity
-                                #         if "shared" in layer:
-                                #             print("adding {} to optimizer {}".format(layer, task))
-
-                                #             # FIXME why are we calling target and expression specifically?
-                                #             # they could very well not be in subtasks..?
-                                #             optimizers["target"].add_param_group(
-                                #                 {"params": self.components[component][stack][layer].parameters(), "lr":lr}
-                                #             )
-                                #             optimizers["expression"].add_param_group(
-                                #                 {"params": self.components[component][stack][layer].parameters(), "lr":lr}
-                                #             )
-
 
         return optimizers, schedulers
 
