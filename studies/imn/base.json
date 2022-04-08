@@ -1,0 +1,26 @@
+{
+    "name": "imn-base",
+    "model_name": "imn",
+    
+    "find_scope": false,
+    "shared_layers": 5,
+    "target_layers": 2,
+    "polarity_layers": 2,
+    "expression_layers": 2,
+    "interactions": 2,
+    "query": "expression",
+    "key": "polarity",
+    "value": "polarity",
+    "gold_transmission":true,
+
+
+    "cnn_dim": 768,
+    "dropout": 0.1,
+    "loss_weight": 33,     
+    "lr": 1e-5,
+    "lr_scheduler_patience":25,
+    
+    "metric": "absa",
+
+    "epochs": [50]
+}

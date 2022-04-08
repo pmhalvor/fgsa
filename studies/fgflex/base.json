@@ -1,0 +1,39 @@
+{
+    "name": "fgflex-base",
+
+    "model_name": "fgflex",
+    
+    "cnn_dim": 768,
+    "expanding_cnn": [0, 2, 3, 4],
+    "gold_transmission": true,
+    "kernel_size": 5,
+    "stack_count": [1, 2, 3],
+    "attention_relations": [
+        [
+            ["expression", "expression"],
+            ["polarity", "polarity"],
+            ["target", "target"],
+            ["target", "polarity"],
+            ["expression", "polarity"]
+        ]
+    ],
+
+    "dropout": 0.4,
+
+    "loss_weight": [1, 5, 10], 
+    "bert_finetune": true,
+    "bert_expression": true,
+    "bert_holder": true,
+    "bert_polarity": true,
+    "bert_target": true,
+    "metric": "absa",
+
+    "optimizer_name": "adam",
+    "weight_decay": 0,
+
+    "lr": 1e-5,
+
+    "warm_up_constant": 5,
+
+    "epochs": [50, 50, 50]
+}

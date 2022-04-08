@@ -1,0 +1,13 @@
+{
+    "name": "study-learning_rate",
+    "learning_rate": [
+        5e-6,
+        1e-6,
+        5e-7,
+        1e-7,
+        5e-8,
+        1e-8
+    ],
+
+    "metric": "easy"
+}

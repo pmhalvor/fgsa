@@ -204,6 +204,8 @@ class Study():
           model = IMN
         elif model_name.lower() == "racl":
           model = RACL
+        elif model_name.lower() == "fgflex":
+          model = FgFlex
         # elif model_name.lower() == "next":
         #   model = Next
 
@@ -335,7 +337,12 @@ if __name__ == "__main__":
                                 print("FAILED TO SAVE MODEL {} DUE TO FOLLOW EXCEPTION".format(study.name))
                                 print(e)
         
+                    # free up memory again
+                    metric = str(study.metric)
+                    del study.model
+                    torch.cuda.empty_cache()
+
                 params[param] = best_hyper
-                print("Best results for {m} metric: {p}={h}".format(m=study.metric, p=param, h=best_hyper))
+                print("Best results for {m} metric: {p}={h}".format(m=metric, p=param, h=best_hyper))
     
         print("Final params after study:\n{}".format(params))
