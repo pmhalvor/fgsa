@@ -10,7 +10,7 @@
     "stack_count": 1,
 
     "dropout": 0.4,
-    "loss_weight": 27, 
+    "loss_weight": 1, 
     "optimizer_name": "adam",
     "weight_decay": 0,
     "warm_up_constant": 5,
@@ -18,7 +18,6 @@
     "use_linear_dropout": true,
     
     "lr": 1e-5,
-    "target_lr": 1e-4,
     
     "metric": "absa",
 
