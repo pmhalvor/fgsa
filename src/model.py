@@ -1024,6 +1024,7 @@ class FgsaLSTM(BertHead):
         # make lstm tasks configurable via json
         for task in self.subtasks:
             if lstm_tasks[task]:
+                print(f"Adding lstm layer for {task}")
                 # add lstm to subtask's components
                 components[task].update({
                     "lstm": torch.nn.LSTM(
