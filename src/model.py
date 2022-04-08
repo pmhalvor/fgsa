@@ -2079,14 +2079,15 @@ class FgFlex(BertHead):
                 # logits transmission
                 if gold_transmission and ("all" not in relation) and ("shared" not in relation):
                     first_transmission = self.transmission(outputs[first_task][-1], true_labels[first_task])
-                    second_transmission = self.transmission(outputs[second_task][-1], true_labels[second_task])
+                    # second_transmission = self.transmission(outputs[second_task][-1], true_labels[second_task])
 
                     # reshape to match query/key shapes
                     first_transmission = first_transmission.permute(1, 0).unsqueeze(-1).expand(key.shape)
-                    second_transmission = second_transmission.permute(1, 0).unsqueeze(-1).expand(query.shape)
+                    # second_transmission = second_transmission.permute(1, 0).unsqueeze(-1).expand(query.shape)
 
-                    query = query * second_transmission
-                    key = key * first_transmission
+                    # query = query * second_transmission
+                    # key = key * first_transmission
+                    value = value * first_transmission
 
                 relation_attn, weights = self.components["relations"][f"stack_{stack}"][relation](
                     # expects shape: [seq, batch, cnn_dim]
