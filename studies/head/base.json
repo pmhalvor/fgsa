@@ -5,11 +5,6 @@
     "learning_rate": 1e-5,
 
     "dropout": 0.4,
-    "bert_finetune": true,
-    "bert_expression": true,
-    "bert_holder": true,
-    "bert_polarity": true,
-    "bert_target": true,
 
     "metric": "absa",
 

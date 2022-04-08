@@ -1,0 +1,18 @@
+{
+    "name": "head-frostbert",
+    "model_name": "BertHead",
+
+    "bert_finetune": [false, true],
+    "bert_expression": [false, true],
+    "bert_holder": [false, true],
+    "bert_polarity": [false, true],
+    "bert_target": [false, true],
+
+    "learning_rate": 1e-5,
+
+    "dropout": 0.4,
+
+    "metric": "absa",
+
+    "epochs": 50
+}

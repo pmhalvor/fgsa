@@ -1,29 +1,40 @@
 {
-    "name": "study-lrs",
+    "name": "head-lrs",
+    "model_name": "BertHead",
+
+    "dropout": 0.4,
+
+    "lr": 1e-5,
     "expression_lr": [
+        1e-4, 
+        1e-5, 
         1e-6,
         1e-7,
-        1e-8,
-        1e-9
+        1e-8
     ],
     "holder_lr": [
+        1e-4, 
+        1e-5, 
         1e-6,
         1e-7,
-        1e-8,
-        1e-9
+        1e-8
     ],
     "polarity_lr": [
+        1e-4, 
+        1e-5, 
         1e-6,
         1e-7,
-        1e-8,
-        1e-9
+        1e-8
     ],
     "target_lr": [
+        1e-4, 
+        1e-5, 
         1e-6,
         1e-7,
-        1e-8,
-        1e-9
+        1e-8
     ],
 
-    "metric": "easy"
+    "metric": "absa",
+
+    "epochs": 50
 }
