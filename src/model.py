@@ -480,6 +480,85 @@ class BertHead(torch.nn.Module):
             return True
         return False
 
+    ########### Component blocks ###########
+    def attn_block(self, embed_dim):
+        return torch.nn.MultiheadAttention(
+            embed_dim = embed_dim,
+            num_heads = 1,
+            dropout=self.dropout,
+        ).to(torch.device(self.device))
+
+    def cnn_block(self, in_channels, out_channels, kernel_size=5):
+        use_cnn_dropout = self.find("use_cnn_dropout", default=False)
+        use_cnn_activation = self.find("use_cnn_activation", default=False)  # TODO true?
+
+        layers = []
+
+        if use_cnn_dropout: 
+            layers.append(torch.nn.Dropout(self.dropout))
+
+        layers.append(torch.nn.Conv1d(
+            in_channels = in_channels,
+            out_channels = out_channels, 
+            kernel_size = kernel_size,
+            padding = kernel_size//2,
+        ))
+
+        if use_cnn_activation:
+            layers.append(torch.nn.ReLU())
+
+        return torch.nn.Sequential(*layers).to(torch.device(self.device))
+
+    def expanding_cnn_block(self, in_channels, out_channels, kernel_size=5, m=2):
+        """
+        Expands cnn size to m times the original in_channels size, 
+        before reducing back down to size out_channels
+        """
+        use_cnn_dropout = self.find("use_cnn_dropout", default=False)
+        use_cnn_activation = self.find("use_cnn_activation", default=False)
+
+        layers = []
+
+        if use_cnn_dropout: 
+            layers.append(torch.nn.Dropout(self.dropout))
+
+        layers.append(torch.nn.Conv1d(
+            in_channels = in_channels,
+            out_channels = in_channels*m, 
+            kernel_size = kernel_size,
+            padding = kernel_size//2,
+        ))
+        layers.append(torch.nn.Conv1d(
+            in_channels = in_channels*m,
+            out_channels = out_channels, 
+            kernel_size = kernel_size,
+            padding = kernel_size//2,
+        ))
+
+        if use_cnn_activation:
+            layers.append(torch.nn.ReLU())
+
+        return torch.nn.Sequential(*layers).to(torch.device(self.device))
+
+    def linear_block(self, in_features, out_features):
+        use_linear_activation = self.find("use_linear_activation", default=False)
+        use_linear_dropout = self.find("use_linear_dropout", default=False)  #TODO true?
+
+        layers = []
+
+        if use_linear_dropout:
+            layers.append(torch.nn.Dropout(self.dropout))
+        
+        layers.append(torch.nn.Linear(
+            in_features=in_features,
+            out_features=out_features
+        ))
+
+        if use_linear_activation:
+            layers.append(torch.nn.Softmax(dim=-1))
+
+        return torch.nn.Sequential(*layers)
+    
     ########### Model training ###########
     def fit(self, train_loader, dev_loader=None, epochs=10):
         writer = SummaryWriter()
@@ -975,25 +1054,6 @@ class FgsaLSTM(BertHead):
     Prediction outputs dictionary of subtask label predictions.
     """
 
-    def linear_block(self, in_features, out_features):
-        use_linear_softmax = self.find("use_linear_softmax", default=False)
-        use_linear_dropout = self.find("use_linear_dropout", default=False)
-
-        layers = []
-
-        if use_linear_dropout:
-            layers.append(torch.nn.Dropout(self.dropout))
-        
-        layers.append(torch.nn.Linear(
-            in_features=in_features,
-            out_features=out_features
-        ))
-
-        if use_linear_softmax:
-            layers.append(torch.nn.Softmax(dim=-1))
-
-        return torch.nn.Sequential(*layers)
-
     def init_components(self, subtasks):
         """
         Parameters:
@@ -1176,45 +1236,27 @@ class IMN(BertHead):
         #######################################
         # Task-specific CNN layers
         #######################################
-        layers = []
-        for layer in range(target_layers):
-            # every layer gets a dropout, cnn, and relu activation
-            layers.append(torch.nn.Dropout(self.dropout))
-            layers.append(torch.nn.Conv1d(
-                    in_channels = cnn_dim,
-                    out_channels = cnn_dim, 
-                    kernel_size = 5,
-                    padding=2,
-                ))
-            layers.append(torch.nn.ReLU())
+        layers = [
+            # configure dropout (or activation) via use_cnn_dropout=True in json-configs
+            self.cnn_block(cnn_dim, cnn_dim, 5)
+            for layer in range(target_layers)
+        ]
         target_sequential = torch.nn.Sequential(*layers).to(torch.device(self.device))
         components["target"].update({"cnn_sequential": target_sequential})
 
-        layers = []
-        for layer in range(polarity_layers):
-            # every layer gets a dropout, cnn, and relu activation
-            layers.append(torch.nn.Dropout(self.dropout))
-            layers.append(torch.nn.Conv1d(
-                    in_channels = cnn_dim,
-                    out_channels = cnn_dim, 
-                    kernel_size = 5,
-                    padding=2,
-                ))
-            layers.append(torch.nn.ReLU())
+        layers = [
+            # configure dropout (or activation) via use_cnn_dropout=True in json-configs
+            self.cnn_block(cnn_dim, cnn_dim, 5)
+            for layer in range(polarity_layers)
+        ]
         polarity_sequential = torch.nn.Sequential(*layers).to(torch.device(self.device))
         components["polarity"].update({"cnn_sequential": polarity_sequential})
         
-        layers = []
-        for layer in range(expression_layers):
-            # every layer gets a dropout, cnn, and relu activation
-            layers.append(torch.nn.Dropout(self.dropout))
-            layers.append(torch.nn.Conv1d(
-                    in_channels = cnn_dim,
-                    out_channels = cnn_dim, 
-                    kernel_size = 5,
-                    padding=2,
-                ))
-            layers.append(torch.nn.ReLU())
+        layers = [
+            # configure dropout (or activation) via use_cnn_dropout=True in json-configs
+            self.cnn_block(cnn_dim, cnn_dim, 5)
+            for layer in range(expression_layers)
+        ]
         expression_sequential = torch.nn.Sequential(*layers).to(torch.device(self.device))
         components["expression"].update({"cnn_sequential": expression_sequential})
 
@@ -1222,37 +1264,26 @@ class IMN(BertHead):
         # Task-specific output layers
         #######################################
         components["target"].update({
-            "linear": torch.nn.Sequential(
-                torch.nn.Dropout(self.dropout),
-                torch.nn.Linear(
+            # configure dropout (or activation) via use_linear_dropout in json-configs
+            "linear": self.linear_block(
                     in_features=int(768+(shared_layers+1)*cnn_dim),  # bert:768 + shared_cnn:(300 + 300) + target_cnn:300
                     out_features=3
-                ), 
-                torch.nn.Softmax(dim=-1)
             ).to(torch.device(self.device))
         })
 
         components["expression"].update({
-            "linear": torch.nn.Sequential(
-                torch.nn.Dropout(self.dropout),
-                torch.nn.Linear(
+            "linear": self.linear_block(
                     in_features=int(768+(shared_layers+1)*cnn_dim), # bert:768 + shared_cnn:(300 + 300) + expression_cnn:300
                     out_features=3
-                ), 
-                torch.nn.Softmax(dim=-1)
             ).to(torch.device(self.device))
         })
 
         # polarity had attention before linear
         components["polarity"].update({
             "attention": torch.nn.MultiheadAttention(cnn_dim, num_heads=1).to(torch.device(self.device)), 
-            "linear": torch.nn.Sequential(
-                torch.nn.Dropout(self.dropout),
-                torch.nn.Linear(
+            "linear": self.linear_block(
                     in_features=int(2*cnn_dim), # initial_shared_features:300 + polarity_cnn:300
                     out_features=polarity_labels  # NOTE: SemEval data has neutral and confusing polarities
-                ), 
-                torch.nn.Softmax(dim=-1)
             ).to(torch.device(self.device))
         })
 
@@ -1264,7 +1295,7 @@ class IMN(BertHead):
         components.update({
             "scope": torch.nn.ModuleDict({
                 # scope finder: shared -> linear 
-                "linear": torch.nn.Sequential(
+                "linear": torch.nn.Sequential(  # FIXME delete or retest
                     torch.nn.Linear(
                         in_features=cnn_dim,
                         out_features=2
@@ -1286,13 +1317,10 @@ class IMN(BertHead):
         # Re-encoder
         #######################################
         components["shared"].update({
-            "re_encode": torch.nn.Sequential(
-                torch.nn.Linear(
+            "re_encode": self.linear_block(
                     # sentence_output:cnn_dim + target_output:3 + expression_output:3 + polarity_output:5
                     in_features=int(cnn_dim + 3 + 3 + polarity_labels),  
                     out_features=cnn_dim,
-                ),
-                torch.nn.ReLU()
             ).to(torch.device(self.device))
         })
 
@@ -1847,66 +1875,10 @@ class FgFlex(BertHead):
     Parameters:
         TODO Fill in parameters used in self.find()
     """
-    def expanding_cnn_block(self, in_channels, out_channels, kernel_size=5, m=2):
-        """
-        Expands cnn size to m times the original in_channels size, 
-        before reducing back down to size out_channels
-        """
-        use_cnn_dropout = self.find("use_cnn_dropout", default=False)
-        use_cnn_activation = self.find("use_cnn_activation", default=False)
-
-        layers = []
-
-        if use_cnn_dropout: 
-            layers.append(torch.nn.Dropout(self.dropout))
-
-        layers.append(torch.nn.Conv1d(
-            in_channels = in_channels,
-            out_channels = in_channels*m, 
-            kernel_size = kernel_size,
-            padding = kernel_size//2,
-        ))
-        layers.append(torch.nn.Conv1d(
-            in_channels = in_channels*m,
-            out_channels = out_channels, 
-            kernel_size = kernel_size,
-            padding = kernel_size//2,
-        ))
-
-        if use_cnn_activation:
-            layers.append(torch.nn.ReLU())
-
-        return torch.nn.Sequential(*layers).to(torch.device(self.device))
-
-    def cnn_block(self, in_channels, out_channels, kernel_size=5):
-        use_cnn_dropout = self.find("use_cnn_dropout", default=False)
-        use_cnn_activation = self.find("use_cnn_activation", default=False)
-
-        layers = []
-
-        if use_cnn_dropout: 
-            layers.append(torch.nn.Dropout(self.dropout))
-
-        layers.append(torch.nn.Conv1d(
-            in_channels = in_channels,
-            out_channels = out_channels, 
-            kernel_size = kernel_size,
-            padding = kernel_size//2,
-        ))
-
-        if use_cnn_activation:
-            layers.append(torch.nn.ReLU())
-
-        return torch.nn.Sequential(*layers).to(torch.device(self.device))
-
-    def attn_block(self, embed_dim):
-        return torch.nn.MultiheadAttention(
-            embed_dim = embed_dim,
-            num_heads = 1,
-            dropout=self.dropout,
-        ).to(torch.device(self.device))
-
     def linear_block(self, in_features, out_features):
+        """
+        TODO Check same as berthead, then delete
+        """
         use_linear_activation = self.find("use_linear_activation", default=False)
         use_linear_dropout = self.find("use_linear_dropout", default=False)
 
