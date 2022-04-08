@@ -1,0 +1,19 @@
+{
+    "name": "head-loss-weight-coarse",
+    "model_name": "BertHead",
+
+    "loss_weight": [1, 5, 10, 15, 20, 25, 30],
+    "learning_rate": 1e-5,
+
+    "dropout": 0.4,
+    "bert_finetune": true,
+    "bert_expression": true,
+    "bert_holder": true,
+    "bert_polarity": true,
+    "bert_target": true,
+
+    "metric": "absa",
+
+    "epochs": 50
+
+}

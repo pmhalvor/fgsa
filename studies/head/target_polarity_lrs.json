@@ -1,0 +1,16 @@
+{
+    "name": "study-target-polarity-lrs",
+    "polarity_lr": [
+        1e-6,
+        1e-7,
+        1e-8,
+        1e-9
+    ],
+    "target_lr": [
+        1e-7,
+        1e-8,
+        1e-9
+    ],
+
+    "metric": "easy"
+}

@@ -1,0 +1,19 @@
+{
+
+    "name": "fglstm-loss-weight",
+    "model_name": "fgsalstm",
+
+    "num_layers": 1,
+    "hidden_size": 768,
+    "bidirectional": false,
+    
+    "dropout": 0.4,
+    "loss_weight": [1, 2, 3, 4, 5],
+
+    "lr": 1e-5, 
+
+    "metric": "absa",
+
+    "epochs": [25]
+
+}

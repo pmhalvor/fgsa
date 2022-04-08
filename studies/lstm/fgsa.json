@@ -1,0 +1,26 @@
+{
+    "name": "fgsaLSTM-loss-weight",
+
+    "model_name": "fgsaLSTM",
+    
+    "dropout": 0.4,
+
+    "loss_weight": [10, 30, 50], 
+    "bert_polarity": true,
+    "bert_target":false,
+    "metric": "hard",
+
+    "optimizer_name": "adam",
+    "weight_decay": 0,
+
+    "lr": 1e-7,
+    "expression_lr": 1e-5,
+    "polarity_lr": 1e-4,
+    "target_lr": 1e-5,
+
+    "bidirectional": [true, false],
+    "hidden_size": [350, 768, 1500],
+    "num_layers": 3,
+    
+    "epochs": [25]
+}

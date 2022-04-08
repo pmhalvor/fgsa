@@ -1,0 +1,21 @@
+{
+
+    "name": "fglstm-loss-weight-coarse",
+    "model_name": "fgsalstm",
+
+    "num_layers": 1,
+    "hidden_size": 768,
+    "bidirectional": false,
+    
+    "loss_weight": [5, 10, 15, 20, 25, 30],
+    "dropout": 0.4,
+    "bert_finetune": true,
+    "bert_expression": true,
+    "bert_holder": true,
+    "bert_polarity": true,
+    "bert_target": true,
+    "metric": "absa",
+
+    "epochs": [25]
+
+}

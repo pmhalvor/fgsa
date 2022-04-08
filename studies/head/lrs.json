@@ -1,0 +1,29 @@
+{
+    "name": "study-lrs",
+    "expression_lr": [
+        1e-6,
+        1e-7,
+        1e-8,
+        1e-9
+    ],
+    "holder_lr": [
+        1e-6,
+        1e-7,
+        1e-8,
+        1e-9
+    ],
+    "polarity_lr": [
+        1e-6,
+        1e-7,
+        1e-8,
+        1e-9
+    ],
+    "target_lr": [
+        1e-6,
+        1e-7,
+        1e-8,
+        1e-9
+    ],
+
+    "metric": "easy"
+}
