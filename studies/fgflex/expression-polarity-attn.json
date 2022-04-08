@@ -1,0 +1,44 @@
+{
+    "name": "fgflex-expression-polarity",
+
+    "model_name": "fgflex",
+    
+    "cnn_dim": 768,
+    "expanding_cnn": 0,
+    "gold_transmission": true,
+    "kernel_size": 5,
+    "stack_count": 1,
+    "attention_relations": [
+        [
+            ["expression", "polarity"],
+            ["polarity", "expression"]
+        ],
+        
+        [
+            ["expression", "polarity"],
+            ["polarity", "expression"],
+            ["shared", "all"]
+        ],
+        [
+            ["expression", "expression"],
+            ["holder", "holder"],
+            ["polarity", "polarity"],
+            ["target", "target"],
+            ["expression", "polarity"],
+            ["polarity", "expression"],
+            ["shared", "all"]
+        ]
+    ],
+
+    "dropout": 0.4,
+    "loss_weight": 1, 
+    "optimizer_name": "adam",
+    "weight_decay": 0,
+    "warm_up_constant": 5,
+    
+    "lr": 1e-5,
+    
+    "metric": "absa",
+
+    "epochs": [50, 50, 50]
+}
