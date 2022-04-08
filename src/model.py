@@ -2106,7 +2106,8 @@ class FgFlex(BertHead):
                 else:
                     same_task = [attn_inter]
 
-                task_inputs[first_task] = torch.stack(same_task).mean(dim=0)      
+                task_inputs[first_task] = torch.stack(same_task).mean(dim=0)  
+                prev_first = first_task    
 
                 # stack outputs for this relation (averaged after all stacks complete)
                 if first_task == "shared":
