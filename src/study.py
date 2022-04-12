@@ -248,13 +248,13 @@ class Study():
 
     def score(self, metric=None):
         """
-        scikit-learn like score() to  use in GridSearchCV
+        Self-configured scoring function for simple external calling
 
         Parameters:
             metric (str): ["easy", "hard", "strict", "binary", "proportional"]
         """
         self.logger.info('Scoring model...')
-        absa, binary, hard, macro, proportional, span = self.model.evaluate(self.dev_loader, verbose=self.verbose)
+        absa, binary, hard, macro, proportional, span = self.model.evaluate(self.test_loader, verbose=self.verbose)
 
         if metric is None:
             metric = self.metric 

@@ -191,6 +191,7 @@ def smooth(study, runs, header=""):
     avg_metric.plot(title="Metric "+header, figsize=(15,5))
 
 
+
 ### DEPRECATED BELOW ------------------------------------------------------
 ### Batch-wise loss 
 def parse_batchwise_loss(data):
