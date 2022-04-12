@@ -199,6 +199,7 @@ def smooth(study, runs, header=""):
 
 
 
+
 ### DEPRECATED BELOW ------------------------------------------------------
 ### Batch-wise loss 
 def parse_batchwise_loss(data):
