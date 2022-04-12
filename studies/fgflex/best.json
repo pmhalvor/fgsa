@@ -1,5 +1,5 @@
 {
-    "name": "fgflex-expression-polarity",
+    "name": "fgflex-best",
 
     "model_name": "fgflex",
     
@@ -10,6 +10,10 @@
     "stack_count": 1,
     "attention_relations": [
         [
+            ["expression", "expression"],
+            ["polarity", "polarity"],
+            ["target", "target"],
+            ["target", "polarity"],
             ["expression", "polarity"]
         ]
     ],
@@ -24,5 +28,5 @@
     
     "metric": "absa",
 
-    "epochs": [25, 25, 25]
+    "epochs": [50, 50, 50]
 }

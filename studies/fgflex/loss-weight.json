@@ -10,7 +10,7 @@
     "stack_count": 1,
     
     "dropout": 0.4,
-    "loss_weight": [1, 5, 10, 15, 20, 25], 
+    "loss_weight": [1, 1, 1, 5, 5, 5, 10, 10, 10], 
     "optimizer_name": "adam",
     "weight_decay": 0,
     "warm_up_constant": 5,
@@ -21,5 +21,5 @@
     
     "metric": "absa",
 
-    "epochs": 50
+    "epochs": [25, 25, 25]
 }
