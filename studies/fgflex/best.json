@@ -28,5 +28,5 @@
     
     "metric": "absa",
 
-    "epochs": [50, 50, 50]
+    "epochs": [25, 25, 25]
 }
