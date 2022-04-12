@@ -2,42 +2,13 @@
     "name": "imn-layers",
     "model_name": "imn",
     
-    "shared_layers": [1, 3, 5],
-    "target_layers": [1, 3, 5],
-    "polarity_layers": [1, 3, 5],
-    "expression_layers": [1, 3, 5],
-    "interactions": 2,
-
-    "cnn_dim": 768,
-    "dropout": 0.1,
-    "loss_weight": [1, 5, 10], 
-    "bert_finetune": true,
-    "bert_expression": true,
-    "bert_holder": true,
-    "bert_polarity": true,
-    "bert_target": true,
-    
-    "lr": 1e-5,
-    "lr_scheduler_patience":25,
-    
-    "metric": "absa",
-
-    "epochs": [25]
-}
-
-
-
-{
-    "name": "imn-layers",
-    "model_name": "imn",
-    
     "find_scope": false,
     "gold_transmission": true,
-    "expression_layers": [1, 3, 5],
-    "polarity_layers": [1, 3, 5],
-    "shared_layers": [1, 3, 5],
-    "target_layers": [1, 3, 5],
-    "interactions": [1, 3, 5],
+    "shared_layers": [1, 2, 3, 4, 5],
+    "expression_layers": [1, 2, 3, 4, 5],
+    "polarity_layers": [1, 2, 3, 4, 5],
+    "target_layers": [1, 2, 3, 4, 5],
+    "interactions": [1, 2, 3, 4, 5],
     "query": "expression",
     "key": "polarity",
     "value": "polarity",
@@ -54,5 +25,5 @@
     
     "metric": "absa",
 
-    "epochs": [25]
+    "epochs": [25, 25, 25]
 }
