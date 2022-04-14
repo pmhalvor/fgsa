@@ -1,0 +1,21 @@
+{
+    "name": "lstm-layers",
+
+    "model_name": "fgsaLSTM",
+    
+    "dropout": 0.4,
+
+    "loss_weight": 1, 
+
+    "optimizer_name": "adam",
+    "weight_decay": 0,
+
+    "lr": 1e-5,
+
+    "num_layers": [1,2,3, 4, 5],
+    "hidden_size": 768,
+    "bidirectional": [false, true],
+    
+    "metric": "absa",
+    "epochs": 25
+}
