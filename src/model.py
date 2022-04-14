@@ -540,6 +540,39 @@ class BertHead(torch.nn.Module):
 
         return torch.nn.Sequential(*layers).to(torch.device(self.device))
 
+    def split_cnn_block(self, in_channels, out_channels, kernels=[3, 5]):
+        """  
+        Parameters:
+            kernels (list): sizes of kernels wished to split cnn between.
+                NOTE: kernel count must be divisible by 768, ex (1,2,3,4,6,8,...)
+        """
+        use_cnn_dropout = self.find("use_cnn_dropout", default=False)  # FIXME True?
+        use_cnn_activation = self.find("use_cnn_activation", default=False)
+
+        splits = torch.nn.ModuleList([])
+
+        for kernel_size in kernels:
+            layers = []
+
+            if use_cnn_dropout: 
+                layers.append(torch.nn.Dropout(self.dropout))
+
+
+            layers.append(torch.nn.Conv1d(
+                in_channels = in_channels,
+                out_channels = out_channels/len(kernels), 
+                kernel_size = kernel_size,
+                padding = kernel_size//2,
+            ))
+
+            if use_cnn_activation:
+                layers.append(torch.nn.ReLU())
+
+            splits.append(torch.nn.Sequential(*layers))
+
+        return splits.to(torch.device(self.device))
+        
+
     def linear_block(self, in_features, out_features):
         use_linear_activation = self.find("use_linear_activation", default=False)
         use_linear_dropout = self.find("use_linear_dropout", default=False)  #TODO true?
@@ -1882,12 +1915,15 @@ class FgFlex(BertHead):
         #######################################
         # cnn related params 
         cnn_dim = self.find("cnn_dim", default=768)
-        expanding_cnn = self.find("expanding_cnn", default=False)
+        expanding_cnn = self.find("expanding_cnn", default=None)
+        split_cnn_kernels = self.find("split_cnn_kernels", default=None)
         kernel_size = self.find("kernel_size", default=5)
         
-        # configurable expanding cnn block
-        cnn_block = self.cnn_block if not expanding_cnn else partial(self.expanding_cnn_block, m=expanding_cnn)
-        
+        # configurable cnn blocks used on subtasks (not shared)
+        # NOTE refactored to task-wise component build
+        # cnn_block = self.cnn_block if not expanding_cnn else partial(self.expanding_cnn_block, m=expanding_cnn)
+        # cnn_block = cnn_block if not split_cnn_kernels else partial(self.split_cnn_block, kernels=split_cnn_kernels)
+
         # layers
         shared_layers = self.find("shared_layers", default=1)
         # task-wise layers found during for-loop in "Task-specific CNN layers"
@@ -1928,12 +1964,29 @@ class FgFlex(BertHead):
         # Task-specific CNN layers
         #######################################
         for task in self.subtasks:
-            components[task].update(
-                {"cnn": torch.nn.Sequential(*[
-                    cnn_block(cnn_dim, cnn_dim)
-                    for layer in range(self.find(task+"_layers", default=1))
-                ])
-            })
+            if expanding_cnn is not None:
+                components[task].update(
+                    {"expanding_cnn": torch.nn.Sequential(*[
+                        self.expanding_cnn_block(cnn_dim, cnn_dim, kernel_size, m=expanding_cnn)
+                        for layer in range(self.find(task+"_layers", default=1))
+                    ])
+                })
+            # elif split_cnn_kernels is not None: # FIXME this is going to fail..
+            #     components[task].update(
+            #         {"split_cnn": torch.nn.Sequential(*[
+            #             self.split_cnn_block(cnn_dim, cnn_dim, split_cnn_kernels)
+            #             for layer in range(self.find(task+"_layers", default=1))
+            #         ])
+            #     })
+            else:
+                components[task].update(
+                    {"cnn": torch.nn.Sequential(*[
+                        self.cnn_block(cnn_dim, cnn_dim, kernel_size)
+                        for layer in range(self.find(task+"_layers", default=1))
+                    ])
+                })
+                
+
 
 
         ######################################
@@ -1941,15 +1994,28 @@ class FgFlex(BertHead):
         ######################################
 
         # similar to IMN setup
-        shared = torch.nn.ModuleDict({
-            "cnn_0": self.cnn_block(
-                in_channels=768, 
-                out_channels=cnn_dim, 
-                kernel_size=kernel_size
-            ),
-            "attn_linear": self.linear_block(cnn_dim*2, 3)
-        })
+        # NOTE main difference: IMN uses split_cnn_block w/ kernel=3 & kernel=5
+        if split_cnn_kernels is not None:
+            shared = torch.nn.ModuleDict({
+                "cnn_0": self.split_cnn_block(
+                    in_channels=768, 
+                    out_channels=cnn_dim, 
+                    kernel_size=split_cnn_kernels
+                ),
+                "attn_linear": self.linear_block(cnn_dim*2, 3)
+            })
+        else:
+            shared = torch.nn.ModuleDict({
+                "cnn_0": self.cnn_block(
+                    in_channels=768, 
+                    out_channels=cnn_dim, 
+                    kernel_size=kernel_size
+                ),
+                "attn_linear": self.linear_block(cnn_dim*2, 3)
+            })
+
         for layer in range(1, shared_layers):
+            # TODO use split_cnn_blocks in all following layers?
             shared.update({
                 f"cnn_{layer}": self.cnn_block(
                     in_channels=cnn_dim, 
@@ -1998,6 +2064,7 @@ class FgFlex(BertHead):
         gold_transmission = self.find("gold_transmission", default=True)
         stack_count = self.find("stack_count", default=1)
         shared_layers = self.find("shared_layers", default=1)
+        split_cnn_kernels = self.find("split_cnn_kernels", default=None)
         
         input_ids = batch[0].to(torch.device(self.device))
         attention_mask = batch[1].to(torch.device(self.device))
@@ -2019,7 +2086,9 @@ class FgFlex(BertHead):
         # Shared CNN layers
         ######################################
         shared = self.components["shared"]
+
         sentence_output = shared[f"cnn_0"](sentence_output)
+        # FIXME check if split_cnn_kernels
         for i in range(1, shared_layers):
             sentence_output = shared[f"cnn_{i}"](sentence_output)
 
@@ -2079,14 +2148,15 @@ class FgFlex(BertHead):
                 # logits transmission
                 if gold_transmission and ("all" not in relation) and ("shared" not in relation):
                     first_transmission = self.transmission(outputs[first_task][-1], true_labels[first_task])
-                    second_transmission = self.transmission(outputs[second_task][-1], true_labels[second_task])
+                    # second_transmission = self.transmission(outputs[second_task][-1], true_labels[second_task])
 
                     # reshape to match query/key shapes
                     first_transmission = first_transmission.permute(1, 0).unsqueeze(-1).expand(key.shape)
-                    second_transmission = second_transmission.permute(1, 0).unsqueeze(-1).expand(query.shape)
+                    # second_transmission = second_transmission.permute(1, 0).unsqueeze(-1).expand(query.shape)
 
-                    query = query * second_transmission
-                    key = key * first_transmission
+                    # query = query * second_transmission
+                    # key = key * first_transmission
+                    value = value * first_transmission
 
                 relation_attn, weights = self.components["relations"][f"stack_{stack}"][relation](
                     # expects shape: [seq, batch, cnn_dim]
