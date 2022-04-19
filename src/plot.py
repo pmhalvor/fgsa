@@ -194,9 +194,10 @@ def smooth(study, runs, header=""):
     avg_metric.plot(title="Metric "+header, figsize=(15,5))
 
     print("Final values:")
-    display(avg_loss.tail(1))
-    display(avg_metric.tail(1))
+    display(avg_loss.tail(3))
+    display(avg_metric.tail(3))
 
+    return avg_loss, avg_metric
 
 
 
