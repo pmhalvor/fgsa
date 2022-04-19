@@ -2249,10 +2249,9 @@ class FgFlex(BertHead):
                 else:
                     same_task = [attn_inter]
 
-                # FIXME this is where we update polarity w/ wrong shape [32, 57, 1536]
-                # need to re-encode? 
-                reencoding = self.components[first_task]["re-encode"](torch.stack(same_task).mean(dim=0))
-                task_inputs[first_task] = reencoding  # TODO START HERHEREHR by testing in jupyter (probab need to restart it.. )  
+                if first_task in task_inputs:
+                    re_encoded = self.components[first_task]["re_encode"](torch.stack(same_task).mean(dim=0))
+                    task_inputs[first_task] = re_encoded.permute(0, 2, 1)
                 prev_first = first_task    
 
                 # stack outputs for this relation (averaged after all stacks complete)
