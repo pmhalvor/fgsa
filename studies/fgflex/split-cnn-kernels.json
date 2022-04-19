@@ -4,7 +4,6 @@
     "model_name": "fgflex",
     
     "cnn_dim": 768,
-    "expanding_cnn": 0,
     "gold_transmission": true,
     "split_cnn_kernels": [
         [3,5],

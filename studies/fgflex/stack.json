@@ -1,6 +1,7 @@
 {
-
-    "model_name": "fgflex-stack",
+    "name": "fgflex-stack",
+    
+    "model_name": "fgflex",
     
     "cnn_dim": 768,
     "expanding_cnn": 0,
