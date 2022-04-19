@@ -345,8 +345,20 @@ class BertHead(torch.nn.Module):
         # init after kwargs stored
         self.unpack_lrs()
 
+        # for i in range(5):  # dirty fix to avoid intermittend HTTPError for hugging face
+        #     try:
+        #         self.bert = BertModel.from_pretrained(bert_path).to(torch.device(self.device))
+        #     except Exception as e:
+        #         if "HTTPError" in e.msg() and i<4:
+        #             continue
+        #         raise e 
+        #     if self.find("bert") is not None:
+        #         break
+
         # initialize bert head
         self.bert = BertModel.from_pretrained(bert_path).to(torch.device(self.device))
+
+
         self.bert.requires_grad = self.finetune
         self.bert_dropout = torch.nn.Dropout(self.dropout).to(torch.device(self.device)) 
         
@@ -540,6 +552,56 @@ class BertHead(torch.nn.Module):
 
         return torch.nn.Sequential(*layers).to(torch.device(self.device))
 
+    def split_cnn_block(self, in_channels, out_channels, kernels=[3, 5], task_layers=1):
+        """ 
+
+        Implementation style: 
+            1. split into kernel sizes
+            2. go through all task layers
+            3. concatenate to original output size
+
+        Parameters:
+            kernels (list): sizes of kernels wished to split cnn between.
+                NOTE: kernel count must be divisible by 768, ex (1,2,3,4,6,8,...)
+        """
+        use_cnn_dropout = self.find("use_cnn_dropout", default=False)  # FIXME True?
+        use_cnn_activation = self.find("use_cnn_activation", default=False)
+
+        splits = torch.nn.ModuleList([])
+
+        for kernel_size in kernels: 
+            elements = []
+
+
+            for task_layer in range(task_layers):
+
+                if use_cnn_dropout: 
+                    elements.append(torch.nn.Dropout(self.dropout))
+
+                if task_layer == 0:
+                    # first layer expects inputs of orig size
+                    elements.append(torch.nn.Conv1d(
+                        in_channels = in_channels,
+                        out_channels = int(out_channels/len(kernels)), 
+                        kernel_size = kernel_size,
+                        padding = kernel_size//2,
+                    ))
+                else:
+                    # all other layers expect inputs size as previous output
+                    elements.append(torch.nn.Conv1d(
+                        in_channels = int(in_channels/len(kernels)),
+                        out_channels = int(out_channels/len(kernels)), 
+                        kernel_size = kernel_size,
+                        padding = kernel_size//2,
+                    ))
+
+                if use_cnn_activation:
+                    elements.append(torch.nn.ReLU())
+                
+            splits.append(torch.nn.Sequential(*elements))
+
+        return splits.to(torch.device(self.device))
+        
     def linear_block(self, in_features, out_features):
         use_linear_activation = self.find("use_linear_activation", default=False)
         use_linear_dropout = self.find("use_linear_dropout", default=False)  #TODO true?
@@ -1774,6 +1836,8 @@ class RACL(IMN):
 
             # TODO gold transmission of expressions
             if gold_transmission:
+                # shouldn't target also be transmissed?
+                # make get_confidence handle both target and expression, taking in batch[2] or batch[5]
                 raise NotImplementedError  # not exactly complete, come back and check
                 expression_confidence = self.get_confidence(
                     expression_logits, 
@@ -1788,6 +1852,8 @@ class RACL(IMN):
 
             # polarity convolution
             polarity_cnn = self.components["polarity"]["cnn"](polarity_inputs[-1])
+
+            # TODO it looks like both target and expression should each be applied to polarity somehow..?
 
             # shared-polarity attention
             polarity_attn, _ = self.components["relations"][f"stack_{i}"]["shared_at_polarity"](
@@ -1882,11 +1948,10 @@ class FgFlex(BertHead):
         #######################################
         # cnn related params 
         cnn_dim = self.find("cnn_dim", default=768)
-        expanding_cnn = self.find("expanding_cnn", default=False)
+        expanding_cnn = self.find("expanding_cnn", default=None)
+        split_cnn_kernels = self.find("split_cnn_kernels", default=None)
+        split_cnn_tasks = self.find("split_cnn_tasks", default=None)
         kernel_size = self.find("kernel_size", default=5)
-        
-        # configurable expanding cnn block
-        cnn_block = self.cnn_block if not expanding_cnn else partial(self.expanding_cnn_block, m=expanding_cnn)
         
         # layers
         shared_layers = self.find("shared_layers", default=1)
@@ -1916,7 +1981,7 @@ class FgFlex(BertHead):
 
                 # map subtask information back to shared hidden state size
                 "re_encode": self.linear_block(
-                    in_features=cnn_dim,  # update according to forward
+                    in_features=cnn_dim*2,  # after attention
                     out_features=cnn_dim
                 )
             })
@@ -1927,29 +1992,70 @@ class FgFlex(BertHead):
         #######################################
         # Task-specific CNN layers
         #######################################
-        for task in self.subtasks:
-            components[task].update(
-                {"cnn": torch.nn.Sequential(*[
-                    cnn_block(cnn_dim, cnn_dim)
-                    for layer in range(self.find(task+"_layers", default=1))
-                ])
-            })
+        # NOTE: stack can be 0, then these components are skipped. # TODO test this implementation
+        for stack in range(stack_count):
+            for task in self.subtasks:
+                task_layers = self.find(task+"_layers", default=1)
 
+                # handle three different cnn types for subtasks
+                if expanding_cnn:  # Sometimesse will be 0, other times None
+                    components[task].update(
+                        {f"cnn_{stack}": torch.nn.Sequential(*[
+                            self.expanding_cnn_block(cnn_dim, cnn_dim, kernel_size, m=expanding_cnn)
+                            for layer in range(task_layers)
+                            ])}
+                        )
+                elif None not in (split_cnn_tasks, split_cnn_kernels): 
+                    if task in split_cnn_tasks:
+                        components[task].update({
+                            f"cnn_{stack}": self.split_cnn_block(
+                                cnn_dim, cnn_dim, split_cnn_kernels, task_layers
+                                )
+                            })
+                    else:
+                        components[task].update(
+                            {f"cnn_{stack}": torch.nn.Sequential(*[
+                                self.cnn_block(cnn_dim, cnn_dim, kernel_size)
+                                for layer in range(task_layers)
+                                ])}
+                            )
+
+                else:
+                    components[task].update(
+                        {f"cnn_{stack}": torch.nn.Sequential(*[
+                            self.cnn_block(cnn_dim, cnn_dim, kernel_size)
+                            for layer in range(task_layers)
+                            ])}
+                        )
+                
 
         ######################################
         # Shared relation components
         ######################################
 
         # similar to IMN setup
-        shared = torch.nn.ModuleDict({
-            "cnn_0": self.cnn_block(
-                in_channels=768, 
-                out_channels=cnn_dim, 
-                kernel_size=kernel_size
-            ),
-            "attn_linear": self.linear_block(cnn_dim*2, 3)
-        })
+        # NOTE main difference: IMN uses split_cnn_block w/ kernel=3 & kernel=5
+        if split_cnn_kernels is not None:  # NOTE only split on first shared
+            shared = torch.nn.ModuleDict({
+                "cnn_0": self.split_cnn_block(
+                    in_channels=768, 
+                    out_channels=cnn_dim, 
+                    kernels = split_cnn_kernels
+                ),
+                "attn_linear": self.linear_block(cnn_dim*2, 3)
+            })
+        else:
+            shared = torch.nn.ModuleDict({
+                "cnn_0": self.cnn_block(
+                    in_channels=768, 
+                    out_channels=cnn_dim, 
+                    kernel_size=kernel_size
+                ),
+                "attn_linear": self.linear_block(cnn_dim*2, 3)
+            })
+
         for layer in range(1, shared_layers):
+            # TODO use split_cnn_blocks in all following layers?
             shared.update({
                 f"cnn_{layer}": self.cnn_block(
                     in_channels=cnn_dim, 
@@ -1973,7 +2079,7 @@ class FgFlex(BertHead):
             "relations": relations,
         }))
 
-        if stack_count > 0:
+        if stack_count > 0:  # when stack == 0 no attention should be made. No task-wise cnn either.. 
             prev_task = None
             for task in self.subtasks:
                 for relation in components["relations"]["stack_0"]:
@@ -1998,6 +2104,8 @@ class FgFlex(BertHead):
         gold_transmission = self.find("gold_transmission", default=True)
         stack_count = self.find("stack_count", default=1)
         shared_layers = self.find("shared_layers", default=1)
+        split_cnn_kernels = self.find("split_cnn_kernels", default=None)
+        split_cnn_tasks = self.find("split_cnn_tasks", default=None)
         
         input_ids = batch[0].to(torch.device(self.device))
         attention_mask = batch[1].to(torch.device(self.device))
@@ -2019,12 +2127,26 @@ class FgFlex(BertHead):
         # Shared CNN layers
         ######################################
         shared = self.components["shared"]
-        sentence_output = shared[f"cnn_0"](sentence_output)
+
+        if split_cnn_kernels is not None:
+            # split cnn output is a list
+            splits = len(shared[f"cnn_0"])
+            sentence_output = torch.cat(
+                [
+                    cnn(sentence_output)
+                    for cnn in shared[f"cnn_0"]
+                ],
+                dim=1  # concat on the embedding dimension
+            )
+        else:
+            sentence_output = shared[f"cnn_0"](sentence_output)
+
         for i in range(1, shared_layers):
             sentence_output = shared[f"cnn_{i}"](sentence_output)
 
             # update word embeddings with shared features learned from this cnn layer
             embeddings = torch.cat((embeddings, sentence_output), dim=1) # cat embedding dim
+            # FIXME embeddings is never even used..?
 
         # only the information learned from shared cnn(s), no embeddings
         initial_shared_features = sentence_output
@@ -2032,16 +2154,16 @@ class FgFlex(BertHead):
         ######################################
         # Stacked relation interactions
         ######################################
-        task_inputs = {
+        task_inputs = {  # TODO document
             task: initial_shared_features
             for task in self.subtasks
         }
-        outputs = {
+        outputs = {  # TODO document
             task: []
             for task in self.subtasks
         }
-        attn_outputs = {}
-        cnn_outputs = {"shared": initial_shared_features}
+        attn_outputs = {}  # TODO document
+        cnn_outputs = {"shared": initial_shared_features}  # TODO document
 
         for stack in range(stack_count):
             ######################################
@@ -2049,11 +2171,22 @@ class FgFlex(BertHead):
             ######################################
             for task in self.subtasks:
                 task_output = task_inputs[task]
-                if "cnn" in self.components[task].keys():
-                    cnn_outputs[task] = self.components[task]["cnn"](task_output)
+
+                if f"cnn_{stack}" in self.components[task].keys():
+                    if split_cnn_tasks is not None and task in split_cnn_tasks: 
+                        cnn_outputs[task] = torch.cat(
+                            [
+                                cnn(task_output)
+                                for cnn in self.components[task][f"cnn_{stack}"]
+                            ],
+                            dim=1
+                        )
+                    else:
+                        cnn_outputs[task] = self.components[task][f"cnn_{stack}"](task_output)
+
                     # TODO take into account embeddings like in IMN? Then would need to expand linear in init_comp
                     # task_output = torch.cat((embeddings, cnn_outputs[task]), dim=1)  # cat embedding dim
-                else:
+                else:  # TODO check does this occur when task layers = 0=?
                     cnn_outputs[task] = task_output
 
                 outputs[task].append(self.components[task]["linear"](task_output.permute(0, 2, 1)))
@@ -2079,14 +2212,16 @@ class FgFlex(BertHead):
                 # logits transmission
                 if gold_transmission and ("all" not in relation) and ("shared" not in relation):
                     first_transmission = self.transmission(outputs[first_task][-1], true_labels[first_task])
-                    second_transmission = self.transmission(outputs[second_task][-1], true_labels[second_task])
+                    # second_transmission = self.transmission(outputs[second_task][-1], true_labels[second_task])
 
                     # reshape to match query/key shapes
                     first_transmission = first_transmission.permute(1, 0).unsqueeze(-1).expand(key.shape)
-                    second_transmission = second_transmission.permute(1, 0).unsqueeze(-1).expand(query.shape)
+                    # second_transmission = second_transmission.permute(1, 0).unsqueeze(-1).expand(query.shape)
 
-                    query = query * second_transmission
+                    # NOTE only apply gold transimssion to keys (first task), so values help "remap" to previous state
+                    # query = query * second_transmission
                     key = key * first_transmission
+                    # value = value * first_transmission
 
                 relation_attn, weights = self.components["relations"][f"stack_{stack}"][relation](
                     # expects shape: [seq, batch, cnn_dim]
@@ -2106,7 +2241,9 @@ class FgFlex(BertHead):
                 else:
                     same_task = [attn_inter]
 
-                task_inputs[first_task] = torch.stack(same_task).mean(dim=0)  
+                if first_task in task_inputs:
+                    re_encoded = self.components[first_task]["re_encode"](torch.stack(same_task).mean(dim=0))
+                    task_inputs[first_task] = re_encoded.permute(0, 2, 1)
                 prev_first = first_task    
 
                 # stack outputs for this relation (averaged after all stacks complete)
@@ -2120,8 +2257,8 @@ class FgFlex(BertHead):
         if stack_count == 0:
             for task in self.subtasks:
                 task_output = task_inputs[task]
-                if "cnn" in self.components[task].keys():
-                    task_output = self.components[task]["cnn"](task_output)
+                # if "cnn_0" in self.components[task].keys():
+                #     task_output = self.components[task]["cnn_0"](task_output)
                 outputs[task] = [self.components[task]["linear"](task_output.permute(0, 2, 1))]
 
         final_output = {

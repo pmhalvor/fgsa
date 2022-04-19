@@ -1,0 +1,31 @@
+{
+    "name": "fgflex-split-cnn-tasks",
+
+    "model_name": "fgflex",
+    
+    "cnn_dim": 768,
+    "expanding_cnn": 0,
+    "gold_transmission": true,
+    "split_cnn_tasks": [
+        ["expression", "holder", "target", "polarity"],
+        ["expression"],
+        ["holder"],
+        ["target"],
+        ["polarity"],
+        ["target", "polarity"]
+    ],
+    "split_cnn_kernels": [[3, 5, 7]],
+    "stack_count": 1,
+
+    "dropout": 0.4,
+    "loss_weight": 1, 
+    "optimizer_name": "adam",
+    "weight_decay": 0,
+    "warm_up_constant": 5,
+    
+    "lr": 1e-5,
+    
+    "metric": "absa",
+
+    "epochs": [25, 25, 25]
+}

@@ -1,0 +1,31 @@
+{
+    "name": "fgflex-best",
+
+    "model_name": "fgflex",
+    
+    "cnn_dim": 768,
+    "expanding_cnn": 0,
+    "gold_transmission": true,
+    "kernel_size": 5,
+    "stack_count": 1,
+    "attention_relations": [
+        [
+            ["target", "expression"],
+            ["expression", "target"],
+            ["target", "polarity"],
+            ["expression", "polarity"]
+        ]
+    ],
+
+    "dropout": 0.4,
+    "loss_weight": 1, 
+    "optimizer_name": "adam",
+    "weight_decay": 0,
+    "warm_up_constant": 5,
+    
+    "lr": 1e-5,
+    
+    "metric": "absa",
+
+    "epochs": [25, 25, 25]
+}

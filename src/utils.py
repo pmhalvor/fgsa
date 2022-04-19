@@ -290,7 +290,7 @@ def span_f1(gold, pred, eps=1e-8):
 
 def proportional_f1(true_labels, predict_labels, num_labels, eps=1e-8):
     """
-    F1-score for _any_ correctly guessed label. Much more lenient than score() from RACL (above).
+    F1-score for token-wise label predictions. Much more lenient than score() from RACL (above).
 
     Parameters:
         true_labels (torch.Tensor): batched true labels of size [batchsize, seq_len] 
@@ -351,7 +351,7 @@ def binary_tp(gold, pred):
     # for p in pred:  # for token in prediction
     tp = False  # reset tp value
     for p, g in zip(pred, gold):
-        if p == g:
+        if g > 0 and p == g:  # gold token is B or I and pred==gold
             tp = True
     if tp is True:
         tps += 1
@@ -384,7 +384,7 @@ def binary_fp(gold, pred):
     fps = 0
     fp = False
     for p, g in zip(pred, gold):
-        if p>0 and g==0:  # predicted label present, but zero in gold
+        if p > 0 and g==0:  # predicted label present, but zero in gold
             fp = True
     if fp is True:
         fps += 1

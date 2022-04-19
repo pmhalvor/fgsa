@@ -20,12 +20,8 @@
 
     "dropout": 0.4,
 
-    "loss_weight": [1, 5, 10], 
     "bert_finetune": true,
-    "bert_expression": true,
-    "bert_holder": true,
-    "bert_polarity": true,
-    "bert_target": true,
+    "loss_weight": [1, 5, 10], 
     "metric": "absa",
 
     "optimizer_name": "adam",
