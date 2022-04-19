@@ -600,7 +600,7 @@ class BertHead(torch.nn.Module):
                 
             splits.append(torch.nn.Sequential(*elements))
 
-        return splits
+        return splits.to(torch.device(self.device))
         
     def linear_block(self, in_features, out_features):
         use_linear_activation = self.find("use_linear_activation", default=False)
