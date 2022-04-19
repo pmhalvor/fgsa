@@ -1,21 +1,21 @@
 {
-    "name": "fgflex-best",
+    "name": "fgflex-split-cnn-tasks",
 
     "model_name": "fgflex",
     
     "cnn_dim": 768,
     "expanding_cnn": 0,
     "gold_transmission": true,
-    "kernel_size": 5,
-    "stack_count": 1,
-    "attention_relations": [
-        [
-            ["target", "expression"],
-            ["expression", "target"],
-            ["target", "polarity"],
-            ["expression", "polarity"]
-        ]
+    "split_cnn_kernels": [3, 5, 7],
+    "split_cnn_tasks": [
+        ["expression", "holder", "target", "polarity"],
+        ["expression"],
+        ["holder"],
+        ["target"],
+        ["polarity"],
+        ["target", "polarity"]
     ],
+    "stack_count": 1,
 
     "dropout": 0.4,
     "loss_weight": 1, 

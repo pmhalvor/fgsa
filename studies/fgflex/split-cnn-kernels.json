@@ -1,22 +1,24 @@
 {
+    "name": "fgflex-split-cnn-kernels",
 
-    "model_name": "fgflex-stack",
+    "model_name": "fgflex",
     
     "cnn_dim": 768,
     "expanding_cnn": 0,
     "gold_transmission": true,
-    "kernel_size": 5,
-    "stack_count": [1, 2, 3, 4, 5],
-    
-    "dropout": 0.4,
+    "split_cnn_kernels": [
+        [3,5],
+        [3, 5, 7],
+        [5, 7],
+        [3, 7]
+    ],
+    "stack_count": [1, 2, 3],
 
+    "dropout": 0.4,
     "loss_weight": 1, 
-    "bert_finetune": true,
     "optimizer_name": "adam",
     "weight_decay": 0,
     "warm_up_constant": 5,
-    "use_linear_dropout": [true, false],
-    "use_cnn_dropout": [true, false],
     
     "lr": 1e-5,
     

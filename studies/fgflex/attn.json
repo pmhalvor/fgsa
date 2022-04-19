@@ -1,27 +1,40 @@
 {
-    "name": "fgflex-best",
 
-    "model_name": "fgflex",
+    "model_name": "fgflex-attn",
     
     "cnn_dim": 768,
     "expanding_cnn": 0,
     "gold_transmission": true,
     "kernel_size": 5,
-    "stack_count": 1,
+    "stack_count": [1, 2, 3, 4, 5],
+    
     "attention_relations": [
+        [
+            ["target", "target"],
+            ["expression", "expression"],
+            ["holder", "holder"],
+            ["polarity", "polarity"]
+        ],
         [
             ["target", "expression"],
             ["expression", "target"],
             ["target", "polarity"],
             ["expression", "polarity"]
+        ],
+        [
+            ["expression", "polarity"]
         ]
     ],
 
     "dropout": 0.4,
+
     "loss_weight": 1, 
+    "bert_finetune": true,
     "optimizer_name": "adam",
     "weight_decay": 0,
     "warm_up_constant": 5,
+    "use_linear_dropout": [true, false],
+    "use_cnn_dropout": [true, false],
     
     "lr": 1e-5,
     
