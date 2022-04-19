@@ -1,6 +1,8 @@
 {
 
-    "model_name": "fgflex-attn",
+    "name": "fgflex-attn",
+    
+    "model_name": "fgflex",
     
     "cnn_dim": 768,
     "expanding_cnn": 0,
