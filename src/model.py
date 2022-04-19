@@ -2174,7 +2174,7 @@ class FgFlex(BertHead):
 
                 # apply regular cnn
                 if f"cnn_{stack}" in self.components[task].keys():
-                    if task in split_cnn_tasks: 
+                    if split_cnn_tasks is not None and task in split_cnn_tasks: 
                         cnn_outputs[task] = torch.cat(
                             [
                                 cnn(task_output)
