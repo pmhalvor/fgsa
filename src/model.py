@@ -1998,7 +1998,7 @@ class FgFlex(BertHead):
                 task_layers = self.find(task+"_layers", default=1)
 
                 # handle three different cnn types for subtasks
-                if expanding_cnn is not None:
+                if expanding_cnn:  # Sometimesse will be 0, other times None
                     components[task].update(
                         {f"cnn_{stack}": torch.nn.Sequential(*[
                             self.expanding_cnn_block(cnn_dim, cnn_dim, kernel_size, m=expanding_cnn)
@@ -2172,8 +2172,6 @@ class FgFlex(BertHead):
             for task in self.subtasks:
                 task_output = task_inputs[task]
 
-                print(task, task_output.shape, type(task_inputs))
-
                 # apply regular cnn
                 if f"cnn_{stack}" in self.components[task].keys():
                     if task in split_cnn_tasks: 
@@ -2184,19 +2182,14 @@ class FgFlex(BertHead):
                             ],
                             dim=1
                         )
-                        print(f"Successfully applied split cnn for {task} giving output shape {cnn_outputs[task].shape}")
                     else:
-                        print(f"{task} does not use split cnn, so using regular cnn")
-                        print({self.components[task][f"cnn_{stack}"]})
                         cnn_outputs[task] = self.components[task][f"cnn_{stack}"](task_output)
 
                     # TODO take into account embeddings like in IMN? Then would need to expand linear in init_comp
                     # task_output = torch.cat((embeddings, cnn_outputs[task]), dim=1)  # cat embedding dim
                 else:  # TODO check does this occur when task layers = 0=?
-                    print(f"In else on {task} bc cnn_{stack} not in {self.components[task].keys()}")
                     cnn_outputs[task] = task_output
 
-                print(f"Made it to linear outputs for {task}: output.shape={task_output.shape}")
                 outputs[task].append(self.components[task]["linear"](task_output.permute(0, 2, 1)))
 
             cnn_outputs["all"] = sum([cnn_outputs[task] for task in self.subtasks])
