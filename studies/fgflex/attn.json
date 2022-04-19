@@ -6,9 +6,7 @@
     "expanding_cnn": 0,
     "gold_transmission": true,
     "kernel_size": 5,
-    "stack_count": [1, 2, 3, 4, 5],
-    
-    "attention_relations": [
+        "attention_relations": [
         [
             ["target", "target"],
             ["expression", "expression"],
@@ -25,6 +23,8 @@
             ["expression", "polarity"]
         ]
     ],
+
+    "stack_count": 1,
 
     "dropout": 0.4,
 
