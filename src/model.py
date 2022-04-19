@@ -1807,6 +1807,8 @@ class RACL(IMN):
 
             # TODO gold transmission of expressions
             if gold_transmission:
+                # shouldn't target also be transmissed?
+                # make get_confidence handle both target and expression, taking in batch[2] or batch[5]
                 raise NotImplementedError  # not exactly complete, come back and check
                 expression_confidence = self.get_confidence(
                     expression_logits, 
@@ -1821,6 +1823,8 @@ class RACL(IMN):
 
             # polarity convolution
             polarity_cnn = self.components["polarity"]["cnn"](polarity_inputs[-1])
+
+            # TODO it looks like both target and expression should each be applied to polarity somehow..?
 
             # shared-polarity attention
             polarity_attn, _ = self.components["relations"][f"stack_{i}"]["shared_at_polarity"](
