@@ -97,6 +97,9 @@ def parse_metrics(data):
                 metric = metric.split("(RACL)")[-1].strip()
             loss = float(line.split('overall: ')[-1].split(' (')[0].strip())
             scores[metric.lower()].append(loss)
+        
+        if "Score:" in line:
+            print(line.split("INFO] ")[1])
             
     for metric in list(scores):
         if scores[metric] == []:
@@ -158,7 +161,7 @@ def show_study_loss(name, title=None):
             for row in run:
                 if "Current" in row:
                     print("Above plots w/ following params:\n {}".format(row.split("Current params:")[-1]))
-        
+                    print("="*75)
         except TypeError:
             print("No data for run {}".format(i))
     
@@ -189,6 +192,12 @@ def smooth(study, runs, header=""):
 
     avg_loss.plot(title="Loss "+header, figsize=(15,5))
     avg_metric.plot(title="Metric "+header, figsize=(15,5))
+
+    print("Final values:")
+    display(avg_loss.tail(3))
+    display(avg_metric.tail(3))
+
+    return avg_loss, avg_metric
 
 
 

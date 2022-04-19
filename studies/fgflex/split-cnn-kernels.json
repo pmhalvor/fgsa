@@ -1,0 +1,27 @@
+{
+    "name": "fgflex-split-cnn-kernels",
+
+    "model_name": "fgflex",
+    
+    "cnn_dim": 768,
+    "gold_transmission": true,
+    "split_cnn_kernels": [
+        [3,5],
+        [3, 5, 7],
+        [5, 7],
+        [3, 7]
+    ],
+    "stack_count": [1, 2, 3],
+
+    "dropout": 0.4,
+    "loss_weight": 1, 
+    "optimizer_name": "adam",
+    "weight_decay": 0,
+    "warm_up_constant": 5,
+    
+    "lr": 1e-5,
+    
+    "metric": "absa",
+
+    "epochs": [25, 25, 25]
+}
