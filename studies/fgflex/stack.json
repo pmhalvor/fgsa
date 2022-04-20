@@ -8,6 +8,11 @@
     "gold_transmission": true,
     "kernel_size": 5,
     "stack_count": [3, 4, 5],
+    "attention_relations": [
+        [
+            ["polarity", "expression"]
+        ]
+    ],
     
     "dropout": 0.4,
 
