@@ -7,7 +7,7 @@
     "expanding_cnn": 0,
     "gold_transmission": true,
     "kernel_size": 5,
-    "stack_count": [1, 2, 3, 4, 5],
+    "stack_count": [3, 4, 5],
     
     "dropout": 0.4,
 
@@ -17,7 +17,7 @@
     "weight_decay": 0,
     "warm_up_constant": 5,
     "use_linear_dropout": [true, false],
-    "use_cnn_dropout": [true, false],
+    "use_cnn_dropout": [false, true],
     
     "lr": 1e-5,
     
