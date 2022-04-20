@@ -1637,16 +1637,17 @@ class RACL(IMN):
     def init_components(self, subtasks):
         cnn_dim = self.find("cnn_dim", default=768)
         stack_count = self.find("stack_count", default=1)
+        kernel_size = self.find("kernel_size", default=5)
 
         components = torch.nn.ModuleDict({
             "target": torch.nn.ModuleDict({
                 # aspect extraction: cnn -> relu -> matmul w/ expression -> attention -> cat -> linear
                 "cnn": torch.nn.Sequential(
                     torch.nn.Conv1d(
-                        in_channels = int(768),
+                        in_channels = int(cnn_dim),
                         out_channels = int(cnn_dim), 
-                        kernel_size = 5,
-                        padding=2
+                        kernel_size = kernel_size,
+                        padding=kernel_size//2
                     ),
                     torch.nn.ReLU()
                 ).to(torch.device(self.device)),
@@ -1660,7 +1661,7 @@ class RACL(IMN):
                 "re_encode": torch.nn.Sequential(
                     torch.nn.Linear(
                         in_features=int(cnn_dim*2), 
-                        out_features=int(768)
+                        out_features=int(cnn_dim)
                     ),
                     # torch.nn.ReLU(),  # TODO activate like l2 norm or nah?
                     torch.nn.AlphaDropout(
@@ -1672,10 +1673,10 @@ class RACL(IMN):
                 # opinion extraction: cnn -> relu -> matmul w/ target -> attention -> cat -> linear
                 "cnn": torch.nn.Sequential(
                     torch.nn.Conv1d(
-                        in_channels = int(768),
+                        in_channels = int(cnn_dim),
                         out_channels = int(cnn_dim), 
-                        kernel_size = 5,
-                        padding=2
+                        kernel_size = kernel_size,
+                        padding=kernel_size//2
                     ),
                     torch.nn.ReLU()
                 ).to(torch.device(self.device)),
@@ -1689,9 +1690,8 @@ class RACL(IMN):
                 "re_encode": torch.nn.Sequential(
                     torch.nn.Linear(
                         in_features=int(cnn_dim*2), 
-                        out_features=int(768)
+                        out_features=int(cnn_dim)
                     ),
-                    # torch.nn.ReLU(),  # TODO activate like l2 norm or nah?
                     torch.nn.AlphaDropout(
                         self.dropout,
                     ),
@@ -1701,10 +1701,10 @@ class RACL(IMN):
                 # polarity classification: cnn -> relu -> matmul w/ (embedding) -> attention -> cat -> dropout -> linear
                 "cnn": torch.nn.Sequential(
                     torch.nn.Conv1d(
-                        in_channels = int(768),
+                        in_channels = int(cnn_dim),
                         out_channels = int(cnn_dim), 
-                        kernel_size = 5,
-                        padding=2
+                        kernel_size = kernel_size,
+                        padding=kernel_size//2
                     ),
                     torch.nn.ReLU()
                 ).to(torch.device(self.device)),
@@ -1718,7 +1718,7 @@ class RACL(IMN):
                 "re_encode": torch.nn.Sequential(
                     torch.nn.Linear(  # TODO delete
                         in_features=int(cnn_dim), 
-                        out_features=768
+                        out_features=cnn_dim
                     ),
                     # torch.nn.ReLU(),  # TODO activate like l2 norm or nah?
                     torch.nn.AlphaDropout(
@@ -1756,7 +1756,7 @@ class RACL(IMN):
                         # key_padding_mask: (batch[1]*-1)+1
                     ).to(torch.device(self.device)),
                     "shared_at_polarity": torch.nn.MultiheadAttention(
-                        embed_dim = cnn_dim,
+                        embed_dim = cnn_dim,  
                         num_heads = 1,
                         dropout=self.dropout,
                         # query: shared_hidden_state
@@ -1768,10 +1768,14 @@ class RACL(IMN):
                 })
                 for i in range(stack_count)
             }),
+            "shared": self.cnn_block(768, int(cnn_dim), kernel_size)
         }))
 
         self.other_components = {
             "relations": {
+                "lr": self.learning_rate
+            },
+            "shared": {
                 "lr": self.learning_rate
             }
         }
@@ -1794,6 +1798,9 @@ class RACL(IMN):
             attention_mask = attention_mask,
         ).last_hidden_state
         embeddings = self.bert_dropout(embeddings).permute(0, 2, 1)
+
+        # reshape embeddings to cnn_dim
+        embeddings = self.components["shared"](embeddings)
 
         # store inputs along the way 
         expression_inputs = [embeddings]
@@ -1854,7 +1861,6 @@ class RACL(IMN):
             polarity_cnn = self.components["polarity"]["cnn"](polarity_inputs[-1])
 
             # [sequence, batch, cnn_dim]
-            # TODO it looks like both target and expression should each be applied to polarity somehow..?
             query_shared = shared_query[-1].permute(2, 0, 1)
             key_polarity = torch.nn.functional.normalize(polarity_cnn, p=2, dim=-1).permute(2, 0, 1)
             value_context = polarity_cnn.permute(2, 0, 1) + target_attn
@@ -1864,7 +1870,6 @@ class RACL(IMN):
                 expression_transmission = self.transmission(expression_logits, true_labels["expression"])
 
                 value_context += expression_transmission.T.unsqueeze(-1).expand(value_context.shape) 
-
 
             # shared-polarity attention
             polarity_attn, _ = self.components["relations"][f"stack_{i}"]["shared_at_polarity"](
