@@ -1977,7 +1977,8 @@ class FgFlex(BertHead):
         components = torch.nn.ModuleDict({
             task: torch.nn.ModuleDict({
                 # final outputs for each task
-                "linear": self.linear_block(in_features=cnn_dim, out_features=3),
+                # in features are concats of embeddings, shared layers, and task cnns
+                "linear": self.linear_block(in_features=cnn_dim*3, out_features=3),
 
                 # map subtask information back to shared hidden state size
                 "re_encode": self.linear_block(
@@ -1996,6 +1997,7 @@ class FgFlex(BertHead):
         for stack in range(stack_count):
             for task in self.subtasks:
                 task_layers = self.find(task+"_layers", default=1)
+                # NOTE: if task_layers == 0, empty sequential cnn_0 is made, but data still flows through
 
                 # handle three different cnn types for subtasks
                 if expanding_cnn:  # Sometimesse will be 0, other times None
@@ -2144,9 +2146,8 @@ class FgFlex(BertHead):
         for i in range(1, shared_layers):
             sentence_output = shared[f"cnn_{i}"](sentence_output)
 
-            # update word embeddings with shared features learned from this cnn layer
-            embeddings = torch.cat((embeddings, sentence_output), dim=1) # cat embedding dim
-            # FIXME embeddings is never even used..?
+        # update word embeddings with shared features learned from this cnn layer
+        embeddings = torch.cat((embeddings, sentence_output), dim=1) # cat embedding dim
 
         # only the information learned from shared cnn(s), no embeddings
         initial_shared_features = sentence_output
@@ -2172,22 +2173,18 @@ class FgFlex(BertHead):
             for task in self.subtasks:
                 task_output = task_inputs[task]
 
-                if f"cnn_{stack}" in self.components[task].keys():
-                    if split_cnn_tasks is not None and task in split_cnn_tasks: 
-                        cnn_outputs[task] = torch.cat(
-                            [
-                                cnn(task_output)
-                                for cnn in self.components[task][f"cnn_{stack}"]
-                            ],
-                            dim=1
-                        )
-                    else:
-                        cnn_outputs[task] = self.components[task][f"cnn_{stack}"](task_output)
+                if split_cnn_tasks is not None and task in split_cnn_tasks: 
+                    cnn_outputs[task] = torch.cat(
+                        [
+                            cnn(task_output)
+                            for cnn in self.components[task][f"cnn_{stack}"]
+                        ],
+                        dim=1
+                    )
+                else:
+                    cnn_outputs[task] = self.components[task][f"cnn_{stack}"](task_output)
 
-                    # TODO take into account embeddings like in IMN? Then would need to expand linear in init_comp
-                    # task_output = torch.cat((embeddings, cnn_outputs[task]), dim=1)  # cat embedding dim
-                else:  # TODO check does this occur when task layers = 0=?
-                    cnn_outputs[task] = task_output
+                task_output = torch.cat((embeddings, cnn_outputs[task]), dim=1)  # cat embedding dim
 
                 outputs[task].append(self.components[task]["linear"](task_output.permute(0, 2, 1)))
 
