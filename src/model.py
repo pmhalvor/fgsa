@@ -1439,7 +1439,6 @@ class IMN(BertHead):
         # Task-specific layers
         #######################################
         self.output = {}  # task-specific outputs stored along the way
-        softmax = torch.nn.Softmax(dim=-1)  # expecting labels to be last dim # TODO move to init_components()
 
         for i in range(interactions+1):
             ### Subtask: target
@@ -1785,6 +1784,10 @@ class RACL(IMN):
 
         input_ids = batch[0].to(torch.device(self.device))
         attention_mask = batch[1].to(torch.device(self.device))
+        true_labels = {
+            "expression": batch[2].to(torch.device(self.device)),
+            "target": batch[5].to(torch.device(self.device))
+        }
 
         embeddings = self.bert(
             input_ids = input_ids,
@@ -1809,62 +1812,66 @@ class RACL(IMN):
             target_cnn = self.components["target"]["cnn"](target_inputs[-1])
             expression_cnn = self.components["expression"]["cnn"](expression_inputs[-1])
 
-            # Relation R1  # TODO remove weights expression_at_target (not needed)
-            target_attn, target_at_expression = self.components["relations"][f"stack_{i}"]["target_at_expression"](
-                # expects shape: [seq, batch, cnn_dim]
-                query=torch.nn.functional.normalize(expression_cnn, p=2, dim=-1).permute(2, 0, 1),
-                key=torch.nn.functional.normalize(target_cnn, p=2, dim=-1).permute(2, 0, 1),
-                value=target_cnn.permute(2, 0, 1),
-                key_padding_mask=((batch[1]*-1)+1).bool().to(torch.device(self.device)),
-                need_weights=True
+            #### Relation R1  
+            # TODO check what actually needs to be normalize & what happens when no normalize (like IMN)
+            # MO2A expects shape: [sequence, batch, cnn_dim]
+            query_expression = torch.nn.functional.normalize(expression_cnn, p=2, dim=-1).permute(2, 0, 1)
+            key_target = torch.nn.functional.normalize(target_cnn, p=2, dim=-1).permute(2, 0, 1)
+            value_target = target_cnn.permute(2, 0, 1)
+            mask = ((batch[1]*-1)+1).bool().to(torch.device(self.device))
+
+            target_attn, _ = self.components["relations"][f"stack_{i}"]["target_at_expression"](
+                query=query_expression,
+                key=key_target,
+                value=value_target,
+                key_padding_mask=mask,
+                need_weights=False
             )
 
             target_inter = torch.cat((target_cnn.permute(0, 2, 1), target_attn.permute(1,0,2)), dim=-1)
             target_logits = self.components["target"]["linear"](target_inter)
 
-            # TODO remove weights expression_at_target (not needed)
-            expression_attn, expression_at_target = self.components["relations"][f"stack_{i}"]["expression_at_target"](
+
+            # MA2O expects shape: [sequence, batch, cnn_dim]
+            query_target = torch.nn.functional.normalize(target_cnn, p=2, dim=-1).permute(2, 0, 1)
+            key_expression = torch.nn.functional.normalize(expression_cnn, p=2, dim=-1).permute(2, 0, 1)
+            value_expression = expression_cnn.permute(2, 0, 1)
+            # same mask as before
+
+            expression_attn, _ = self.components["relations"][f"stack_{i}"]["expression_at_target"](
                 # expects shape: [seq, batch, cnn_dim]
-                query=torch.nn.functional.normalize(expression_cnn, p=2, dim=-1).permute(2, 0, 1),
-                key=torch.nn.functional.normalize(target_cnn, p=2, dim=-1).permute(2, 0, 1),
-                value=expression_cnn.permute(2, 0, 1),
-                key_padding_mask=((batch[1]*-1)+1).bool().to(torch.device(self.device)),
+                query=query_target,
+                key=key_expression,
+                value=value_expression,
+                key_padding_mask=mask,
                 need_weights=False
             )
             expression_inter = torch.cat((expression_cnn.permute(0, 2, 1), expression_attn.permute(1,0,2)), dim=-1)
             expression_logits = self.components["expression"]["linear"](expression_inter)
 
-            # TODO gold transmission of expressions
-            if gold_transmission:
-                # shouldn't target also be transmissed?
-                # make get_confidence handle both target and expression, taking in batch[2] or batch[5]
-                raise NotImplementedError  # not exactly complete, come back and check
-                expression_confidence = self.get_confidence(
-                    expression_logits, 
-                    batch,
-                    self.current_epoch
-                )
-                expression_propagate = expression_at_target*(  # expand confidence to shape of attention weights
-                    expression_confidence.unsqueeze(-1).expand(expression_at_target.shape)
-                )
-            else:
-                expression_propagate = expression_attn
 
-            # polarity convolution
+            #### Polarity convolution
             polarity_cnn = self.components["polarity"]["cnn"](polarity_inputs[-1])
 
+            # [sequence, batch, cnn_dim]
             # TODO it looks like both target and expression should each be applied to polarity somehow..?
+            query_shared = shared_query[-1].permute(2, 0, 1)
+            key_polarity = torch.nn.functional.normalize(polarity_cnn, p=2, dim=-1).permute(2, 0, 1)
+            value_context = polarity_cnn.permute(2, 0, 1) + target_attn
+            # same mask as before
+
+            if gold_transmission:
+                expression_transmission = self.transmission(expression_logits, true_labels["expression"])
+
+                value_context += expression_transmission.T.unsqueeze(-1).expand(value_context.shape) 
+
 
             # shared-polarity attention
             polarity_attn, _ = self.components["relations"][f"stack_{i}"]["shared_at_polarity"](
-                query=torch.nn.functional.normalize(shared_query[-1]).permute(2, 0, 1),
-                key=(
-                    # key needs some information sharing from target and expression 
-                    torch.nn.functional.normalize(polarity_cnn, p=2, dim=-1).permute(2, 0, 1)
-                    + target_attn + expression_propagate  # FIXME size problem permute?
-                ),
-                value=polarity_cnn.permute(2, 0, 1),
-                key_padding_mask=((batch[1]*-1)+1).bool().to(torch.device(self.device)),
+                query=query_shared,
+                key=key_polarity,
+                value=value_context,
+                key_padding_mask=mask,
                 need_weights=False
             )
             polarity_inter = shared_query[-1] + polarity_attn.permute(1, 2, 0)
@@ -1910,6 +1917,24 @@ class RACL(IMN):
         expression_confidence.requires_grad = True
         
         return expression_confidence  # shape: [batch, sequence]
+
+
+    def transmission(self, logits, true):
+        """
+        To help guide the attention mechanisms on which tokens to focus more on,
+        given logits from individual subtask. 
+        """
+        # decide how much true labels should influence attention based on current epoch
+        gold_influence = self.get_prob(self.current_epoch, self.find("warm_up_constant", default=5))
+
+        focus_scope = (  # strengthen signal from true logits
+            gold_influence*true.bool().float()
+                + (1-gold_influence)*logits.argmax(-1)
+        ).detach().to(torch.device(self.device))
+        focus_scope.requires_grad = True
+        
+        return focus_scope  # shape: [batch, sequence]
+
 
 
 class FgFlex(BertHead):
@@ -2215,7 +2240,7 @@ class FgFlex(BertHead):
                     first_transmission = first_transmission.permute(1, 0).unsqueeze(-1).expand(key.shape)
                     # second_transmission = second_transmission.permute(1, 0).unsqueeze(-1).expand(query.shape)
 
-                    # NOTE only apply gold transimssion to keys (first task), so values help "remap" to previous state
+                    # NOTE only apply gold transmission to keys (first task), so values help "remap" to previous state
                     # query = query * second_transmission
                     key = key * first_transmission
                     # value = value * first_transmission
