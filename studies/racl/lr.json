@@ -1,5 +1,5 @@
 {
-    "name": "racl-base",
+    "name": "racl-lr",
 
     "model_name": "racl",
     
@@ -10,7 +10,7 @@
 
     "dropout": 0.4,
     "loss_weight": 1, 
-    "lr": 1e-5,
+    "lr": [1e-4, 1e-5, 1e-6, 1e-7],
 
     "optimizer_name": "adam",
     "weight_decay": 0,

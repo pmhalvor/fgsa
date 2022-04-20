@@ -1,9 +1,9 @@
 {
-    "name": "racl-base",
+    "name": "racl-cnn-dim",
 
     "model_name": "racl",
     
-    "cnn_dim": 768,
+    "cnn_dim": [384, 768, 1536],
     "gold_transmission": true,
     "stack_count": 1,
     "warm_up_constant": 5,

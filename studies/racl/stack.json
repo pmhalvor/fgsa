@@ -1,11 +1,11 @@
 {
-    "name": "racl-base",
+    "name": "racl-stack",
 
     "model_name": "racl",
     
     "cnn_dim": 768,
     "gold_transmission": true,
-    "stack_count": 1,
+    "stack_count": [1, 2, 3, 4],
     "warm_up_constant": 5,
 
     "dropout": 0.4,
