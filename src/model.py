@@ -1858,11 +1858,9 @@ class RACL(IMN):
             query_shared = shared_query[-1].permute(2, 0, 1)
             key_polarity = torch.nn.functional.normalize(polarity_cnn, p=2, dim=-1).permute(2, 0, 1)
             value_context = polarity_cnn.permute(2, 0, 1) + target_attn
-            
             # same mask as before
 
             if gold_transmission:
-                target_transmission = self.transmission(target_logits, true_labels["target"])
                 expression_transmission = self.transmission(expression_logits, true_labels["expression"])
 
                 value_context += expression_transmission.T.unsqueeze(-1).expand(value_context.shape) 
@@ -1873,7 +1871,7 @@ class RACL(IMN):
                 query=query_shared,
                 key=key_polarity,
                 value=value_context,
-                key_padding_mask=((batch[1]*-1)+1).bool().to(torch.device(self.device)),
+                key_padding_mask=mask,
                 need_weights=False
             )
             polarity_inter = shared_query[-1] + polarity_attn.permute(1, 2, 0)
