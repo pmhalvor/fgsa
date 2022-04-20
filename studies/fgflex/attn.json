@@ -8,7 +8,10 @@
     "expanding_cnn": 0,
     "gold_transmission": true,
     "kernel_size": 5,
-        "attention_relations": [
+    "attention_relations": [
+        [
+            ["polarity", "expression"]
+        ],
         [
             ["target", "target"],
             ["expression", "expression"],
@@ -20,11 +23,9 @@
             ["expression", "target"],
             ["target", "polarity"],
             ["expression", "polarity"]
-        ],
-        [
-            ["expression", "polarity"]
         ]
     ],
+    "split_cnn_kernels": [[3, 5]],
 
     "stack_count": 1,
 

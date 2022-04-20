@@ -12,10 +12,13 @@
         ["holder"],
         ["target"],
         ["polarity"],
-        ["target", "polarity"]
+        ["target", "expression"],
+        ["target", "polarity"],
+        ["target", "expression", "polarity"]
     ],
     "split_cnn_kernels": [[3, 5, 7]],
     "stack_count": 1,
+    "attention_relations": [[["polarity", "expression"]]],
 
     "dropout": 0.4,
     "loss_weight": 1, 

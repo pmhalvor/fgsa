@@ -6,12 +6,24 @@
     "cnn_dim": 768,
     "gold_transmission": true,
     "split_cnn_kernels": [
-        [3,5],
-        [3, 5, 7],
+        [3, 5],
         [5, 7],
-        [3, 7]
+        [7, 9],
+        [9, 11],
+        [3, 7],
+        [5, 9],
+        [7, 11],
+        [3, 9],
+        [5, 11],
+        [7, 13],
+        [3, 5, 7],
+        [3, 7, 11],
+        [3, 9, 13],
+        [3, 5, 7, 9, 11, 13],
     ],
-    "stack_count": [1, 2, 3],
+    "stack_count": 2,
+    "attention_relations": [[["polarity", "expression"]]],
+
 
     "dropout": 0.4,
     "loss_weight": 1, 
