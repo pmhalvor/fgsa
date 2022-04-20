@@ -1784,6 +1784,10 @@ class RACL(IMN):
 
         input_ids = batch[0].to(torch.device(self.device))
         attention_mask = batch[1].to(torch.device(self.device))
+        true_labels = {
+            "expression": batch[2].to(torch.device(self.device)),
+            "target": batch[5].to(torch.device(self.device))
+        }
 
         embeddings = self.bert(
             input_ids = input_ids,
@@ -1808,12 +1812,6 @@ class RACL(IMN):
             target_cnn = self.components["target"]["cnn"](target_inputs[-1])
             expression_cnn = self.components["expression"]["cnn"](expression_inputs[-1])
 
-            #### Gold transmission
-            if gold_transmission:
-                target_transmission = self.transmission(target_cnn, true_labels["target"])
-                expression_transmission = self.transmission(expression_cnn, true_labels["expression"])
-
-
             #### Relation R1  
             # TODO check what actually needs to be normalize & what happens when no normalize (like IMN)
             # MO2A expects shape: [sequence, batch, cnn_dim]
@@ -1821,11 +1819,6 @@ class RACL(IMN):
             key_target = torch.nn.functional.normalize(target_cnn, p=2, dim=-1).permute(2, 0, 1)
             value_target = target_cnn.permute(2, 0, 1)
             mask = ((batch[1]*-1)+1).bool().to(torch.device(self.device))
-
-            if gold_transmission:
-                # query_expression = query_expression * expression_transmission
-                key_target = key_target * target_transmission
-                # value_target = value_target * target_transmission
 
             target_attn, _ = self.components["relations"][f"stack_{i}"]["target_at_expression"](
                 query=query_expression,
@@ -1845,11 +1838,6 @@ class RACL(IMN):
             value_expression = expression_cnn.permute(2, 0, 1)
             # same mask as before
 
-            if gold_transmission:
-                # query_target = query_target * target_transmission
-                key_expression = key_expression * expression_transmission
-                # value_expression = value_expression * expression_transmission
-
             expression_attn, _ = self.components["relations"][f"stack_{i}"]["expression_at_target"](
                 # expects shape: [seq, batch, cnn_dim]
                 query=query_target,
@@ -1866,23 +1854,25 @@ class RACL(IMN):
             polarity_cnn = self.components["polarity"]["cnn"](polarity_inputs[-1])
 
             # [sequence, batch, cnn_dim]
+            # TODO it looks like both target and expression should each be applied to polarity somehow..?
             query_shared = shared_query[-1].permute(2, 0, 1)
             key_polarity = torch.nn.functional.normalize(polarity_cnn, p=2, dim=-1).permute(2, 0, 1)
-            value_context = polarity_cnn.permute(2, 0, 1)
+            value_context = polarity_cnn.permute(2, 0, 1) + target_attn
+            
             # same mask as before
 
             if gold_transmission:
-                polarity_transmission = self.transmission(polarity_cnn, true_labels["polarity"])
-                key_polarity = key_polarity * polarity_transmission
+                target_transmission = self.transmission(target_logits, true_labels["target"])
+                expression_transmission = self.transmission(expression_logits, true_labels["expression"])
 
-            # TODO it looks like both target and expression should each be applied to polarity somehow..?
-            value_context = target_attn + expression_transmission 
+                value_context += expression_transmission.T.unsqueeze(-1).expand(value_context.shape) 
+
 
             # shared-polarity attention
             polarity_attn, _ = self.components["relations"][f"stack_{i}"]["shared_at_polarity"](
                 query=query_shared,
-                key=(key_polarity + ),
-                value=polarity_cnn.permute(2, 0, 1),
+                key=key_polarity,
+                value=value_context,
                 key_padding_mask=((batch[1]*-1)+1).bool().to(torch.device(self.device)),
                 need_weights=False
             )
