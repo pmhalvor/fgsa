@@ -1,5 +1,5 @@
 {
-    "name": "imn-cnn-dim",
+    "name": "imn-cnn-dim-500-1500",
     "model_name": "imn",
     
     "find_scope": false,
@@ -13,7 +13,7 @@
     "key": "polarity",
     "value": "polarity",
 
-    "cnn_dim": [100, 384, 768, 1000, 1536],
+    "cnn_dim": [576, 576, 576, 768, 768, 768, 960, 960, 960, 1536, 1536, 1536],
     "dropout": 0.4,
     "loss_weight": 1, 
     "optimizer_name": "adam",
