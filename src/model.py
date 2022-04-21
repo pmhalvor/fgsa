@@ -1985,33 +1985,33 @@ class FgFlex(BertHead):
                     ## CNN component: three possible cnn types for subtasks
                     if expanding_cnn:  # Sometimesse will be 0, other times None
                         components[task][f"cnn_{stack}"] = torch.nn.Sequential(*[
-                            self.expanding_cnn_block(cnn_dim*2, cnn_dim, kernel_size, m=expanding_cnn)
+                            self.expanding_cnn_block((768+cnn_dim), cnn_dim, kernel_size, m=expanding_cnn)
                             for layer in range(task_layers)
                         ])
                     elif None not in (split_cnn_tasks, split_cnn_kernels): 
                         if task in split_cnn_tasks:
                             components[task][f"cnn_{stack}"] = self.split_cnn_block(
-                                cnn_dim*2, cnn_dim, split_cnn_kernels, task_layers
+                                (768+cnn_dim), cnn_dim, split_cnn_kernels, task_layers
                             )
                         else:
                             components[task][f"cnn_{stack}"] = torch.nn.Sequential(*[
-                                self.cnn_block(cnn_dim*2, cnn_dim, kernel_size)
+                                self.cnn_block((768+cnn_dim), cnn_dim, kernel_size)
                                 for layer in range(task_layers)
                             ])
                     else:
                         components[task][f"cnn_{stack}"] = torch.nn.Sequential(*[
-                            self.cnn_block(cnn_dim*2, cnn_dim, kernel_size)
+                            self.cnn_block((768+cnn_dim), cnn_dim, kernel_size)
                             for layer in range(task_layers)
                         ])
         
                     ## Feedforward component: Expands per stack due to concatentation
-                    components[task][f"linear_{stack}"] = self.linear_block(in_features=(cnn_dim*2), out_features=3)
+                    components[task][f"linear_{stack}"] = self.linear_block(in_features=((768+cnn_dim)), out_features=3)
 
         else: 
             for task in subtasks:
                 # final outputs for each task
                 # in_features are concats of embeddings, shared layers, and task cnns
-                components[task]["linear"] = self.linear_block(in_features=cnn_dim*2, out_features=3)
+                components[task]["linear"] = self.linear_block(in_features=(768+cnn_dim), out_features=3)
         ######################################
         # Shared relation components
         ######################################
@@ -2063,7 +2063,7 @@ class FgFlex(BertHead):
                     # map subtask information back to shared hidden state size after (multiple) attention(s)
                     components[rel[0]]["re_encode"] = self.linear_block(
                         in_features=cnn_dim*(1 + count),  # 1 task output + number of relations with rel[0] as first task
-                        out_features=cnn_dim*2
+                        out_features=(768+cnn_dim)
                     )
 
         components["relations"] = relations
