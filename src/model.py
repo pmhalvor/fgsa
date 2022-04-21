@@ -2227,11 +2227,6 @@ class FgFlex(BertHead):
             for task in relation_inters:
                 if task in self.subtasks:
                     all_task_inters = torch.cat([cnn_outputs[task].permute(0, 2, 1)] + relation_inters[task], dim=-1)
-                    print(cnn_outputs[task].permute(0, 2, 1).shape)
-                    print(relation_inters[task][0].shape)
-                    print(all_task_inters.shape)
-                    print(self.components[task]["re_encode"])
-                    print(task)
                     task_inputs[task] = self.components[task]["re_encode"](all_task_inters).permute(0, 2, 1)  # batch, sequence, embedding
 
 
