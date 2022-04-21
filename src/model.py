@@ -2048,14 +2048,13 @@ class FgFlex(BertHead):
         relations = torch.nn.ModuleDict({})
         attn_linears = torch.nn.ModuleDict({})
         for stack in range(stack_count):
+            relations[f"stack_{stack}"] = torch.nn.ModuleDict({})
             for rel in attention_relations:
-                relations[f"stack_{stack}"] = torch.nn.ModuleDict({
-                    f"{rel[0]}_at_{rel[1]}": torch.nn.ModuleDict({
-                        "attn": self.attn_block(cnn_dim),
+                relations[f"stack_{stack}"][f"{rel[0]}_at_{rel[1]}"] = torch.nn.ModuleDict({
+                    "attn": self.attn_block(cnn_dim),
 
-                        # new linear for each attn relation for first_task logits using attn information
-                        "linear": self.linear_block(cnn_dim*2, 3),
-                    })
+                    # new linear for each attn relation for first_task logits using attn information
+                    "linear": self.linear_block(cnn_dim*2, 3)
                 })
                 if rel[0] in self.subtasks + ["shared"] and "re_encode" not in components[rel[0]].keys():
                     # only reach this one time per first_task=rel[0]
@@ -2228,6 +2227,11 @@ class FgFlex(BertHead):
             for task in relation_inters:
                 if task in self.subtasks:
                     all_task_inters = torch.cat([cnn_outputs[task].permute(0, 2, 1)] + relation_inters[task], dim=-1)
+                    print(cnn_outputs[task].permute(0, 2, 1).shape)
+                    print(relation_inters[task][0].shape)
+                    print(all_task_inters.shape)
+                    print(self.components[task]["re_encode"])
+                    print(task)
                     task_inputs[task] = self.components[task]["re_encode"](all_task_inters).permute(0, 2, 1)  # batch, sequence, embedding
 
 
