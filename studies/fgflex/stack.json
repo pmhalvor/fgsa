@@ -7,12 +7,8 @@
     "expanding_cnn": 0,
     "gold_transmission": true,
     "kernel_size": 5,
-    "stack_count": [3, 4, 5],
-    "attention_relations": [
-        [
-            ["polarity", "expression"]
-        ]
-    ],
+    "stack_count": [1, 2, 3, 4, 5],
+    "attention_relations": [[["polarity", "expression"]]],
     
     "dropout": 0.4,
 
@@ -21,8 +17,8 @@
     "optimizer_name": "adam",
     "weight_decay": 0,
     "warm_up_constant": 5,
-    "use_linear_dropout": [true, false],
-    "use_cnn_dropout": [false, true],
+    "use_linear_dropout": true,
+    "use_cnn_dropout": false,
     
     "lr": 1e-5,
     

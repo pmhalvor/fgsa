@@ -14,6 +14,7 @@
         ["polarity"],
         ["target", "expression"],
         ["target", "polarity"],
+        ["expression", "polarity"],
         ["target", "expression", "polarity"]
     ],
     "split_cnn_kernels": [[3, 5, 7]],

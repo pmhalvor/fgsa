@@ -21,8 +21,8 @@
         [
             ["target", "expression"],
             ["expression", "target"],
-            ["target", "polarity"],
-            ["expression", "polarity"]
+            ["polarity", "target"],
+            ["polarity", "expression"]
         ]
     ],
     "split_cnn_kernels": [[3, 5]],
@@ -36,8 +36,8 @@
     "optimizer_name": "adam",
     "weight_decay": 0,
     "warm_up_constant": 5,
-    "use_linear_dropout": [true, false],
-    "use_cnn_dropout": [true, false],
+    "use_linear_dropout": true,
+    "use_cnn_dropout": false,
     
     "lr": 1e-5,
     

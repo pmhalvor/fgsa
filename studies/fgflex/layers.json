@@ -13,11 +13,7 @@
     "gold_transmission": true,
     "kernel_size": 5,
     "stack_count": 1,
-    "attention_relations": [
-        [
-            ["polarity", "expression"]
-        ]
-    ],
+    "attention_relations": [[["polarity", "expression"]]],
     "split_cnn_kernels":[[3, 5]],
 
     "dropout": 0.4,
