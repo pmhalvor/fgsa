@@ -2215,7 +2215,7 @@ class FgFlex(BertHead):
                 attn_logits = relation_components["linear"](attn_inter)  # produce logits for first_task using info from attn
 
                 # stack attention outputs for this relation (averaged after all stacks complete)
-                if first_task is not "shared":
+                if first_task not in ("shared", "all"):
                     outputs[first_task].append(attn_logits)
 
                 # append attn output to list if first task present, else create new list
