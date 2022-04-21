@@ -2141,12 +2141,10 @@ class FgFlex(BertHead):
         cnn_outputs = {"shared": shared_output}  # only the information learned from shared cnn(s), no embeddings
 
         for stack in range(stack_count):
-            print("stack"*10, stack)
             ######################################
             # Subtask CNN that mimic IMN setup
             ######################################
             for task in self.subtasks:
-                print(task*10)
                 task_output = task_inputs[task]
 
                 if split_cnn_tasks is not None and task in split_cnn_tasks: 
@@ -2159,8 +2157,6 @@ class FgFlex(BertHead):
                     )
                 elif len(self.components[task][f"cnn_{stack}"]) > 0:
                         
-                    print(self.components[task][f"cnn_{stack}"])
-                    print(task_output.shape)
                     cnn_outputs[task] = self.components[task][f"cnn_{stack}"](task_output)
                 else: 
                     cnn_outputs[task] = shared_output
@@ -2168,9 +2164,6 @@ class FgFlex(BertHead):
                 # cat embedding dim when task cnn exists (i.e. task_layers not 0)
                 task_output = torch.cat((embeddings, cnn_outputs[task]), dim=1)  
 
-                print(self.components[task][f"linear_{stack}"])
-                print(task_output.shape)
-                # BUG crashes when task_layers = 0 
                 outputs[task].append(self.components[task][f"linear_{stack}"](task_output.permute(0, 2, 1)))
 
             cnn_outputs["all"] = sum([cnn_outputs[task] for task in self.subtasks])
