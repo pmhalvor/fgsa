@@ -5,12 +5,13 @@
     
     "cnn_dim": 768,
     "gold_transmission": true,
-    "stack_count": [1, 2, 3, 4],
+    "stack_count": [1, 1, 1, 2, 2, 2, 3, 3, 3],
     "warm_up_constant": 5,
 
     "dropout": 0.4,
     "loss_weight": 1, 
     "lr": 1e-5,
+    "lr_scheduler_patience":5,
 
     "optimizer_name": "adam",
     "weight_decay": 0,
