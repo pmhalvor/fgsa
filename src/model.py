@@ -619,7 +619,7 @@ class BertHead(torch.nn.Module):
         if use_linear_activation:
             layers.append(torch.nn.Softmax(dim=-1))
 
-        return torch.nn.Sequential(*layers)
+        return torch.nn.Sequential(*layers).to(torch.device(self.device))
     
     ########### Model training ###########
     def fit(self, train_loader, dev_loader=None, epochs=10):
@@ -1127,8 +1127,7 @@ class FgsaLSTM(BertHead):
             if lstm_tasks[task]:
                 print(f"Adding lstm layer for {task}")
                 # add lstm to subtask's components
-                components[task].update({
-                    "lstm": torch.nn.LSTM(
+                components[task]["lstm"] = torch.nn.LSTM(
                         input_size=768,
                         hidden_size=hidden_size, 
                         num_layers=num_layers,
@@ -1136,7 +1135,6 @@ class FgsaLSTM(BertHead):
                         dropout=dropout,
                         bidirectional=bidirectional, 
                     ).to(torch.device(self.device)),
-                })
             else:
                 # replace linear to ensure correct in_features size (if bidirectional)
                 components[task] = torch.nn.ModuleDict({
@@ -1264,7 +1262,7 @@ class IMN(BertHead):
                     kernel_size = 5,
                     padding=2,
                 ).to(torch.device(self.device))
-            components["shared"].update(layer)
+            components["shared"] = layer
 
         self.other_components = {
             "shared": {
@@ -1283,7 +1281,7 @@ class IMN(BertHead):
             for layer in range(target_layers)
         ]
         target_sequential = torch.nn.Sequential(*layers).to(torch.device(self.device))
-        components["target"].update({"cnn_sequential": target_sequential})
+        components["target"]["cnn_sequential"] = target_sequential
 
         layers = [
             # configure dropout (or activation) via use_cnn_dropout=True in json-configs
@@ -1291,7 +1289,7 @@ class IMN(BertHead):
             for layer in range(polarity_layers)
         ]
         polarity_sequential = torch.nn.Sequential(*layers).to(torch.device(self.device))
-        components["polarity"].update({"cnn_sequential": polarity_sequential})
+        components["polarity"]["cnn_sequential"] = polarity_sequential
         
         layers = [
             # configure dropout (or activation) via use_cnn_dropout=True in json-configs
@@ -1299,42 +1297,37 @@ class IMN(BertHead):
             for layer in range(expression_layers)
         ]
         expression_sequential = torch.nn.Sequential(*layers).to(torch.device(self.device))
-        components["expression"].update({"cnn_sequential": expression_sequential})
+        components["expression"]["cnn_sequential"] = expression_sequential
 
         #######################################
         # Task-specific output layers
         #######################################
-        components["target"].update({
+        components["target"]["linear"] = self.linear_block(
             # configure dropout (or activation) via use_linear_dropout in json-configs
-            "linear": self.linear_block(
-                    in_features=int(768+(shared_layers+1)*cnn_dim),  # bert:768 + shared_cnn:(300 + 300) + target_cnn:300
-                    out_features=3
-            ).to(torch.device(self.device))
-        })
+            in_features=int(768+(shared_layers+1)*cnn_dim),  # bert:768 + shared_cnn:(300 + 300) + target_cnn:300
+            out_features=3
+        ).to(torch.device(self.device))
 
-        components["expression"].update({
-            "linear": self.linear_block(
-                    in_features=int(768+(shared_layers+1)*cnn_dim), # bert:768 + shared_cnn:(300 + 300) + expression_cnn:300
-                    out_features=3
-            ).to(torch.device(self.device))
-        })
+        components["expression"]["linear"] = self.linear_block(
+            in_features=int(768+(shared_layers+1)*cnn_dim), # bert:768 + shared_cnn:(300 + 300) + expression_cnn:300
+            out_features=3
+        ).to(torch.device(self.device))
 
         # polarity had attention before linear
-        components["polarity"].update({
-            "attention": torch.nn.MultiheadAttention(cnn_dim, num_heads=1).to(torch.device(self.device)), 
-            "linear": self.linear_block(
-                    in_features=int(2*cnn_dim), # initial_shared_features:300 + polarity_cnn:300
-                    out_features=polarity_labels  # NOTE: SemEval data has neutral and confusing polarities
-            ).to(torch.device(self.device))
-        })
+        components["polarity"]["attention"] = torch.nn.MultiheadAttention(
+            cnn_dim, num_heads=1
+        ).to(torch.device(self.device))
+        components["polarity"]["linear"] = self.linear_block(
+            in_features=int(2*cnn_dim), # initial_shared_features:300 + polarity_cnn:300
+            out_features=polarity_labels  # NOTE: SemEval data has neutral and confusing polarities
+        ).to(torch.device(self.device))
 
         
         #######################################
         # Scope predictions
         #######################################
 
-        components.update({
-            "scope": torch.nn.ModuleDict({
+        components["scope"] = torch.nn.ModuleDict({
                 # scope finder: shared -> linear 
                 "linear": torch.nn.Sequential(  # FIXME delete or retest
                     torch.nn.Linear(
@@ -1344,7 +1337,6 @@ class IMN(BertHead):
                     torch.nn.Sigmoid()
                 ).to(torch.device(self.device))
             })
-        })
 
         self.relu = torch.nn.ReLU()
         self.scope_loss = torch.nn.CrossEntropyLoss(ignore_index=self.ignore_id)
@@ -1357,13 +1349,11 @@ class IMN(BertHead):
         #######################################
         # Re-encoder
         #######################################
-        components["shared"].update({
-            "re_encode": self.linear_block(
+        components["shared"]["re_encode"] = self.linear_block(
                     # sentence_output:cnn_dim + target_output:3 + expression_output:3 + polarity_output:5
                     in_features=int(cnn_dim + 3 + 3 + polarity_labels),  
                     out_features=cnn_dim,
             ).to(torch.device(self.device))
-        })
 
         return components
 
@@ -1732,8 +1722,7 @@ class RACL(IMN):
         ######################################
         # Shared relation components
         ######################################
-        components.update(torch.nn.ModuleDict({
-            "relations": torch.nn.ModuleDict({
+        components["relations"] = torch.nn.ModuleDict({
                 f"stack_{i}": torch.nn.ModuleDict({
                     "target_at_expression": torch.nn.MultiheadAttention(
                         embed_dim = cnn_dim,
@@ -1767,9 +1756,8 @@ class RACL(IMN):
                     ).to(torch.device(self.device)),
                 })
                 for i in range(stack_count)
-            }),
-            "shared": self.cnn_block(768, int(cnn_dim), kernel_size)
-        }))
+            })
+        components["shared"] = self.cnn_block(768, int(cnn_dim), kernel_size)
 
         self.other_components = {
             "relations": {
@@ -1819,7 +1807,7 @@ class RACL(IMN):
             target_cnn = self.components["target"]["cnn"](target_inputs[-1])
             expression_cnn = self.components["expression"]["cnn"](expression_inputs[-1])
 
-            #### Relation R1  
+            ### Relation: R1  
             # TODO check what actually needs to be normalize & what happens when no normalize (like IMN)
             # MO2A expects shape: [sequence, batch, cnn_dim]
             query_expression = torch.nn.functional.normalize(expression_cnn, p=2, dim=-1).permute(2, 0, 1)
@@ -1857,16 +1845,16 @@ class RACL(IMN):
             expression_logits = self.components["expression"]["linear"](expression_inter)
 
 
-            #### Polarity convolution
+            ### Relation: R2 + R3 + R4 
             polarity_cnn = self.components["polarity"]["cnn"](polarity_inputs[-1])
 
             # [sequence, batch, cnn_dim]
             query_shared = shared_query[-1].permute(2, 0, 1)
             key_polarity = torch.nn.functional.normalize(polarity_cnn, p=2, dim=-1).permute(2, 0, 1)
-            value_context = polarity_cnn.permute(2, 0, 1) + target_attn
+            value_context = polarity_cnn.permute(2, 0, 1) + target_attn  # R2
             # same mask as before
 
-            if gold_transmission:
+            if gold_transmission:  # R2 (and R3 if target is added here?)
                 expression_transmission = self.transmission(expression_logits, true_labels["expression"])
 
                 value_context += expression_transmission.T.unsqueeze(-1).expand(value_context.shape) 
@@ -1950,28 +1938,6 @@ class FgFlex(BertHead):
     Parameters:
         TODO Fill in parameters used in self.find()
     """
-    def linear_block(self, in_features, out_features):
-        """
-        TODO Check same as berthead, then delete
-        """
-        use_linear_activation = self.find("use_linear_activation", default=False)
-        use_linear_dropout = self.find("use_linear_dropout", default=False)
-
-        layers = []
-
-        if use_linear_dropout:
-            layers.append(torch.nn.Dropout(self.dropout))
-        
-        layers.append(torch.nn.Linear(
-            in_features=in_features,
-            out_features=out_features
-        ))
-
-        if use_linear_activation:
-            layers.append(torch.nn.Softmax(dim=-1))
-
-        return torch.nn.Sequential(*layers).to(torch.device(self.device))
-
     def init_components(self, subtasks):
         #######################################
         # Potentially unset model params
@@ -1990,6 +1956,7 @@ class FgFlex(BertHead):
         # learning rates
         attn_lr = self.find("attn_lr", default=self.learning_rate)
         shared_lr = self.find("shared_lr", default=self.learning_rate)
+
         # relation params        
         stack_count = self.find("stack_count", default=1)
         attention_relations = self.find("attention_relations", 
@@ -2005,11 +1972,8 @@ class FgFlex(BertHead):
         # Base components
         #######################################
         components = torch.nn.ModuleDict({
-            task: torch.nn.ModuleDict({
-                # final outputs for each task
-                # in features are concats of embeddings, shared layers, and task cnns
-                "linear": self.linear_block(in_features=cnn_dim*3, out_features=3),
-
+            task: torch.nn.ModuleDict({  
+                # TODO is this only needed when task used as first_task in attn?
                 # map subtask information back to shared hidden state size
                 "re_encode": self.linear_block(
                     in_features=cnn_dim*2,  # after attention
@@ -2023,43 +1987,45 @@ class FgFlex(BertHead):
         #######################################
         # Task-specific CNN layers
         #######################################
-        # NOTE: stack can be 0, then these components are skipped. # TODO test this implementation
-        for stack in range(stack_count):
-            for task in self.subtasks:
-                task_layers = self.find(task+"_layers", default=1)
-                # NOTE: if task_layers == 0, empty sequential cnn_0 is made, but data still flows through
+        # NOTE: stack can be 0, then task-wise components are skipped, only single linear given
+        if stack_count > 0:
+            for stack in range(stack_count):
+                for task in self.subtasks:
+                    task_layers = self.find(task+"_layers", default=1)
+                    # NOTE: if task_layers == 0, empty sequential cnn_0 is made, but data still flows through
 
-                # handle three different cnn types for subtasks
-                if expanding_cnn:  # Sometimesse will be 0, other times None
-                    components[task].update(
-                        {f"cnn_{stack}": torch.nn.Sequential(*[
-                            self.expanding_cnn_block(cnn_dim, cnn_dim, kernel_size, m=expanding_cnn)
-                            for layer in range(task_layers)
-                            ])}
-                        )
-                elif None not in (split_cnn_tasks, split_cnn_kernels): 
-                    if task in split_cnn_tasks:
-                        components[task].update({
-                            f"cnn_{stack}": self.split_cnn_block(
-                                cnn_dim, cnn_dim, split_cnn_kernels, task_layers
+                    ## CNN component: three possible cnn types for subtasks
+                    if expanding_cnn:  # Sometimesse will be 0, other times None
+                        components[task][f"cnn_{stack}"] = torch.nn.Sequential(*[
+                                self.expanding_cnn_block(cnn_dim, cnn_dim, kernel_size, m=expanding_cnn)
+                                for layer in range(task_layers)
+                                ])
+                    elif None not in (split_cnn_tasks, split_cnn_kernels): 
+                        if task in split_cnn_tasks:
+                            components[task][f"cnn_{stack}"] = self.split_cnn_block(
+                                    cnn_dim, cnn_dim, split_cnn_kernels, task_layers
+                                    )
+                                })
+                        else:
+                            components[task][f"cnn_{stack}"] = torch.nn.Sequential(*[
+                                    self.cnn_block(cnn_dim, cnn_dim, kernel_size)
+                                    for layer in range(task_layers)
+                                    ])}
                                 )
-                            })
                     else:
-                        components[task].update(
-                            {f"cnn_{stack}": torch.nn.Sequential(*[
+                        components[task][f"cnn_{stack}"] = torch.nn.Sequential(*[
                                 self.cnn_block(cnn_dim, cnn_dim, kernel_size)
                                 for layer in range(task_layers)
-                                ])}
-                            )
+                                ])
+        
+                    ## Feedforward component: Expands per stack due to concatentation
+                    components[task][f"linear_{stack}"] = self.linear_block(in_features=(cnn_dim*3)*stack, out_features=3)
 
-                else:
-                    components[task].update(
-                        {f"cnn_{stack}": torch.nn.Sequential(*[
-                            self.cnn_block(cnn_dim, cnn_dim, kernel_size)
-                            for layer in range(task_layers)
-                            ])}
-                        )
-                
+        else: 
+            for task in subtasks:
+                # final outputs for each task
+                # in_features are concats of embeddings, shared layers, and task cnns
+                components[task]["linear"] = self.linear_block(in_features=cnn_dim*3, out_features=3),
 
         ######################################
         # Shared relation components
@@ -2088,16 +2054,12 @@ class FgFlex(BertHead):
 
         for layer in range(1, shared_layers):
             # TODO use split_cnn_blocks in all following layers?
-            shared.update({
-                f"cnn_{layer}": self.cnn_block(
+            shared[f"cnn_{layer}"] = self.cnn_block(
                     in_channels=cnn_dim, 
                     out_channels=cnn_dim, 
                     kernel_size=kernel_size
                 )
-            })
-        components.update(torch.nn.ModuleDict({
-            "shared": shared
-        }))
+        components["shared"] =  shared
 
         # similar to RACL setup
         relations = torch.nn.ModuleDict({
@@ -2107,15 +2069,14 @@ class FgFlex(BertHead):
             })
             for i in range(stack_count)
         })
-        components.update(torch.nn.ModuleDict({
-            "relations": relations,
-        }))
+        components["relations"] =  relations
 
         if stack_count > 0:  # when stack == 0 no attention should be made. No task-wise cnn either.. 
             prev_task = None
             for task in self.subtasks:
                 for relation in components["relations"]["stack_0"]:
                     if relation.startswith(task) and (task != prev_task):
+                        # FIXME Looks like this was supposed to handle what we ended up using re-encode for
                         components[task]["attn_linear"] = self.linear_block(cnn_dim*2, 3)
                         prev_task = task
 
@@ -2216,7 +2177,7 @@ class FgFlex(BertHead):
 
                 task_output = torch.cat((embeddings, cnn_outputs[task]), dim=1)  # cat embedding dim
 
-                outputs[task].append(self.components[task]["linear"](task_output.permute(0, 2, 1)))
+                outputs[task].append(self.components[task][f"linear_{stack}"](task_output.permute(0, 2, 1)))
 
             cnn_outputs["all"] = sum([cnn_outputs[task] for task in self.subtasks])
 
