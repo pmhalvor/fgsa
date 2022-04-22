@@ -17,8 +17,8 @@
         ["expression", "polarity"],
         ["target", "expression", "polarity"]
     ],
-    "split_cnn_kernels": [[3, 5, 7]],
-    "stack_count": 1,
+    "split_cnn_kernels": [[3, 7, 11]],
+    "stack_count": 4,
     "attention_relations": [[["polarity", "expression"]]],
 
     "dropout": 0.4,
