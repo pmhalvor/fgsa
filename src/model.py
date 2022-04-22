@@ -1983,7 +1983,7 @@ class FgFlex(BertHead):
                     # NOTE: if task_layers == 0, empty sequential cnn_0 is made, but data still flows through
 
                     if task_layers == 0:
-                        # TODO FIXME check that task_layer 0 skipping is ok
+                        # NOTE empty Sequential gives len == 0 in forward, causing only linear to be used.
                         components[task][f"cnn_{stack}"] = torch.nn.Sequential(*[])
                         
                     ## CNN component: three possible cnn types for subtasks
