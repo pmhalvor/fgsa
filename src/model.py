@@ -1982,28 +1982,48 @@ class FgFlex(BertHead):
                     task_layers = self.find(task+"_layers", default=1)
                     # NOTE: if task_layers == 0, empty sequential cnn_0 is made, but data still flows through
 
+                    if task_layers == 0:
+                        # NOTE empty Sequential gives len == 0 in forward, causing only linear to be used.
+                        components[task][f"cnn_{stack}"] = torch.nn.Sequential(*[])
+                        
                     ## CNN component: three possible cnn types for subtasks
                     if expanding_cnn:  # Sometimesse will be 0, other times None
-                        components[task][f"cnn_{stack}"] = torch.nn.Sequential(*[
-                            self.expanding_cnn_block((768+cnn_dim), cnn_dim, kernel_size, m=expanding_cnn)
-                            for layer in range(task_layers)
-                        ])
+                        components[task][f"cnn_{stack}"] = torch.nn.Sequential(*(
+                            # first layer needs to handle larger sizes from shared-emd-cat
+                            [self.expanding_cnn_block((768+cnn_dim), cnn_dim, kernel_size, m=expanding_cnn)]
+                            +
+                            [
+                                self.expanding_cnn_block(cnn_dim, cnn_dim, kernel_size, m=expanding_cnn)
+                                for layer in range(1, task_layers)
+                            ]
+                        ))
                     elif None not in (split_cnn_tasks, split_cnn_kernels): 
                         if task in split_cnn_tasks:
+                            # NOTE sequential inside split to preserve kernel-wise cnns
                             components[task][f"cnn_{stack}"] = self.split_cnn_block(
                                 (768+cnn_dim), cnn_dim, split_cnn_kernels, task_layers
                             )
                         else:
-                            components[task][f"cnn_{stack}"] = torch.nn.Sequential(*[
-                                self.cnn_block((768+cnn_dim), cnn_dim, kernel_size)
-                                for layer in range(task_layers)
-                            ])
+                            components[task][f"cnn_{stack}"] = torch.nn.Sequential(*(
+                                # first layer needs to handle larger sizes from shared-emd-cat
+                                [self.cnn_block((768+cnn_dim), cnn_dim, kernel_size)]
+                                +
+                                [
+                                    self.cnn_block(cnn_dim, cnn_dim, kernel_size)
+                                    for layer in range(1, task_layers)
+                                ]
+                            ))
                     else:
-                        components[task][f"cnn_{stack}"] = torch.nn.Sequential(*[
-                            self.cnn_block((768+cnn_dim), cnn_dim, kernel_size)
-                            for layer in range(task_layers)
-                        ])
-        
+                        components[task][f"cnn_{stack}"] = torch.nn.Sequential(*(
+                            # first layer needs to handle larger sizes from shared-emd-cat
+                            [self.cnn_block((768+cnn_dim), cnn_dim, kernel_size)]
+                            +
+                            [
+                                self.cnn_block(cnn_dim, cnn_dim, kernel_size)
+                                for layer in range(1, task_layers)
+                            ]
+                        ))
+
                     ## Feedforward component: Expands per stack due to concatentation
                     components[task][f"linear_{stack}"] = self.linear_block(in_features=((768+cnn_dim)), out_features=3)
 
