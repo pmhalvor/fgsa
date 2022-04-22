@@ -31,5 +31,5 @@
 
     "warm_up_constant": 5,
 
-    "epochs": [50, 50, 50]
+    "epochs": [25, 25, 25]
 }
