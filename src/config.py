@@ -18,7 +18,7 @@ NOREC_DIR = HOME + "/nlp/msc/norec_fine"
 # TODO Use or delete?
 default_parameters = {
         "debug": False,
-        "epochs": 50,
+        "epochs": 25,
         "proportion": 1.,
         "load_checkpoint": False,
         "bert_finetune": False,  # bert frosty
