@@ -1416,7 +1416,7 @@ class IMN(BertHead):
         initial_shared_features = sentence_output  # TODO detach and/or clone?    
 
 
-        if self.find("find_scope", default=True):
+        if self.find("find_scope", default=False):
             scope_output = self.scope_relevance(
                 batch,
                 sentence_output
@@ -1558,7 +1558,6 @@ class IMN(BertHead):
                  + (1-gold_influence)*values
             ).detach().to(torch.device(self.device))
             values.requires_grad = True
-
 
         return queries, keys, values
 
@@ -2183,7 +2182,9 @@ class FgFlex(BertHead):
                 # cat embedding dim when task cnn exists (i.e. task_layers not 0)
                 task_output = torch.cat((embeddings, cnn_outputs[task]), dim=1)  
 
-                outputs[task].append(self.components[task][f"linear_{stack}"](task_output.permute(0, 2, 1)))
+                task_output = self.components[task][f"linear_{stack}"](task_output.permute(0, 2, 1))
+
+                outputs[task].append(task_output)
 
             cnn_outputs["all"] = sum([cnn_outputs[task] for task in self.subtasks])
 
@@ -2218,8 +2219,8 @@ class FgFlex(BertHead):
 
                     # NOTE only apply gold transmission to keys (first task), so values help "remap" to previous state
                     # query = query * second_transmission
-                    key = key * first_transmission
-                    # value = value * first_transmission
+                    # key = key * first_transmission
+                    value = value * first_transmission
 
                 relation_attn, weights = relation_components["attn"](
                     # expects shape: [seq, batch, cnn_dim]
