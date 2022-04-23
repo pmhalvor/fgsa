@@ -2202,9 +2202,9 @@ class FgFlex(BertHead):
                 second_task = interacting_tasks[1]
 
                 # attention head expects shape: [seq, batch, cnn_dim]
-                query = torch.nn.functional.normalize(cnn_outputs[second_task], p=2, dim=-1).permute(2, 0, 1)
-                key = torch.nn.functional.normalize(cnn_outputs[first_task], p=2, dim=-1).permute(2, 0, 1)
-                value = torch.nn.functional.normalize(cnn_outputs[first_task], p=2, dim=-1).permute(2, 0, 1)  
+                query = (cnn_outputs[second_task], p=2, dim=-1).permute(2, 0, 1)
+                key = (cnn_outputs[first_task], p=2, dim=-1).permute(2, 0, 1)
+                value = (cnn_outputs[first_task], p=2, dim=-1).permute(2, 0, 1)  
 
                 mask = ((batch[1]*-1)+1).bool().to(torch.device(self.device))
 

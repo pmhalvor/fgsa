@@ -7,14 +7,15 @@
     "expanding_cnn": 0,
     "gold_transmission": true,
     "kernel_size": 5,
-    "stack_count": 1,
+    "stack_count":2, 
+    "shared_layers":3,
+    "target_layers": 2,
     "attention_relations": [
         [
             ["polarity", "expression"]
         ]
     ],
     "split_cnn_kernels":[[3, 7, 11]],
-    "split_cnn_tasks": [["target", "expression", "polarity"]],
 
     "dropout": 0.4,
     "loss_weight": 1, 
