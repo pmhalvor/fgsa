@@ -2220,7 +2220,7 @@ class FgFlex(BertHead):
                     # NOTE only apply gold transmission to keys (first task), so values help "remap" to previous state
                     # query = query * second_transmission
                     # key = key * first_transmission
-                    value = value * first_transmission
+                    value = value + first_transmission
 
                 relation_attn, weights = relation_components["attn"](
                     # expects shape: [seq, batch, cnn_dim]
