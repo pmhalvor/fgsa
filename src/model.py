@@ -589,7 +589,7 @@ class BertHead(torch.nn.Module):
                 else:
                     # all other layers expect inputs size as previous output
                     elements.append(torch.nn.Conv1d(
-                        in_channels = int(in_channels/len(kernels)),
+                        in_channels = int(out_channels/len(kernels)),
                         out_channels = int(out_channels/len(kernels)), 
                         kernel_size = kernel_size,
                         padding = kernel_size//2,
