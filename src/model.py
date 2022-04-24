@@ -2119,7 +2119,7 @@ class FgFlex(BertHead):
             attention_mask = attention_mask,
         ).last_hidden_state
         embeddings = self.bert_dropout(embeddings).permute(0, 2, 1)
-        shared_output = embeddings.clone()
+        shared_output = embeddings
 
         ######################################
         # Shared CNN layers
