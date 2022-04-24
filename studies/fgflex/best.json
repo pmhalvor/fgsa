@@ -22,7 +22,7 @@
         ["expression", "target", "polarity"],
         ["expression", "target", "polarity"],
         ["expression", "target", "polarity"]
-    ]
+    ],
 
     "dropout": 0.4,
     "loss_weight": 1, 
