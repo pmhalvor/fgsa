@@ -1,9 +1,10 @@
 {
-    "name": "fgflex-best-rm-clone",
+    "name": "fgflex-best-cnn-dropout",
 
     "model_name": "fgflex",
     
     "cnn_dim": 768,
+    "use_cnn_dropout": true,
     "expanding_cnn": 0,
     "gold_transmission": true,
     "kernel_size": [7,7,7],
