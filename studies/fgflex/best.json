@@ -1,21 +1,28 @@
 {
-    "name": "fgflex-best",
+    "name": "fgflex-best-rm-clone",
 
     "model_name": "fgflex",
     
     "cnn_dim": 768,
     "expanding_cnn": 0,
     "gold_transmission": true,
-    "kernel_size": 5,
-    "stack_count":2, 
+    "kernel_size": [7,7,7],
+    "stack_count":[2,2,2], 
     "shared_layers":3,
     "target_layers": 2,
     "attention_relations": [
         [
+            ["polarity", "expression"],
+            ["polarity", "expression"],
             ["polarity", "expression"]
         ]
     ],
-    "split_cnn_kernels":[[3, 7, 11]],
+    "split_cnn_kernels":[[3, 5, 7, 9, 11, 13],[3, 5, 7, 9, 11, 13],[3, 5, 7, 9, 11, 13]],
+    "split_cnn_tasks": [
+        ["expression", "target", "polarity"],
+        ["expression", "target", "polarity"],
+        ["expression", "target", "polarity"]
+    ]
 
     "dropout": 0.4,
     "loss_weight": 1, 
@@ -27,5 +34,5 @@
     
     "metric": "absa",
 
-    "epochs": [25, 25, 25]
+    "epochs": [10, 10, 10]
 }
