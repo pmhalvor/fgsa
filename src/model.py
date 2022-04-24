@@ -2069,15 +2069,20 @@ class FgFlex(BertHead):
         for stack in range(stack_count):
             relations[f"stack_{stack}"] = torch.nn.ModuleDict({})
             for rel in attention_relations:
+                if f"{rel[0]}_at_{rel[1]}" in relations:
+                    continue
                 relations[f"stack_{stack}"][f"{rel[0]}_at_{rel[1]}"] = torch.nn.ModuleDict({
                     "attn": self.attn_block(cnn_dim),
 
                     # new linear for each attn relation for first_task logits using attn information
                     "linear": self.linear_block(cnn_dim*2, 3)
                 })
+                # BUG if the same relation is added multiple times, only 1 attention block is available, 
+                # yet, re-encoding will expand to size included all of same relations. 
+                # Quick fix: do not use multiple identical relations
                 if rel[0] in self.subtasks + ["shared"] and "re_encode" not in components[rel[0]].keys():
                     # only reach this one time per first_task=rel[0]
-                    count = sum([rel[0] == r[0] for r in attention_relations])
+                    count = sum([rel[0] == r[0] if rel[1] != r[1] else False for r in attention_relations]) + 1  # ugly fix to bug above
                     # map subtask information back to shared hidden state size after (multiple) attention(s)
                     components[rel[0]]["re_encode"] = self.linear_block(
                         in_features=cnn_dim*(1 + count),  # 1 task output + number of relations with rel[0] as first task
@@ -2194,6 +2199,7 @@ class FgFlex(BertHead):
             prev_first = None
             relation_inters = {}
             for relation in self.components["relations"][f"stack_{stack}"]:
+                print(relation)
                 relation_components = self.components["relations"][f"stack_{stack}"][relation]
 
                 # parse relation name formatted first_at_second (first=keys,values and second=query)
@@ -2240,8 +2246,10 @@ class FgFlex(BertHead):
 
                 # append attn output to list if first task present, else create new list
                 if first_task in relation_inters:
+                    print("adding to already made list", relation_attn.permute(1,0,2).shape)
                     relation_inters[first_task].append(relation_attn.permute(1,0,2))
                 else:
+                    print("adding to new list", relation_attn.permute(1,0,2).shape)
                     relation_inters[first_task] = [relation_attn.permute(1,0,2)]
 
             # concatenate all attention outputs using same first task w/ that task's conv outputs
