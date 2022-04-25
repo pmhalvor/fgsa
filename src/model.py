@@ -959,7 +959,7 @@ class BertHead(torch.nn.Module):
         })
         optimizer_name = self.find("optimizer_name", default=self.find("optimizer"))
         bert_tuners = {  # subtasks to train bert on
-            task: self.find(f"bert_{task}", default=False)
+            task: self.find(f"bert_{task}", default=True)
             for task in self.subtasks
         }
         task_lrs = { # subtask specific learning rates
@@ -2097,7 +2097,8 @@ class FgFlex(BertHead):
                 "lr": attn_lr
             },
             "shared":{
-                "lr": shared_lr
+                "lr": shared_lr,
+                "tasks": self.subtasks
             }
         }
 
@@ -2199,7 +2200,6 @@ class FgFlex(BertHead):
             prev_first = None
             relation_inters = {}
             for relation in self.components["relations"][f"stack_{stack}"]:
-                print(relation)
                 relation_components = self.components["relations"][f"stack_{stack}"][relation]
 
                 # parse relation name formatted first_at_second (first=keys,values and second=query)
@@ -2246,10 +2246,8 @@ class FgFlex(BertHead):
 
                 # append attn output to list if first task present, else create new list
                 if first_task in relation_inters:
-                    print("adding to already made list", relation_attn.permute(1,0,2).shape)
                     relation_inters[first_task].append(relation_attn.permute(1,0,2))
                 else:
-                    print("adding to new list", relation_attn.permute(1,0,2).shape)
                     relation_inters[first_task] = [relation_attn.permute(1,0,2)]
 
             # concatenate all attention outputs using same first task w/ that task's conv outputs
