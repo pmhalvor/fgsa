@@ -1,27 +1,29 @@
 {
-    "name": "fgflex-best-cnn-dropout",
+    "name": "fgflex-cnn-dim",
 
     "model_name": "fgflex",
     
-    "cnn_dim": 768,
+    "cnn_dim": [768, 960, 1052, 1144, 1236],
     "use_cnn_dropout": true,
     "expanding_cnn": 0,
     "gold_transmission": true,
-    "kernel_size": [7,7,7],
-    "stack_count":[2,2,2], 
+    "kernel_size": [7],
+    "stack_count":[2], 
     "shared_layers":3,
     "target_layers": 2,
     "attention_relations": [
         [
-            ["polarity", "expression"],
-            ["polarity", "expression"],
+            ["polarity", "expression"]
+        ],
+        [
+            ["polarity", "expression"]
+        ],
+        [
             ["polarity", "expression"]
         ]
     ],
-    "split_cnn_kernels":[[3, 5, 7, 9, 11, 13],[3, 5, 7, 9, 11, 13],[3, 5, 7, 9, 11, 13]],
+    "split_cnn_kernels":[[3, 5, 7, 9, 11, 13]],
     "split_cnn_tasks": [
-        ["expression", "target", "polarity"],
-        ["expression", "target", "polarity"],
         ["expression", "target", "polarity"]
     ],
 
@@ -35,5 +37,7 @@
     
     "metric": "absa",
 
-    "epochs": [10, 10, 10]
+    "epochs": [
+        20, 20, 20
+    ]
 }
