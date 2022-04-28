@@ -714,7 +714,7 @@ class BertHead(torch.nn.Module):
 
         return self.losses
 
-    def evaluate(self, loader, verbose=False):
+    def evaluate(self, loader, verbose=False, final=False):
         """
         Returns overall binary and proportional F1 scores for predictions on the
         development data via loader, while logging task-wise scores along the way.
@@ -808,18 +808,25 @@ class BertHead(torch.nn.Module):
                 proportional[task] = p
                 span[task] = s
                 macro[task] = m
-                logging.debug("{task:10}       binary: {score}".format(task=task, score=b))
-                logging.debug("{task:10} proportional: {score}".format(task=task, score=p))
-                logging.debug("{task:10}         span: {score}".format(task=task, score=s))
-                logging.debug("{task:10}        macro: {score}".format(task=task, score=m))
 
-            # NOTE add average f1 over score per subtask to totals
+            # NOTE adding average f1 over scores per subtask to metric totals over all batches
             absa_total_over_batches += f_absa
             binary_total_over_batches += (sum([binary[task] for task in self.subtasks])/len(self.subtasks))
+            hard_total_over_batches += (sum([hard[task] for task in self.subtasks])/len(self.subtasks))
+            macro_total_over_batches += (sum([macro[task] for task in self.subtasks])/len(self.subtasks))
             proportional_total_over_batches += (sum([proportional[task] for task in self.subtasks])/len(self.subtasks))
             span_total_over_batches += (sum([span[task] for task in self.subtasks])/len(self.subtasks))
-            macro_total_over_batches += (sum([macro[task] for task in self.subtasks])/len(self.subtasks))
-            hard_total_over_batches += (sum([hard[task] for task in self.subtasks])/len(self.subtasks))
+
+
+            if final:
+                logging.debug("FINAL Batch {batch}:".format(batch=b))
+                logging.debug("FINAL {metric:13}: {score}".format(metric="absa", score=f_absa))
+                logging.debug("FINAL {metric:13}: {score}".format(metric="binary", score=(sum([binary[task] for task in self.subtasks])/len(self.subtasks))))
+                logging.debug("FINAL {metric:13}: {score}".format(metric="hard", score=(sum([hard[task] for task in self.subtasks])/len(self.subtasks))))
+                logging.debug("FINAL {metric:13}: {score}".format(metric="macro", score=(sum([macro[task] for task in self.subtasks])/len(self.subtasks))))
+                logging.debug("FINAL {metric:13}: {score}".format(metric="proportional", score=(sum([proportional[task] for task in self.subtasks])/len(self.subtasks))))
+                logging.debug("FINAL {metric:13}: {score}".format(metric="span", score=(sum([span[task] for task in self.subtasks])/len(self.subtasks))))
+
 
         absa_overall = absa_total_over_batches/len(loader)
         binary_overall = binary_total_over_batches/len(loader)
@@ -1007,7 +1014,7 @@ class BertHead(torch.nn.Module):
                     # IMN architecture
                     if component == "shared":
                         tasks = other_components[component].get("tasks")
-                        tasks = tasks if tasks is not None else []
+                        tasks = tasks if tasks is not None else self.subtasks
 
                         for task in tasks:
                             optimizers[task].add_param_group(
@@ -1262,7 +1269,8 @@ class IMN(BertHead):
                     kernel_size = 5,
                     padding=2,
                 ).to(torch.device(self.device))
-            components["shared"] = layer
+            components["shared"].update(layer)
+
 
         self.other_components = {
             "shared": {
@@ -2077,12 +2085,13 @@ class FgFlex(BertHead):
                     # new linear for each attn relation for first_task logits using attn information
                     "linear": self.linear_block(cnn_dim*2, 3)
                 })
-                # BUG if the same relation is added multiple times, only 1 attention block is available, 
+                # BUG: if the same relation is added multiple times, only 1 attention block is available, 
                 # yet, re-encoding will expand to size included all of same relations. 
-                # Quick fix: do not use multiple identical relations
+                # FIX: Check that first task is same, but second task is different when counting for re-encoder size
                 if rel[0] in self.subtasks + ["shared"] and "re_encode" not in components[rel[0]].keys():
                     # only reach this one time per first_task=rel[0]
                     count = sum([rel[0] == r[0] if rel[1] != r[1] else False for r in attention_relations]) + 1  # ugly fix to bug above
+                    
                     # map subtask information back to shared hidden state size after (multiple) attention(s)
                     components[rel[0]]["re_encode"] = self.linear_block(
                         in_features=cnn_dim*(1 + count),  # 1 task output + number of relations with rel[0] as first task
