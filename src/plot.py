@@ -1,5 +1,7 @@
-import pandas as pd
 import matplotlib.pyplot as plt
+import numpy as np
+import pandas as pd
+from scipy.stats import norm
 
 
 def show_data(data, title=None):
@@ -80,7 +82,16 @@ def show_loss(name):
 ### Metrics
 def parse_metrics(data):
     """Assume data is f.readlines() of a log file."""
-    scores = {
+    dev_scores = {
+        "absa": [],
+        "easy": [],
+        "hard": [],
+        "binary": [],
+        "proportional": [],
+        "span": [],
+        "macro": [],
+    }
+    test_scores = {
         "absa": [],
         "easy": [],
         "hard": [],
@@ -95,17 +106,23 @@ def parse_metrics(data):
             metric = line.split("INFO] ")[-1].split("overall:")[0].strip()
             if "(RACL)" in metric:
                 metric = metric.split("(RACL)")[-1].strip()
-            loss = float(line.split('overall: ')[-1].split(' (')[0].strip())
-            scores[metric.lower()].append(loss)
+            score = float(line.split('overall: ')[-1].split(' (')[0].strip())
+            dev_scores[metric.lower()].append(score)
         
         if "Score:" in line:
             print(line.split("INFO] ")[1])
+
+        if "FINAL" in line:
+            metric = line.split("FINAL")[1].split(":").strip()
+            if metric in test_scores:
+                score = line.split(":")[-1]
+                test_scores[metric] = score # TODO Finish implementing
             
-    for metric in list(scores):
-        if scores[metric] == []:
-            scores.pop(metric)
+    for metric in list(dev_scores):
+        if dev_scores[metric] == []:
+            dev_scores.pop(metric)
         
-    return scores
+    return dev_scores
 
 def show_metrics(name, title=None):
 
@@ -198,6 +215,32 @@ def smooth(study, runs, header=""):
     display(avg_metric.tail(3))
 
     return avg_loss, avg_metric
+
+
+### Stats
+
+def get_final_scores(study, runs = None, metric="absa", header=""):
+    iterator = runs if runs is not None else study[1]
+    
+    finals =  [
+        study[1][run][metric].tail(1).item()
+        for run in iterator
+    ]
+    
+    #x-axis ranges from -3 and 3 with .001 steps
+    x = np.arange(min(finals), max(finals), 0.001)
+    interval = (max(finals) - min(finals)) / np.mean(finals)
+    dist =  norm.pdf(x, np.mean(finals), np.std(finals)) * interval
+    
+    #plot normal distribution with mean 0 and standard deviation 1
+    plt.plot(x, norm.pdf(x, dist))
+    
+    plt.hist(finals, bins=6)
+    plt.title("Dist. of final scores "+header)
+ 
+    plt.show()
+    
+    return finals
 
 
 
