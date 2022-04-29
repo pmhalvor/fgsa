@@ -3,7 +3,7 @@
 
     "model_name": "fgflex",
     
-    "cnn_dim": 4608,
+    "cnn_dim": 3072,
     "use_cnn_dropout": true,
     "use_linear_dropout": true,
     "expanding_cnn": 0,
