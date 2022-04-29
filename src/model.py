@@ -648,9 +648,13 @@ class BertHead(torch.nn.Module):
                     if self.find("scope_loss_value", default=None) is not None:
                         logging.info("{:10} loss:{}".format("scope", self.scope_loss_value.item()))
                         writer.add_scalar("loss/{}".format("scope"), self.scope_loss_value.item(), epoch)
-
+                    
                     if dev_loader is not None:
                         self.evaluate(dev_loader)
+
+                # free up some memory
+                torch.cuda.empty_cache()
+
 
         logging.info("Fit complete.")
         writer.close()
