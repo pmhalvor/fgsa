@@ -653,7 +653,9 @@ class BertHead(torch.nn.Module):
                         self.evaluate(dev_loader)
 
                 # free up some memory
+                torch.cuda.memory_summary(device=None, abbreviated=False)
                 torch.cuda.empty_cache()
+                torch.cuda.memory_summary(device=None, abbreviated=False)
 
 
         logging.info("Fit complete.")
