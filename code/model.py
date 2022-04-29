@@ -182,7 +182,7 @@ class BertSimple(torch.nn.Module):
 
 
         for b, batch in enumerate(loader):
-            predictions = self.predict(batch)
+            predictions = self.predict(batch).to(torch.device("cpu"))
 
             # decode predictions and batch[2]
             predict_decoded = decode_batch(predictions, mask=batch[1], targets_only=self.targets_only)
@@ -490,7 +490,7 @@ class BertHead(torch.nn.Module):
         outputs = self.forward(batch)
 
         self.predictions = {
-            task: outputs[task].argmax(1)
+            task: outputs[task].argmax(1).to(torch.device("cpu"))
             for task in self.subtasks
         }
 
@@ -542,7 +542,7 @@ class BertHead(torch.nn.Module):
             task: torch.nn.Linear(
                 in_features=768,
                 out_features=3,  # 3 possible classifications for each task
-            )
+            ).to(torch.device(self.device))
             for task in subtasks
         }
 
@@ -589,10 +589,10 @@ class BertHead(torch.nn.Module):
         """
 
         true = {
-            "expression": batch[2], 
-            "holder": batch[3],
-            "polarity": batch[4],
-            "target": batch[5],
+            "expression": batch[2].to(torch.device(self.device)), 
+            "holder": batch[3].to(torch.device(self.device)),
+            "polarity": batch[4].to(torch.device(self.device)),
+            "target": batch[5].to(torch.device(self.device)),
         }
 
         # calcaulate losses per task

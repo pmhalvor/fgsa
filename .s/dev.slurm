@@ -7,7 +7,7 @@
 # Wall time limit: --time=DD-HH:MM:SS
 #SBATCH --time=19:30:00
 # Memory requested:
-#SBATCH --mem-per-cpu=15G
+#SBATCH --mem-per-gpu=20G
 # Run on GPU
 #SBATCH --partition=accel
 #SBATCH --gpus=1
@@ -18,9 +18,10 @@ set -o nounset  # Treat any unset variables as an error
 
 # modules
 module --quiet purge  # Reset the modules to the system default
-module load Miniconda3/4.9.2
-module load PyTorch/1.7.1-foss-2020b
-
+module use -a /fp/projects01/ec30/software/easybuild/modules/all/
+module load nlpl-pytorch/1.7.1-foss-2019b-cuda-11.1.1-Python-3.7.4
+module load nlpl-scikit-bundle/0.22.2.post1-foss-2019b-Python-3.7.4
+module load nlpl-tokenizers/0.10.2-foss-2019b-Python-3.7.4
 
 ## Do some work:
 cd $HOME/nlp/msc/fgsa/code

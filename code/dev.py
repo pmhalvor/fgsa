@@ -15,6 +15,10 @@ debug = False
 epochs = 200
 label_importance = 10
 learning_rate = 1e-6
+expression_lr = 1e-5
+holder_lr = 1e-8
+polarity_lr = 1e-6
+target_lr = 1e-6
 proportion = 0.5
 load_checkpoint = False
 
@@ -78,6 +82,10 @@ if load_checkpoint:
             device=DEVICE,
             ignore_id=-1,
             lr=learning_rate,
+            expression_lr=expression_lr,
+            holder_lr=holder_lr,
+            polarity_lr=polarity_lr,
+            target_lr=target_lr,
             tokenizer=train_dataset.tokenizer,
             label_importance=label_importance,
         ) 
@@ -87,11 +95,16 @@ else:
         device=DEVICE,
         ignore_id=-1,
         lr=learning_rate,
+        expression_lr=expression_lr,
+        holder_lr=holder_lr,
+        polarity_lr=polarity_lr,
+        target_lr=target_lr,
         tokenizer=train_dataset.tokenizer,
         label_importance=label_importance,
     )
     logging.info("... from new instance.")
 
+logging.info(model)
 logging.info('Fitting model...')
 model.fit(train_loader=train_loader, dev_loader=train_loader, epochs=epochs)
 
