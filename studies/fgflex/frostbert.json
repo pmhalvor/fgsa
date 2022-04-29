@@ -1,0 +1,30 @@
+{
+    "name": "fgflex-frostbert",
+    
+    "model_name": "fgflex",
+    
+    "bert_finetune": false, 
+    "cnn_dim": 768,
+    "expanding_cnn": 0,
+    "gold_transmission": true,
+    "kernel_size": 5,
+    "stack_count": [1, 2, 3, 4, 5],
+    "attention_relations": [[["polarity", "expression"]]],
+    "split_cnn_kernels": [[3, 7, 11]],
+    
+    "dropout": 0.4,
+
+    "loss_weight": 1, 
+    "bert_finetune": true,
+    "optimizer_name": "adam",
+    "weight_decay": 0,
+    "warm_up_constant": 5,
+    "use_linear_dropout": true,
+    "use_cnn_dropout": false,
+    
+    "lr": 1e-5,
+    
+    "metric": "absa",
+
+    "epochs": [25, 25, 25]
+}
