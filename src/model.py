@@ -632,8 +632,14 @@ class BertHead(torch.nn.Module):
                 self.train()        # turn off eval mode
 
                 # feed batch to model
-                output = self.forward(batch)
-                
+                try:
+                    output = self.forward(batch)
+                except Exception as e:
+                    print(f"Most likely memory error in batch {b} with shape {batch[0].shape}")
+                    print(torch.cuda.memory_summary(abbreviated=False))
+                    raise e
+                    
+
                 # apply loss
                 loss = self.backward(output, batch)
 
@@ -653,9 +659,7 @@ class BertHead(torch.nn.Module):
                         self.evaluate(dev_loader)
 
                 # free up some memory
-                print(torch.cuda.memory_summary(abbreviated=False))
                 torch.cuda.empty_cache()
-                print(torch.cuda.memory_summary(abbreviated=False))
 
 
         logging.info("Fit complete.")
