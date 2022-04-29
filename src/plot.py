@@ -53,9 +53,20 @@ def parse_taskwise_loss(data, get_epochs=True):
 
 def show_taskwise_loss(name, get_epochs=True, title=None):
     def show_epochs(epochs):
-        for x in epochs:
-            plt.axvline(x, c="k", ls="-.")
-        
+
+        if len(epochs) > 50:
+            plt.set_xticks([x if i%10==0 else 10 for (i, x) in enumerate(epochs[1:])], [x if i%10==0 else None for (i,x) in enumerate(range(len(epochs[1:])))])
+            plt.set_xlabel("Epochs")
+            plt.set_ylabel("Loss")
+
+            for i, x in enumerate(epochs[1:]):
+                if i%10==0:
+                    plt.axvline(x, c="k", ls="-.")
+        else:
+            for i, x in enumerate(epochs[1:]):
+                plt.axvline(x, c="k", ls="-.")
+            
+            
 
     with open(name) as f:
         data = f.readlines()
