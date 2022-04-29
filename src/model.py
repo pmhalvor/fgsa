@@ -700,9 +700,10 @@ class BertHead(torch.nn.Module):
 
 
         # calculate gradients for parameters used per task
-        for task in self.subtasks:
-            self.losses[task].backward(retain_graph=True)  # retain_graph needed to update shared tasks
-        # self.loss_total.backward()
+        # for task in self.subtasks:
+        #     retain_graph = True if task != self.subtasks[-1] else False
+        #     self.losses[task].backward(retain_graph=retain_graph)  # retain_graph needed to update shared tasks
+        self.loss_total.backward()
 
         # TODO should there be bert optimizer alone, 
         # if so needs to be updated for each task 
