@@ -13,8 +13,8 @@ from utils import pad
 
 ####################  config  ####################
 debug = False 
-epochs = 20
-proportion = 0.5
+epochs = 200
+proportion = 1.
 load_checkpoint = False
 subtasks = [
     "expression",
@@ -25,13 +25,14 @@ subtasks = [
 
 learning_rate = 1e-6
 lrs = {
-    "expression": 1e-7,
+    "expression": 1e-5,
     "holder": 1e-6,
     "polarity": 1e-6,
     "target": 1e-6,
 }
 
-name = "lstm"
+name = "lstm-full"
+
 if proportion<1:
     name += '-{percent}p'.format(
         percent=int(100*proportion)
