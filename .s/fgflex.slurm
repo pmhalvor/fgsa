@@ -7,7 +7,7 @@
 # Wall time limit: --time=DD-HH:MM:SS
 #SBATCH --time=15:30:00
 # Memory requested:
-#SBATCH --mem-per-gpu=60G
+#SBATCH --mem-per-gpu=50G
 # Run on GPU
 #SBATCH --partition=accel
 #SBATCH --gpus=1
