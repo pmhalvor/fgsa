@@ -2089,7 +2089,7 @@ class FgFlex(BertHead):
         for stack in range(stack_count):
             relations[f"stack_{stack}"] = torch.nn.ModuleDict({})
             for rel in attention_relations:
-                if len(rel)==0:
+                if len(rel)<2:
                     continue
                 if f"{rel[0]}_at_{rel[1]}" in relations:
                     continue
