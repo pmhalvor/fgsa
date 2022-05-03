@@ -1,5 +1,5 @@
 {
-    "name": "fgflex-base-double-opt-attn",
+    "name": "fgflex-blank",
 
     "model_name": "fgflex",
     
@@ -7,15 +7,21 @@
     "expanding_cnn": 0,
     "gold_transmission": true,
     "kernel_size": 5,
-    "stack_count": 1,
+    "stack_count": 0,
+    "attention_relations": [
+        [
+            [""]
+        ]
+    ],
 
     "dropout": 0.4,
-    "bert_finetune": true,
+    "loss_weight": 1, 
     "optimizer_name": "adam",
     "weight_decay": 0,
-    "lr": 1e-5,
     "warm_up_constant": 5,
-
+    
+    "lr": 1e-5,
+    
     "metric": "absa",
 
     "epochs": [25, 25, 25]

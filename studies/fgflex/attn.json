@@ -1,6 +1,6 @@
 {
 
-    "name": "fgflex-attn",
+    "name": "fgflex-attn-high",
     
     "model_name": "fgflex",
     
@@ -9,9 +9,6 @@
     "gold_transmission": true,
     "kernel_size": 5,
     "attention_relations": [
-        [
-            ["polarity", "expression"]
-        ],
         [
             ["target", "target"],
             ["expression", "expression"],
@@ -43,5 +40,5 @@
     
     "metric": "absa",
 
-    "epochs": [25, 25, 25]
+    "epochs": [50, 50, 50]
 }

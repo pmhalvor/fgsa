@@ -1,5 +1,5 @@
 {
-    "name": "fgflex-base-double-opt-attn",
+    "name": "fgflex-imn-str8-trans-values",
 
     "model_name": "fgflex",
     
@@ -8,14 +8,20 @@
     "gold_transmission": true,
     "kernel_size": 5,
     "stack_count": 1,
+    "attention_relations": [
+        [
+            ["polarity", "expression"]
+        ]
+    ],
 
     "dropout": 0.4,
-    "bert_finetune": true,
+    "loss_weight": 1, 
     "optimizer_name": "adam",
     "weight_decay": 0,
-    "lr": 1e-5,
     "warm_up_constant": 5,
-
+    
+    "lr": 1e-5,
+    
     "metric": "absa",
 
     "epochs": [25, 25, 25]

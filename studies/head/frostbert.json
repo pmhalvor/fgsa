@@ -1,0 +1,14 @@
+{
+    "name": "head-frostbert-200",
+    "model_name": "BertHead",
+
+    "learning_rate": 1e-5,
+
+    "dropout": 0.4,
+    "bert_finetune": false,
+
+    "metric": "absa",
+
+    "epochs": [200]
+
+}
