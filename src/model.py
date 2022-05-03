@@ -2239,17 +2239,18 @@ class FgFlex(BertHead):
 
                 # logits transmission
                 if gold_transmission and ("all" not in relation) and ("shared" not in relation):
-                    first_transmission = self.transmission(outputs[first_task][-1], true_labels[first_task])
+                    # first_transmission = self.transmission(outputs[first_task][-1], true_labels[first_task])
+                    first_transmission = self.transmission(value, true_labels[first_task])
                     # second_transmission = self.transmission(outputs[second_task][-1], true_labels[second_task])
 
                     # reshape to match query/key shapes
-                    first_transmission = first_transmission.permute(1, 0).unsqueeze(-1).expand(key.shape)
+                    # first_transmission = first_transmission.permute(1, 0).unsqueeze(-1).expand(key.shape)
                     # second_transmission = second_transmission.permute(1, 0).unsqueeze(-1).expand(query.shape)
 
                     # NOTE only apply gold transmission to keys (first task), so values help "remap" to previous state
                     # query = query * second_transmission
                     # key = key * first_transmission
-                    value = value + first_transmission
+                    value = value * first_transmission
 
                 relation_attn, weights = relation_components["attn"](
                     # expects shape: [seq, batch, cnn_dim]
@@ -2318,8 +2319,9 @@ class FgFlex(BertHead):
         gold_influence = self.get_prob(self.current_epoch, self.find("warm_up_constant", default=5))
 
         focus_scope = (  # strengthen signal from true logits
-            gold_influence*true.bool().float()
-                + (1-gold_influence)*logits.argmax(-1).bool().float() 
+            gold_influence*true.permute(1,0).bool().float().unsqueeze(-1).expand(logits.shape)
+                + (1-gold_influence)*logits 
+                # + (1-gold_influence)*logits.argmax(-1).bool().float() 
         ).detach().to(torch.device(self.device))
         focus_scope.requires_grad = True
         
