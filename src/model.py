@@ -872,8 +872,15 @@ class BertHead(torch.nn.Module):
             batch: tuple of batch tensors (size 6) w/ dev/test data 
         """
         self.eval()
+        
+        # make sure gold tranmission deactivated for predictions
+        transmission_config = self.find("gold_transmission")
+        self.gold_transmission = False
 
         outputs = self.forward(batch)
+
+        # reset transmission value to that provided during init
+        self.gold_transmission = transmission_config  
 
         prediction_tensors = {
             task: outputs[task].argmax(1)
