@@ -1,0 +1,37 @@
+{
+    "name": "imn-best-35",
+    "model_name": "imn",
+    
+    "find_scope": false,
+    "gold_transmission": true,
+    "shared_layers": 3,
+    "expression_layers": 2,
+    "polarity_layers": 1,
+    "target_layers": 3,
+    "interactions": 1,
+    "query": "expression",
+    "key": "polarity",
+    "value": "polarity",
+
+    "cnn_dim": 768,
+    "dropout": 0.4,
+    "loss_weight": 1, 
+    "optimizer_name": "adam",
+    "weight_decay": 0,
+    "warm_up_constant": 5,
+    
+    "lr": 1e-5,
+    "lr_scheduler_patience":25,
+    
+    "metric": "absa",
+
+    "epochs": [
+        25, 25, 25, 25, 25,
+        25, 25, 25, 25, 25,
+        25, 25, 25, 25, 25,
+        25, 25, 25, 25, 25,
+        25, 25, 25, 25, 25,
+        25, 25, 25, 25, 25,
+        25, 25, 25, 25, 25
+    ]
+}
