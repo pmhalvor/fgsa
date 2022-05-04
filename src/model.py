@@ -1055,9 +1055,6 @@ class BertHead(torch.nn.Module):
                                     print("Whoops! Not sure how to optimize for first task in layer", layer)
                                     logging.warning("Whoops! Not sure how to optimize for first task in layer {}".format(layer))
 
-                                continue
-
-                                ### Deprecated: appending parameters to both task optimizers seems to be hurting performance
                                 if second_task in optimizers.keys() and first_task != second_task and first_task != "shared":
                                     print("adding {} to optimizer {}".format(layer, second_task))
                                     optimizers[second_task].add_param_group(
