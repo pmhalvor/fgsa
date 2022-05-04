@@ -1003,7 +1003,7 @@ class BertHead(torch.nn.Module):
             if bert_tuners[task] and self.finetune:
                 optimizers[task].add_param_group(
                     # use main learning rate for bert training
-                    {"params": self.bert.parameters(), "lr":self.learning_rate}
+                    {"params": self.bert.parameters(), "lr":self.find("bert_lr", default=self.learning_rate)}
                 )
 
             # learning rate scheduler to mitigate overfitting
@@ -1055,7 +1055,9 @@ class BertHead(torch.nn.Module):
                                     print("Whoops! Not sure how to optimize for first task in layer", layer)
                                     logging.warning("Whoops! Not sure how to optimize for first task in layer {}".format(layer))
 
-                                
+                                continue
+
+                                ### Deprecated: appending parameters to both task optimizers seems to be hurting performance
                                 if second_task in optimizers.keys() and first_task != second_task and first_task != "shared":
                                     print("adding {} to optimizer {}".format(layer, second_task))
                                     optimizers[second_task].add_param_group(
@@ -1286,9 +1288,8 @@ class IMN(BertHead):
 
         self.other_components = {
             "shared": {
-                "lr": self.learning_rate,
+                "lr": self.find("shared_lr", default=self.learning_rate),
                 "tasks": self.subtasks
-
             }
         }
 
@@ -2239,17 +2240,19 @@ class FgFlex(BertHead):
 
                 # logits transmission
                 if gold_transmission and ("all" not in relation) and ("shared" not in relation):
-                    first_transmission = self.transmission(outputs[first_task][-1], true_labels[first_task])
+                    # first_transmission = self.transmission(outputs[first_task][-1], true_labels[first_task])
+                    first_transmission = self.transmission(value, true_labels[first_task])
                     # second_transmission = self.transmission(outputs[second_task][-1], true_labels[second_task])
 
                     # reshape to match query/key shapes
-                    first_transmission = first_transmission.permute(1, 0).unsqueeze(-1).expand(key.shape)
+                    # first_transmission = first_transmission.permute(1, 0).unsqueeze(-1).expand(key.shape)
                     # second_transmission = second_transmission.permute(1, 0).unsqueeze(-1).expand(query.shape)
 
                     # NOTE only apply gold transmission to keys (first task), so values help "remap" to previous state
                     # query = query * second_transmission
                     # key = key * first_transmission
-                    value = value + first_transmission
+                    value = first_transmission
+
 
                 relation_attn, weights = relation_components["attn"](
                     # expects shape: [seq, batch, cnn_dim]
@@ -2318,8 +2321,9 @@ class FgFlex(BertHead):
         gold_influence = self.get_prob(self.current_epoch, self.find("warm_up_constant", default=5))
 
         focus_scope = (  # strengthen signal from true logits
-            gold_influence*true.bool().float()
-                + (1-gold_influence)*logits.argmax(-1).bool().float() 
+            gold_influence*true.permute(1,0).bool().float().unsqueeze(-1).expand(logits.shape)
+                + (1-gold_influence)*logits 
+                # + (1-gold_influence)*logits.argmax(-1).bool().float() 
         ).detach().to(torch.device(self.device))
         focus_scope.requires_grad = True
         

@@ -3,17 +3,19 @@
 
     "model_name": "fgflex",
     
-    "cnn_dim": [384, 576, 768, 960, 1536],
+    "cnn_dim": [100, 200, 300, 400],
     "expanding_cnn": 0,
     "gold_transmission": true,
     "kernel_size": 5,
     "stack_count": 1,
     "attention_relations": [
         [
+            ["polarity", "target"],
             ["polarity", "expression"]
         ]
     ],
-    "split_cnn_kernels":[[3, 5]],
+    "split_cnn_kernels":[[3, 5, 7, 9, 11, 13]],
+    "split_cnn_tasks": [["target", "polarity", "expression"]],
 
     "dropout": 0.4,
     "loss_weight": 1, 

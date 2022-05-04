@@ -1,6 +1,6 @@
 {
 
-    "name": "fgflex-attn-high",
+    "name": "fgflex-attn",
     
     "model_name": "fgflex",
     
@@ -9,6 +9,15 @@
     "gold_transmission": true,
     "kernel_size": 5,
     "attention_relations": [
+        [
+            ["target", "target"],
+            ["expression", "expression"]
+        ],
+        [
+            ["target", "expression"],
+            ["expression", "target"],
+            ["polarity", "expression"]
+        ],
         [
             ["target", "target"],
             ["expression", "expression"],
@@ -21,6 +30,7 @@
             ["polarity", "target"],
             ["polarity", "expression"]
         ]
+
     ],
     "split_cnn_kernels": [[3, 5]],
 

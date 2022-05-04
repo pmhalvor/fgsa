@@ -7,10 +7,9 @@
     "expanding_cnn": 0,
     "gold_transmission": true,
     "kernel_size": 5,
-    "stack_count": 1,
+    "stack_count": [1, 2, 3],
 
     "dropout": 0.4,
-    "bert_finetune": true,
     "optimizer_name": "adam",
     "weight_decay": 0,
     "lr": 1e-5,
