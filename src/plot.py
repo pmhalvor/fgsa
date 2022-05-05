@@ -4,12 +4,16 @@ import pandas as pd
 from scipy.stats import norm
 
 
-def show_data(data, title=None):
+def show_data(data, title=None, epoch_cap=None):
     """ data dict to pandas df w/ plot """
     try:
         df = pd.DataFrame.from_dict(data)
     except ValueError:
         df = pd.DataFrame()
+
+    if epoch_cap is not None:
+        df = df[:epoch_cap]
+
     df.plot(title=title, figsize=(15,5))
     return df.T
 
@@ -118,6 +122,8 @@ def parse_metrics(data):
             if "(RACL)" in metric:
                 metric = metric.split("(RACL)")[-1].strip()
             score = float(line.split('overall: ')[-1].split(' (')[0].strip())
+            if metric.lower() == "binary":
+                continue
             dev_scores[metric.lower()].append(score)
         
         if "Score:" in line:
@@ -166,7 +172,7 @@ def get_runs(name):
         
     return parse_large_logs(data)
 
-def show_study_loss(name, title=None):
+def show_study_loss(name, title=None, epoch_cap=None):
     runs = get_runs(name)[1:] # skip first "run"
     loss_dfs = {}
     metrics_dfs = {}
@@ -179,8 +185,14 @@ def show_study_loss(name, title=None):
         if title is None:
             header = name + f" Run:{i}"
         try:
-            loss_df = show_data(loss, "Loss:{}".format(header))
-            metrics_df = show_data(metrics, "Metrics:{}".format(header))
+            loss_df = show_data(loss, "Loss{}".format(header), epoch_cap)
+            plt.xlabel("Epochs")
+            plt.ylabel("Loss")
+            plt.show()
+
+            metrics_df = show_data(metrics, "Metrics{}".format(header), epoch_cap)
+            plt.xlabel("Epochs")
+            plt.ylabel("Score")
             plt.show()
             
             loss_dfs[i] = loss_df.T
@@ -219,7 +231,9 @@ def smooth(study, runs, header=""):
     avg_metric = sum([metric[i] for i in runs])/len(runs)
 
     avg_loss.plot(title="Loss "+header, figsize=(15,5))
-    avg_metric.plot(title="Metric "+header, figsize=(15,5))
+    plt_metric = avg_metric.plot(title="Metric "+header, figsize=(15,5))
+    plt_metric.set_xlabel("Epochs")
+    plt_metric.set_ylabel("Score")
 
     print("Final values:")
     display(avg_loss.tail(3))
