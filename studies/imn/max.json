@@ -1,7 +1,8 @@
 {
-    "name": "imn-best-6bee611",
+    "name": "imn-max",
     "model_name": "imn",
-    
+
+    "max_sent_len": 130,    
     "find_scope": false,
     "gold_transmission": true,
     "shared_layers": 3,
@@ -21,7 +22,7 @@
     "warm_up_constant": 3,
     
     "lr": 1e-5,
-    "lr_scheduler_patience": 5,
+    "lr_scheduler_patience":5,
     
     "metric": "absa",
 

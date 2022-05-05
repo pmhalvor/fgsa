@@ -1,9 +1,11 @@
 {
-    "name": "imn-best-6bee611",
+    "name": "imn-transmission",
     "model_name": "imn",
     
     "find_scope": false,
-    "gold_transmission": true,
+    "gold_transmission": [true, false],
+    "safe_gold_transmission": [true, false],
+
     "shared_layers": 3,
     "expression_layers": 2,
     "polarity_layers": 1,
@@ -21,7 +23,7 @@
     "warm_up_constant": 3,
     
     "lr": 1e-5,
-    "lr_scheduler_patience": 5,
+    "lr_scheduler_patience":5,
     
     "metric": "absa",
 

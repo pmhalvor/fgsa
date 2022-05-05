@@ -1,5 +1,5 @@
 {
-    "name": "imn-best-6bee611",
+    "name": "imn-best-35",
     "model_name": "imn",
     
     "find_scope": false,
@@ -21,9 +21,17 @@
     "warm_up_constant": 3,
     
     "lr": 1e-5,
-    "lr_scheduler_patience": 5,
+    "lr_scheduler_patience":5,
     
     "metric": "absa",
 
-    "epochs": [25, 25, 25]
+    "epochs": [
+        25, 25, 25, 25, 25,
+        25, 25, 25, 25, 25,
+        25, 25, 25, 25, 25,
+        25, 25, 25, 25, 25,
+        25, 25, 25, 25, 25,
+        25, 25, 25, 25, 25,
+        25, 25, 25, 25, 25
+    ]
 }

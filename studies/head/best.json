@@ -1,0 +1,13 @@
+{
+    "name": "head-best",
+    "model_name": "BertHead",
+
+    "learning_rate": 1e-5,
+
+    "dropout": 0.5,
+
+    "metric": "absa",
+
+    "epochs": [25, 25, 25, 25, 25]
+
+}

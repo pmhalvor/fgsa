@@ -1,7 +1,8 @@
 {
-    "name": "imn-best-6bee611",
+    "name": "imn-epochs",
     "model_name": "imn",
     
+    "max_sent_len": null,
     "find_scope": false,
     "gold_transmission": true,
     "shared_layers": 3,
@@ -21,9 +22,9 @@
     "warm_up_constant": 3,
     
     "lr": 1e-5,
-    "lr_scheduler_patience": 5,
+    "lr_scheduler_patience":5,
     
     "metric": "absa",
 
-    "epochs": [25, 25, 25]
+    "epochs": [30, 35, 50, 75]
 }
