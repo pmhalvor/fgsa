@@ -24,6 +24,7 @@ class Study():
     def __init__(
         self, 
         name="base",
+        metric = "absa",
 
         batch_size=32, 
         bert_path=BERT_PATH,
@@ -33,8 +34,7 @@ class Study():
         ignore_id = -1,
         load_checkpoint = False,
 
-        metric = "span",
-
+        max_sent_len = 111,  # Set due to OOM error on GPU
         model_name = "BertHead",
         model_path = None,
         proportion = 1.,
@@ -54,6 +54,7 @@ class Study():
         self.ignore_id = ignore_id
         self.kwargs = kwargs
         self.load_checkpoint = load_checkpoint
+        self.max_sent_len = max_sent_len
         
         self.metric = metric
 
@@ -125,6 +126,7 @@ class Study():
             partition="train/", 
             ignore_id=self.ignore_id,
             proportion=self.proportion,
+            max_sent_len=self.max_sent_len,
         )
         self.test_dataset = Norec(
             bert_path=self.bert_path,
@@ -133,6 +135,7 @@ class Study():
             ignore_id=self.ignore_id,
             proportion=self.proportion,
             tokenizer=self.train_dataset.tokenizer,
+            max_sent_len=self.max_sent_len,
         )
         self.dev_dataset = Norec(
             bert_path=self.bert_path,
@@ -141,6 +144,7 @@ class Study():
             ignore_id=self.ignore_id,
             proportion=self.proportion,
             tokenizer=self.train_dataset.tokenizer,
+            max_sent_len=self.max_sent_len,
         )
 
     def load_dataloaders(self):

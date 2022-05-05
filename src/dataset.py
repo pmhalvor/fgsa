@@ -55,6 +55,7 @@ class Norec(Dataset):
         proportion=None, 
         ignore_id=-1,
         tokenizer=None,
+        max_sent_len=None,
     ):
         self.tokenizer = self.get_tokenizer(bert_path, tokenizer)
         self.IGNORE_ID = ignore_id  # FIXME get form BertTokenizer, idk if this is FIXME is needed
@@ -74,6 +75,9 @@ class Norec(Dataset):
 
         # reduce size for faster dev
         self.shrink(p=proportion)
+
+        # remove large sentences
+        self.remove_large_sents(max_sent_len=max_sent_len)
 
         # sanity check of shapes
         try:
@@ -162,6 +166,25 @@ class Norec(Dataset):
             logging.info("Dataset {part} shrunk by a scale of {p}. Now {c} rows.".format(
                 part=self.partition, p=p, c=count)
             )
+
+    def remove_large_sents(self, max_sent_len):
+        """  
+        Check sentence lengths of expanded token ids, and removes those with 
+        longer lengths than para max_sent_len. Helps avoid OOM errors on GPU
+        """
+        to_remove = []
+        if max_sent_len is not None:
+            for index, sentence in enumerate(self.ids):
+                if len(sentence) > max_sent_len:
+                    # add indexes in reverse order so pop works later
+                    to_remove.insert(0, index)
+        
+        for index in to_remove:
+            self.ids.pop(index)    
+            self.label["expression"].pop(index)
+            self.label["holder"].pop(index)
+            self.label["polarity"].pop(index)
+            self.label["target"].pop(index)
 
     def get_tokenizer(self, bert_path=None, tokenizer=None):
         if tokenizer is not None:
