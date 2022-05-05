@@ -873,14 +873,16 @@ class BertHead(torch.nn.Module):
         """
         self.eval()
         
-        # make sure gold tranmission deactivated for predictions
-        transmission_config = self.find("gold_transmission")
-        self.gold_transmission = False
+        if self.find("safe_gold_transmission", default=False):
+            # make sure gold tranmission deactivated for predictions
+            transmission_config = self.find("gold_transmission")
+            self.gold_transmission = False
 
         outputs = self.forward(batch)
 
-        # reset transmission value to that provided during init
-        self.gold_transmission = transmission_config  
+        if self.find("safe_gold_transmission", default=False):
+            # reset transmission value to that provided during init
+            self.gold_transmission = transmission_config  
 
         prediction_tensors = {
             task: outputs[task].argmax(1)
@@ -1951,7 +1953,6 @@ class RACL(IMN):
         focus_scope.requires_grad = True
         
         return focus_scope  # shape: [batch, sequence]
-
 
 
 class FgFlex(BertHead):
