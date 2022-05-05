@@ -5,6 +5,7 @@
     
     "cnn_dim": 768,
     "gold_transmission": true,
+    "kernel_size": 5,
     "split_cnn_kernels": [
         [3, 5],
         [5, 7],
@@ -19,21 +20,20 @@
         [3, 5, 7],
         [3, 7, 11],
         [3, 9, 13],
+        [3, 7, 9, 11],
         [3, 5, 7, 9, 11, 13]
     ],
     "stack_count": 2,
-    "attention_relations": [[["polarity", "expression"]]],
-
 
     "dropout": 0.4,
     "loss_weight": 1, 
     "optimizer_name": "adam",
     "weight_decay": 0,
-    "warm_up_constant": 5,
+    "warm_up_constant": 3.5,
     
     "lr": 1e-5,
     
     "metric": "absa",
 
-    "epochs": [25, 25, 25]
+    "epochs": [30, 30, 30]
 }

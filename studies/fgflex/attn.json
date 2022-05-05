@@ -15,6 +15,10 @@
         ],
         [
             ["target", "expression"],
+            ["expression", "target"]
+        ],
+        [
+            ["target", "expression"],
             ["expression", "target"],
             ["polarity", "expression"]
         ],
@@ -29,10 +33,21 @@
             ["expression", "target"],
             ["polarity", "target"],
             ["polarity", "expression"]
+        ],
+        [
+            ["target", "expression"],
+            ["target", "holder"],
+            ["expression", "target"],
+            ["expression", "holder"],
+            ["holder", "target"],
+            ["holder", "expression"],
+            ["polarity", "target"],
+            ["polarity", "holder"],
+            ["polarity", "expression"]
         ]
 
     ],
-    "split_cnn_kernels": [[3, 5]],
+    "split_cnn_kernels": [[3, 7, 11]],
 
     "stack_count": 1,
 
@@ -42,7 +57,6 @@
     "bert_finetune": true,
     "optimizer_name": "adam",
     "weight_decay": 0,
-    "warm_up_constant": 5,
     "use_linear_dropout": true,
     "use_cnn_dropout": false,
     
@@ -50,5 +64,6 @@
     
     "metric": "absa",
 
-    "epochs": [50, 50, 50]
+    "warm_up_constant": 3.5,
+    "epochs": [30, 30, 30]
 }
