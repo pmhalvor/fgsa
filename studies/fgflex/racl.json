@@ -1,0 +1,33 @@
+{
+    "name": "fgflex-racl",
+
+    "model_name": "fgflex",
+    
+    "subtasks": ["expression, "polarity", "target"],
+    "attention_relations": [
+        [
+            ["target", "expression"],
+            ["expression",  "target"],
+            ["polarity", "target"],
+            ["polarity", "expression"]
+        ]
+    ],
+
+    "cnn_dim": 300,
+    "expanding_cnn": 0,
+    "gold_transmission": true,
+    "kernel_size": 5,
+    "stack_count": 1,
+
+    "dropout": 0.4,
+    "loss_weight": 1, 
+    "optimizer_name": "adam",
+    "weight_decay": 0,
+    "warm_up_constant": 3.5,
+    
+    "lr": 1e-5,
+    
+    "metric": "absa",
+
+    "epochs": [30, 30, 30]
+}
