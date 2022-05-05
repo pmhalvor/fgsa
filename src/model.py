@@ -2245,8 +2245,12 @@ class FgFlex(BertHead):
 
                 # logits transmission
                 if gold_transmission and ("all" not in relation) and ("shared" not in relation):
-                    # first_transmission = self.transmission(outputs[first_task][-1], true_labels[first_task])
-                    first_transmission = self.transmission(value, true_labels[first_task])
+                    first_transmission = self.transmission(
+                        # pass information about if subtask found label present
+                        outputs[first_task][-1].detach().argmax(-1).bool().float(),  
+                        true_labels[first_task].bool().float()
+                    ).permute(1,0).unsqueeze(-1).expand(value.shape)
+                    # first_transmission = self.transmission(value, true_labels[first_task])
                     # second_transmission = self.transmission(outputs[second_task][-1], true_labels[second_task])
 
                     # reshape to match query/key shapes
@@ -2256,7 +2260,7 @@ class FgFlex(BertHead):
                     # NOTE only apply gold transmission to keys (first task), so values help "remap" to previous state
                     # query = query * second_transmission
                     # key = key * first_transmission
-                    value = first_transmission
+                    value = value + (value * first_transmission)
 
 
                 relation_attn, weights = relation_components["attn"](
@@ -2317,18 +2321,17 @@ class FgFlex(BertHead):
         prob = constant/(constant+torch.exp(torch.tensor(epoch_count).float()/constant))
         return prob
 
-    def transmission(self, logits, true):
+    def transmission(self, predictions, true):
         """
         To help guide the attention mechanisms on which tokens to focus more on,
-        given logits from individual subtask. 
+        given predictions from individual subtask. 
         """
         # decide how much true labels should influence attention based on current epoch
         gold_influence = self.get_prob(self.current_epoch, self.find("warm_up_constant", default=5))
 
-        focus_scope = (  # strengthen signal from true logits
-            gold_influence*true.permute(1,0).bool().float().unsqueeze(-1).expand(logits.shape)
-                + (1-gold_influence)*logits 
-                # + (1-gold_influence)*logits.argmax(-1).bool().float() 
+        focus_scope = (  # strengthen signal from true label
+            gold_influence*true
+                + (1-gold_influence)*predictions 
         ).detach().to(torch.device(self.device))
         focus_scope.requires_grad = True
         
