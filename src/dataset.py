@@ -180,7 +180,8 @@ class Norec(Dataset):
                     to_remove.insert(0, index)
         
         for index in to_remove:
-            self.ids.pop(index)    
+            self.ids.pop(index)   
+            self.sentence.pop(index) 
             self.label["expression"].pop(index)
             self.label["holder"].pop(index)
             self.label["polarity"].pop(index)
