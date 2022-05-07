@@ -1,5 +1,5 @@
 {
-    "name": "imn-best-6bee611",
+    "name": "imn-best",
     "model_name": "imn",
     
     "find_scope": false,
@@ -18,12 +18,12 @@
     "loss_weight": 1, 
     "optimizer_name": "adam",
     "weight_decay": 0,
-    "warm_up_constant": 3,
     
     "lr": 1e-5,
-    "lr_scheduler_patience": 5,
+    "lr_scheduler_patience": 25,
     
     "metric": "absa",
 
-    "epochs": [25, 25, 25]
+    "warm_up_constant": 3.5,
+    "epochs": [75, 75, 75]
 }
