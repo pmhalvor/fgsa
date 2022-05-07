@@ -874,15 +874,15 @@ class BertHead(torch.nn.Module):
         self.eval()
         
         if self.find("safe_gold_transmission", default=False):
-            # make sure gold tranmission deactivated for predictions
-            transmission_config = self.find("gold_transmission")
-            self.gold_transmission = False
+            # make sure influence from gold tranmission is low for preditions
+            transmission_config = self.find("warm_up_contant")
+            self.warm_up_constant = 0.1
 
         outputs = self.forward(batch)
 
         if self.find("safe_gold_transmission", default=False):
             # reset transmission value to that provided during init
-            self.gold_transmission = transmission_config  
+            self.warm_up_constant = transmission_config  
 
         prediction_tensors = {
             task: outputs[task].argmax(1)
