@@ -5,7 +5,7 @@
 
     "model_name": "fgflex",
 
-    "attention_relation": [
+    "attention_relation": [[
         ["target", "expression"], 
         ["target", "holder"], 
 
@@ -18,7 +18,7 @@
         ["polarity", "target"], 
         ["polarity", "holder"], 
         ["polarity", "expression"]
-    ],     
+    ]],     
     "cnn_dim": 768,
     "expanding_cnn": 0,
     "gold_transmission": true,
