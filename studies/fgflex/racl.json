@@ -1,15 +1,17 @@
 {
-    "name": "fgflex-imn",
+    "name": "fgflex-racl",
 
     "model_name": "fgflex",
-
-    "subtasks": ["expression", "polarity", "target"],    
+    
+    "subtasks": ["expression", "polarity", "target"],
     "attention_relations": [
         [
+            ["target", "expression"],
+            ["expression",  "target"],
+            ["polarity", "target"],
             ["polarity", "expression"]
         ]
     ],
-    "split_cnn_kernels": [[3, 5]],
 
     "cnn_dim": 300,
     "expanding_cnn": 0,
@@ -21,11 +23,11 @@
     "loss_weight": 1, 
     "optimizer_name": "adam",
     "weight_decay": 0,
+    "warm_up_constant": 3.5,
     
     "lr": 1e-5,
     
     "metric": "absa",
 
-    "warm_up_constant": 3.5,
     "epochs": [30, 30, 30]
 }

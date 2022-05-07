@@ -4,6 +4,7 @@
     
     "find_scope": false,
     "gold_transmission": true,
+    "safe_gold_transmission": true,
     "shared_layers": 3,
     "expression_layers": 2,
     "polarity_layers": 1,

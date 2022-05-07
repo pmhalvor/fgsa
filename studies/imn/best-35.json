@@ -4,11 +4,11 @@
     
     "find_scope": false,
     "gold_transmission": true,
-    "shared_layers": 3,
+    "shared_layers": 4,
     "expression_layers": 2,
     "polarity_layers": 1,
-    "target_layers": 3,
-    "interactions": 1,
+    "target_layers": 2,
+    "interactions": 3,
     "query": "expression",
     "key": "polarity",
     "value": "polarity",
@@ -18,7 +18,7 @@
     "loss_weight": 1, 
     "optimizer_name": "adam",
     "weight_decay": 0,
-    "warm_up_constant": 3,
+    "warm_up_constant": 3.5,
     
     "lr": 1e-5,
     "lr_scheduler_patience":5,
@@ -26,12 +26,12 @@
     "metric": "absa",
 
     "epochs": [
-        25, 25, 25, 25, 25,
-        25, 25, 25, 25, 25,
-        25, 25, 25, 25, 25,
-        25, 25, 25, 25, 25,
-        25, 25, 25, 25, 25,
-        25, 25, 25, 25, 25,
-        25, 25, 25, 25, 25
+        30, 30, 30, 30, 30,
+        30, 30, 30, 30, 30,
+        30, 30, 30, 30, 30,
+        30, 30, 30, 30, 30,
+        30, 30, 30, 30, 30,
+        30, 30, 30, 30, 30,
+        30, 30, 30, 30, 30
     ]
 }

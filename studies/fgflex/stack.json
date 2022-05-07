@@ -1,5 +1,5 @@
 {
-    "name": "fgflex-stack-new",
+    "name": "fgflex-stack",
     
     "model_name": "fgflex",
     
@@ -7,7 +7,7 @@
     "expanding_cnn": 0,
     "gold_transmission": true,
     "kernel_size": 5,
-    "stack_count": [1, 2, 3, 4, 5],
+    "stack_count": [1, 2, 3, 4],
     "split_cnn_kernels": [[3, 7, 11]],
     
     "dropout": 0.4,
@@ -16,13 +16,13 @@
     "bert_finetune": true,
     "optimizer_name": "adam",
     "weight_decay": 0,
-    "warm_up_constant": 5,
-    "use_linear_dropout": true,
-    "use_cnn_dropout": false,
+    "use_linear_dropout": [true, false],
+    "use_cnn_dropout": [false, true],
     
     "lr": 1e-5,
     
     "metric": "absa",
 
-    "epochs": [50, 50, 50]
+    "warm_up_constant": 3.5,
+    "epochs": [30, 30, 30]
 }

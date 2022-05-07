@@ -1,40 +1,49 @@
+
 {
     "name": "fgflex-best",
     "empty": null,
 
     "model_name": "fgflex",
-    
-    "cnn_dim": 3072,
-    "use_cnn_dropout": true,
-    "use_linear_dropout": true,
+
+    "attention_relation": [
+        ["target", "expression"], 
+        ["target", "holder"], 
+
+        ["expression", "target"], 
+        ["expression", "holder"], 
+
+        ["holder", "target"], 
+        ["holder", "expression"], 
+
+        ["polarity", "target"], 
+        ["polarity", "holder"], 
+        ["polarity", "expression"]
+    ],     
+    "cnn_dim": 768,
     "expanding_cnn": 0,
     "gold_transmission": true,
-    "kernel_size": 7,
-    "stack_count":2, 
-    "shared_layers":3,
-    "expression_layers": 2,
-    "target_layers": 2,
-    "attention_relations": [
-        [
-            ["polarity", "expression"],
-            ["polarity", "target"]
-        ]
-    ],
-    "split_cnn_kernels":[[3, 5, 7, 13, 3, 5, 7, 13]],
-    "split_cnn_tasks": [
-        ["expression", "target", "polarity"]
+    "kernel_size": 5,
+    "stack_count": 2,
+    "split_cnn_kernels": [
+        [5, 11],
+        [7, 13],
+        [5, 7, 9],
+        [3, 9, 13]
     ],
 
-    "bert_finetune": [true, false],
+    "shared_layers": 3,
+    "expression_layers": 3,
+    "holder_layers": [1, 2, 3],
+    "polarity_layers": 1,
+    "target_layers": 3,
+
     "dropout": 0.4,
-    "loss_weight": 1, 
     "optimizer_name": "adam",
     "weight_decay": 0,
-    "warm_up_constant": 5,
-    
     "lr": 1e-5,
-    
+    "warm_up_constant": 3.5,
+
     "metric": "absa",
 
-    "epochs": 200
+    "epochs": [30, 30, 30]
 }

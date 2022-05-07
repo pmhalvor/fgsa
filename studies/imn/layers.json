@@ -3,7 +3,6 @@
     "model_name": "imn",
     
     "find_scope": false,
-    "gold_transmission": true,
     "shared_layers": [1, 2, 3, 4, 5],
     "expression_layers": [1, 2, 3, 4, 5],
     "polarity_layers": [1, 2, 3, 4, 5],
@@ -13,17 +12,18 @@
     "key": "polarity",
     "value": "polarity",
 
+    "gold_transmission": true,
     "cnn_dim": 768,
     "dropout": 0.4,
     "loss_weight": 1, 
     "optimizer_name": "adam",
     "weight_decay": 0,
-    "warm_up_constant": 5,
+    "warm_up_constant": 3.5,
     
     "lr": 1e-5,
     "lr_scheduler_patience":25,
     
     "metric": "absa",
 
-    "epochs": [25, 25, 25]
+    "epochs": [30, 30, 30]
 }

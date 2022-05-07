@@ -3,28 +3,27 @@
 
     "model_name": "fgflex",
     
-
     "shared_layers": [1,2,3,4,5],
     "expression_layers": [1,2,3,4],
     "polarity_layers": [1,2,3,4],
     "target_layers": [1,2,3,4],
+
     "cnn_dim": 768,
     "expanding_cnn": 0,
     "gold_transmission": true,
     "kernel_size": 5,
-    "stack_count": 1,
-    "attention_relations": [[["polarity", "expression"]]],
+    "stack_count": 2,
     "split_cnn_kernels":[[3, 7, 11]],
 
     "dropout": 0.4,
     "loss_weight": 1, 
     "optimizer_name": "adam",
     "weight_decay": 0,
-    "warm_up_constant": 5,
     
     "lr": 1e-5,
     
     "metric": "absa",
 
-    "epochs": [25, 25, 25]
+    "warm_up_constant": 3.5,
+    "epochs": [30, 30, 30]
 }
