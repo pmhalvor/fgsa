@@ -3,7 +3,7 @@
 
     "model_name": "fgflex",
 
-    "subtasks": ["expression, "polarity", "target"],    
+    "subtasks": ["expression", "polarity", "target"],    
     "attention_relations": [
         [
             ["polarity", "expression"]

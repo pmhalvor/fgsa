@@ -7,7 +7,7 @@
     "expanding_cnn": 0,
     "gold_transmission": true,
     "kernel_size": 5,
-    "stack_count": [1, 2, 3, 4, 5],
+    "stack_count": [1, 2, 3, 4],
     "split_cnn_kernels": [[3, 7, 11]],
     
     "dropout": 0.4,

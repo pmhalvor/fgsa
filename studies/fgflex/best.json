@@ -1,0 +1,48 @@
+
+{
+    "name": "fgflex-best",
+
+    "model_name": "fgflex",
+
+    "attention_relation": [
+        ["target", "expression"], 
+        ["target", "holder"], 
+
+        ["expression", "target"], 
+        ["expression", "holder"], 
+
+        ["holder", "target"], 
+        ["holder", "expression"], 
+
+        ["polarity", "target"], 
+        ["polarity", "holder"], 
+        ["polarity", "expression"]
+    ],     
+    "cnn_dim": 768,
+    "expanding_cnn": 0,
+    "gold_transmission": true,
+    "kernel_size": 5,
+    "stack_count": 2,
+    "split_cnn_kernels": [
+        [5, 11],
+        [7, 13],
+        [5, 7, 9],
+        [3, 9, 13]
+    ],
+
+    "shared_layers": 3,
+    "expression_layers": 3,
+    "holder_layers": [1, 2, 3],
+    "polarity_layers": 1,
+    "target_layers": 3,
+
+    "dropout": 0.4,
+    "optimizer_name": "adam",
+    "weight_decay": 0,
+    "lr": 1e-5,
+    "warm_up_constant": 3.5,
+
+    "metric": "absa",
+
+    "epochs": [30, 30, 30]
+}
