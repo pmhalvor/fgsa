@@ -1,5 +1,6 @@
 {
     "name": "fgflex-best",
+    "empty": null,
 
     "model_name": "fgflex",
     
@@ -19,7 +20,7 @@
             ["polarity", "target"]
         ]
     ],
-    "split_cnn_kernels":[[3, 5, 7, 9, 11, 13, 3, 5, 7, 9, 11, 13]],
+    "split_cnn_kernels":[[3, 5, 7, 13, 3, 5, 7, 13]],
     "split_cnn_tasks": [
         ["expression", "target", "polarity"]
     ],
