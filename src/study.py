@@ -8,7 +8,6 @@ import argparse
 from config import BERT_PATH
 from config import DATA_DIR
 from config import MODEL_DIR
-from config import default_parameters
 from config import log_template
 from dataset import Norec 
 from model import *

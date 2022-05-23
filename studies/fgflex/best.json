@@ -1,11 +1,10 @@
 
 {
     "name": "fgflex-best",
-    "empty": null,
 
     "model_name": "fgflex",
 
-    "attention_relation": [[
+    "attention_relations": [[
         ["target", "expression"], 
         ["target", "holder"], 
 
@@ -24,12 +23,6 @@
     "gold_transmission": true,
     "kernel_size": 5,
     "stack_count": 2,
-    "split_cnn_kernels": [
-        [5, 11],
-        [7, 13],
-        [5, 7, 9],
-        [3, 9, 13]
-    ],
 
     "shared_layers": 3,
     "expression_layers": 3,

@@ -1,7 +1,7 @@
 """
 These methods were borrowed from norec_fine repo.
 Found at: https://github.com/ltgoslo/norec_fine/convert_to_bio.py
-Copied here for completeness. 
+Copied here for repository completeness. 
 """
 import config
 from transformers import BertTokenizer
