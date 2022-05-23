@@ -1957,11 +1957,22 @@ class RACL(IMN):
 
 class FgFlex(BertHead):
     """
-    A combination of the IMN and RACL setup w/ component flexability.
+    A combination of the IMN and RACL setup w/ component flexibility.
     Allows experimenter to test different alterations of these setups.
 
     Parameters:
-        TODO Fill in parameters used in self.find()
+        cnn_dim (int): number of cnn outputs passed as hidden state (default = 768)
+        expanding_cnn (int): ability to expand cnns even larger than normal. Not fully tested (default = None) 
+        split_cnn_kernels (list(int)): ability to use multiple kernel sizes for cnn filters (default = None)
+        kernel_size (int): kernel size for cnn components 
+        attn_lr (float): ability to specify specific learning rate for attention components (default = self.learning rate)
+        shared_lr (float): ability to specify specific learning rate for shared components (default = self.learning_rate)
+        stack_count (int): number of stacks/interactions model should have (default = 1)
+        attention_relations (list(tuple(str, str))): subtasks desired to feed into attention components (default = None)
+        shared_layers (int): number of layers for shared component (default = 1)
+        <task>_layers (int): task-specific layer counts (default = 1)
+        gold_transmission (bool): ability to use true labels in attention components for first few epochs (default = True)
+        warm_up_constant (float): proportion of true labels to influence attention blocks, dependent on current epoch (default = 5)
     """
     def init_components(self, subtasks):
         #######################################
