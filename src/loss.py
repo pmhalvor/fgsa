@@ -1,6 +1,7 @@
 """  
-This part of the experiment was only initially looked at. 
+This part of the experiment was only initially looked at, but not explored in detail. 
 A detailed investigation was given low priority during development. 
+We decided to keep this file as part of our final model for any eventual future development around loss improvements.
 
 """
 
