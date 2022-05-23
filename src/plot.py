@@ -4,7 +4,7 @@ import pandas as pd
 from scipy.stats import norm
 
 
-def show_data(data, title=None, epoch_cap=None):
+def show_data(data, title=None, epoch_cap=None, show=True):
     """ data dict to pandas df w/ plot """
     try:
         df = pd.DataFrame.from_dict(data)
@@ -14,7 +14,7 @@ def show_data(data, title=None, epoch_cap=None):
     if epoch_cap is not None:
         df = df[:epoch_cap]
 
-    df.plot(title=title, figsize=(15,5))
+    df.plot(title=title, figsize=(15,5)) if show else None
     return df.T
 
 ### Task-wise loss
@@ -95,7 +95,7 @@ def show_loss(name):
 
 
 ### Metrics
-def parse_metrics(data):
+def parse_metrics(data, show=True):
     """Assume data is f.readlines() of a log file."""
     dev_scores = {
         "absa": [],
@@ -126,7 +126,7 @@ def parse_metrics(data):
                 continue
             dev_scores[metric.lower()].append(score)
         
-        if "Score:" in line:
+        if "Score:" in line and show:
             print(line.split("INFO] ")[1])
 
         if "FINAL" in line:
@@ -172,7 +172,7 @@ def get_runs(name):
         
     return parse_large_logs(data)
 
-def show_study_loss(name, title=None, epoch_cap=None):
+def show_study_loss(name, title=None, epoch_cap=None, show=True):
     runs = get_runs(name)[1:] # skip first "run"
     loss_dfs = {}
     metrics_dfs = {}
@@ -180,26 +180,28 @@ def show_study_loss(name, title=None, epoch_cap=None):
     header = title
     for i, run in enumerate(runs):
         loss = parse_loss(run)
-        metrics = parse_metrics(run)
+        metrics = parse_metrics(run, show)
         
         if title is None:
             header = name + f" Run:{i}"
         try:
-            loss_df = show_data(loss, "Loss{}".format(header), epoch_cap)
-            plt.xlabel("Epochs")
-            plt.ylabel("Loss")
-            plt.show()
+            loss_df = show_data(loss, "Loss{}".format(header), epoch_cap, show)
+            if show:
+                plt.xlabel("Epochs")
+                plt.ylabel("Loss")
+                plt.show()
 
-            metrics_df = show_data(metrics, "Metrics{}".format(header), epoch_cap)
-            plt.xlabel("Epochs")
-            plt.ylabel("Score")
-            plt.show()
+            metrics_df = show_data(metrics, "Metrics{}".format(header), epoch_cap, show)
+            if show:
+                plt.xlabel("Epochs")
+                plt.ylabel("Score")
+                plt.show()
             
             loss_dfs[i] = loss_df.T
             metrics_dfs[i] = metrics_df.T
             
             for row in run:
-                if "Current" in row:
+                if "Current" in row and show:
                     print("Above plots w/ following params:\n {}".format(row.split("Current params:")[-1]))
                     print("="*75)
         except TypeError:
@@ -243,31 +245,89 @@ def smooth(study, runs, header=""):
 
 
 ### Stats
-
-def get_final_scores(study, runs = None, metric="absa", header=""):
+def get_final_scores(study=None, runs = None, metric="absa", title="Dist. of final scores", studies=None, compare=None):
     iterator = runs if runs is not None else study[1]
     
-    finals =  [
-        study[1][run][metric].tail(1).item()
-        for run in iterator
-    ]
+    if study is not None:
+        finals =  [
+            study[1][run][metric].tail(1).item()
+            for run in iterator
+        ]
+    elif studies is not None:
+        finals =  [
+            study[1][run][metric].tail(1).item()
+            for run in iterator
+            for study in studies
+        ]
+        final_dev = [
+            list(study[1][run][metric].tail(2))[0]
+            for run in iterator
+            for study in studies
+        ]
+    else:
+        return []
+        
+    ### Population distribution
+    # x-axis ranges from min, max  
+    mu =  np.mean(finals)
+    sigma = np.std(finals)
+    x = np.arange(mu-3*sigma, mu+3*sigma, 0.0001)
     
-    #x-axis ranges from -3 and 3 with .001 steps
-    x = np.arange(min(finals), max(finals), 0.001)
-    interval = (max(finals) - min(finals)) / np.mean(finals)
-    dist =  norm.pdf(x, np.mean(finals), np.std(finals)) * interval
+    dist =  norm.pdf(x, mu, sigma) 
+    alpha = (2*sigma)+mu    
+    beta = mu-(2*sigma)
     
-    #plot normal distribution with mean 0 and standard deviation 1
-    plt.plot(x, norm.pdf(x, dist))
+    print("Population average (evaluation) ", mu)
+    print("Population average (development)", sum(final_dev)/len(final_dev))
     
-    plt.hist(finals, bins=6)
-    plt.title("Dist. of final scores "+header)
+    print("Top    2.5% must be over", alpha)
+    print("Bottom 2.5% must be under", beta)
+    
+    # set up plot
+    plt.figure(figsize=(15,7)) 
+    plt.title(title, fontsize=20)
+    plt.xlim([mu-3*sigma, mu+3*sigma])
+    
+    # plot normal distribution with mean 0 and standard deviation 1
+    plt.plot(x, dist)
+    
+    # plot alpha and beta thresholds
+    plt.fill_between(x[x>alpha], dist[x>alpha], step="pre", alpha=0.6, facecolor='g')
+    plt.fill_between(x[x<beta], dist[x<beta], step="pre", alpha=0.6, facecolor='r')
+    
+    # show grouped scores
+    plt.hist(finals, bins=13, alpha=0.2)
+    
+    # readability
+    legend = ["$N(\\theta_0, \\sigma_0^2)$", "$\\theta_\\alpha$", "$\\theta_\\beta$", "IMN scores"]
+    xticks = (
+        [beta, mu-sigma, mu, mu+sigma, alpha], 
+        [
+            f"$\\theta_\\beta$={round(beta, 4)}", 
+            round(mu-sigma,4), 
+            f"$\\theta_0$={round(mu, 4)}", 
+            round(mu+sigma,4), 
+            f"$\\theta_\\alpha$={round(alpha, 4)}"
+        ], 
+    )
+    
+    
+    ### Other scores to compare
+    colors = ["cadetblue", "brown", "lime", "cyan", "yellow", "magenta"]
+    if compare is not None:
+        for i, model in enumerate(compare):
+            plt.bar([compare[model]], [5], color=colors[i], width=0.005, alpha=0.8)
+            legend.append(model)
+            plt.text(compare[model], 5.2, f"{model}\n{round(compare[model], 4)}", ha="center")
+        
  
+    plt.legend(legend, fontsize=13)
+    plt.xticks(xticks[0], xticks[1], fontsize=13)
+    plt.xlabel("Score", fontsize=12)
+    plt.ylabel("Count")
     plt.show()
     
     return finals
-
-
 
 ### DEPRECATED BELOW ------------------------------------------------------
 ### Batch-wise loss 
