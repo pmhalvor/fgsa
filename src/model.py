@@ -361,7 +361,7 @@ class BertHead(torch.nn.Module):
                     output = self.forward(batch)
                 except Exception as e:
                     print(f"Most likely memory error in batch {b} with shape {batch[0].shape}")
-                    print(torch.cuda.memory_summary(abbreviated=False))
+                    # print(torch.cuda.memory_summary(abbreviated=False))
                     # raise e
                     continue  # skip over batches throwing OOM errors
                     

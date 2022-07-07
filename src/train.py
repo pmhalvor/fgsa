@@ -59,6 +59,7 @@ train_dataset = Norec(
     data_dir=DATA_DIR,
     proportion=1.,
     partition="train",
+    max_sent_len=110,
     )
 test_dataset = Norec(
     data_dir=DATA_DIR, 
@@ -66,6 +67,7 @@ test_dataset = Norec(
     partition="test",
     proportion=1.,
     tokenizer=train_dataset.tokenizer,
+    max_sent_len=110,
     )
 dev_dataset = Norec(
     data_dir=DATA_DIR, 
@@ -73,6 +75,7 @@ dev_dataset = Norec(
     partition="dev",
     proportion=1.,
     tokenizer=train_dataset.tokenizer,
+    max_sent_len=110,
     )
 
 
