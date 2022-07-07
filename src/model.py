@@ -9,11 +9,11 @@ import torch
 from transformers import BertForTokenClassification
 from transformers import BertModel  # TODO next step, Bert as head
 
-## Local imports
 from functools import partial
-from fgsa.src.utils import *
 
-import config
+## Local imports
+from fgsa.src.utils import *
+import fgsa.src.config
 
 
 class BertHead(torch.nn.Module):
