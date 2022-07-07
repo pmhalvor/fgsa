@@ -13,7 +13,7 @@ from functools import partial
 
 ## Local imports
 from fgsa.src.utils import *
-import fgsa.src.config
+import fgsa.src.config as config
 
 
 class BertHead(torch.nn.Module):
