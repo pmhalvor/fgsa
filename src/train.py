@@ -17,6 +17,8 @@ os.mkdir("log") if not os.path.exists("log") else None
 
 ##################################################
 ####################  config  ####################
+prop = 1.
+
 parameters = {
     "name": "single-trained-FgFlex",
     "device": "cuda" if torch.cuda.is_available() else "cpu",
@@ -57,26 +59,26 @@ logging.info('Running on device {}'.format(parameters["device"]))
 logging.info("Loading datasets..")
 train_dataset = Norec(
     data_dir=DATA_DIR,
-    proportion=1.,
+    proportion=prop,
     partition="train",
     max_sent_len=110,
-    )
+)
 test_dataset = Norec(
     data_dir=DATA_DIR, 
     ignore_id=-1,
     partition="test",
-    proportion=1.,
+    proportion=prop,
     tokenizer=train_dataset.tokenizer,
     max_sent_len=110,
-    )
+)
 dev_dataset = Norec(
     data_dir=DATA_DIR, 
     ignore_id=-1,
     partition="dev",
-    proportion=1.,
+    proportion=prop,
     tokenizer=train_dataset.tokenizer,
     max_sent_len=110,
-    )
+)
 
 
 # data loader
@@ -109,7 +111,7 @@ model = FgFlex(
 
 logging.info('Fitting model...')
 print("Fitting model")
-model.fit(train_loader=train_loader, dev_loader=dev_loader, epochs=5)
+model.fit(train_loader=train_loader, dev_loader=dev_loader, epochs=10)
 
 logging.info('Evaluating model...')
 absa, binary, hard, macro, proportional, span = model.evaluate(dev_loader, verbose=True)
@@ -118,5 +120,5 @@ logging.info("  ABSA F1: {}".format(absa))
 logging.info("Binary F1: {}".format(binary))
 
 logging.info("Saving model to {}".format("/checkpoints/" + parameters["name"] + '.pt'))
-torch.save(model, "/checkpoints/" + name + '.pt')
+torch.save(model, "checkpoints/" + parameters["name"] + '.pt')
 
