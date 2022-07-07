@@ -29,7 +29,7 @@ Specific version of all the modules we used are presented below and in our `requ
 |nltk | 3.6.7 |
 |pytest | 6.1.1 |
 |pandas | 1.3.5 |
-
+|sklearn| 1.0.2 |
 
 
 # How to
