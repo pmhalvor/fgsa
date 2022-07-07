@@ -11,12 +11,7 @@ from transformers import BertModel  # TODO next step, Bert as head
 
 ## Local imports
 from functools import partial
-from loss import DiceLoss
-from utils import binary_f1
-from utils import proportional_f1
-from utils import score
-from utils import span_f1
-from utils import weighted_macro
+from fgsa.src.utils import *
 
 import config
 
@@ -155,9 +150,6 @@ class BertHead(torch.nn.Module):
 
         elif "cross" in loss_function.lower():
             loss = torch.nn.CrossEntropyLoss(ignore_index=self.ignore_id)
-        
-        elif "dice" in loss_function.lower():
-            loss = DiceLoss(normalization="softmax")
         
         elif "mse" in loss_function.lower():
             loss = torch.nn.MSELoss()
