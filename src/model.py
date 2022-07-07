@@ -3,7 +3,6 @@ import logging
 
 ## ML specific
 from torch.nn.utils.rnn import pad_packed_sequence
-from torch.utils.tensorboard import SummaryWriter
 import torch
 
 from transformers import BertForTokenClassification
@@ -351,8 +350,6 @@ class BertHead(torch.nn.Module):
     
     ########### Model training ###########
     def fit(self, train_loader, dev_loader=None, epochs=10):
-        writer = SummaryWriter()
-
         for epoch in range(epochs):
             self.current_epoch = epoch
 
@@ -377,12 +374,10 @@ class BertHead(torch.nn.Module):
                     logging.info("Epoch:{:3} Batch:{:3}".format(epoch, b))
                     for task in self.subtasks:
                         logging.info("{:10} loss:{}".format(task, loss[task].item()))
-                        writer.add_scalar("loss/{}".format(task), loss[task].item(), epoch)
 
                     # only needed when scope loss is calculated (IMN++)
                     if self.find("scope_loss_value", default=None) is not None:
                         logging.info("{:10} loss:{}".format("scope", self.scope_loss_value.item()))
-                        writer.add_scalar("loss/{}".format("scope"), self.scope_loss_value.item(), epoch)
                     
                     if dev_loader is not None:
                         self.evaluate(dev_loader)
@@ -392,7 +387,6 @@ class BertHead(torch.nn.Module):
 
 
         logging.info("Fit complete.")
-        writer.close()
 
     def backward(self, output, batch):
         """

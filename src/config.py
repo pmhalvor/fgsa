@@ -4,14 +4,15 @@ import datetime
 import torch
 
 
-# TODO replace home directory with specific directory paths dependent on system 
-HOME = "E:/pmhalvor/" if os.path.exists("E:/pmhalvor/") else "/fp/homes01/u01/ec-pmhalvor/"
+HOME = "E:/pmhalvor/nlp/msc/" if os.path.exists("E:/pmhalvor/nlp/msc/") else os.getcwd()
+HOME += "/../" if "fgsa" in HOME else "/"
+
 
 BERT_PATH = "ltgoslo/norbert2"
 DATA_DIR = HOME + "data/norec_fine/"
-LOG_DIR = HOME + "nlp/msc/log/" if "E:" in HOME else "/fp/projects01/ec37/log/"
-MODEL_DIR = HOME + "nlp/msc/models/" if "E:" in HOME else "/fp/projects01/ec37/models/" 
-NOREC_DIR = HOME + "/nlp/msc/norec_fine"
+LOG_DIR = HOME + "log/" 
+MODEL_DIR = HOME + "models/" 
+NOREC_DIR = HOME + "norec_fine"
 
 
 def log_template(level=logging.INFO, name='', job='train'):

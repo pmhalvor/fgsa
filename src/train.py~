@@ -9,13 +9,6 @@ from fgsa.src.model import FgFlex
 from fgsa.src.utils import pad
 
 
-###################  directory  ##################
-import os 
-os.mkdir("checkpoints") if not os.path.exists("checkpoints") else None
-os.mkdir("data") if not os.path.exists("data") else None
-os.mkdir("log") if not os.path.exists("log") else None
-
-##################################################
 ####################  config  ####################
 parameters = {
     "name": "single-trained-FgFlex",

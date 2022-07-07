@@ -7,8 +7,7 @@ import logging
 import os
 
 ### LOCAL 
-from config import BERT_PATH
-from config import DATA_DIR
+from fgsa.src.config import *
 
 
 class Norec(Dataset):
