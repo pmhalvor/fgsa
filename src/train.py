@@ -116,10 +116,6 @@ absa, binary, hard, macro, proportional, span = model.evaluate(dev_loader, verbo
 
 logging.info("  ABSA F1: {}".format(absa))
 logging.info("Binary F1: {}".format(binary))
-logging.info("  Hard F1: {}".format(hard))
-logging.info(" Macro F1: {}".format(Macro))
-logging.info(" Prop. F1: {}".format(proportional))
-logging.info("  Span F1: {}".format(span))
 
 logging.info("Saving model to {}".format("/checkpoints/" + parameters["name"] + '.pt'))
 torch.save(model, "/checkpoints/" + name + '.pt')
