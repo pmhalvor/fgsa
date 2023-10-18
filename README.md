@@ -1,6 +1,7 @@
 # FgFlex: A flexible multitasking sequence-labeler for fine-grained sentiment analysis
 
 This repository contains the code developed for an experiment researching fine-grained sentiment analysis models for Norwegian text. Our thesis documenting the experimentation done on this code can be found [here](https://github.com/pmhalvor/fgsa/blob/master/FgFlex.pdf).
+The slide deck used to present this thesis can be found [here](https://github.com/pmhalvor/fgsa/blob/master/FgFlex_presentation.pdf).
 
 
 Using the IMN [(He et al. 2019)](https://github.com/ruidan/IMN-E2E-ABSA) and RACL [(Chen et al. 2020)](https://github.com/NLPWM-WHU/RACL) as baselines, we synthesis a our novel `FgFlex` model for easy experimentation on attention relations between the subtasks of such models. 
